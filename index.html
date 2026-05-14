@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
-    
-    <!-- Подключаем сокеты через встроенный путь вашего собственного сервера -->
-    <script src="/socket.io/socket.io.js"></script>
-    
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -36,7 +32,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Экран входа */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); position: relative; }
         .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 10px 0; outline: none; font-size: 16px; text-align: center;}
@@ -46,10 +41,8 @@
         .auth-btn.login { background: #6366f1; }
         .auth-btn.register { background: #10b981; }
 
-        /* Плашка ошибки/успеха */
         .error-toast { display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; font-weight: 500; text-align: center; }
 
-        /* Главный интерфейс */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
         .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -96,8 +89,6 @@
         .sent .delete-msg-btn { left: -75px; } 
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
-
-        .typing-indicator { font-size: 13px; color: #10b981; padding: 4px 24px; display: none; font-style: italic; }
 
         .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
@@ -171,7 +162,7 @@
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title">Мои друзья</div>
+                <div class="list-section-title">Все пользователи</div>
                 <div id="friendsList"></div>
                 <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
                 <div id="globalList"></div>
@@ -196,96 +187,45 @@
             </div>
             
             <div class="messages-area" id="messagesArea"></div>
-            
-            <div class="typing-indicator" id="typingIndicator">печатает...</div>
 
             <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" oninput="handleTyping()" placeholder="Напишите сообщение...">
+                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
                 <button class="send-btn" onclick="sendMessage()">▶</button>
             </div>
         </main>
     </div>
 
     <script>
-        let socket;
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
         let selectedAvatarSymbol = "🤖";
-        let typingTimeout = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            socket = io();
-
-            // ИСПРАВЛЕНИЕ: Прямое скрытие экрана авторизации при успешном входе
-            socket.on('auth_success', (data) => {
-                myInfo = data;
-                document.getElementById('greetingName').textContent = data.name;
-                document.getElementById('profileTrigger').textContent = data.avatar;
-                
-                // Физически скрываем экран входа
-                document.getElementById('authScreen').style.display = 'none';
-                
-                socket.emit('request_history');
-            });
-
-            socket.on('auth_error', (msg) => {
-                const isRegSuccess = msg.includes("успешно создан");
-                showAuthNotification(msg, isRegSuccess);
-            });
-
-            socket.on('update_users_list', (users) => {
-                globalUsers = users.filter(u => u.name !== myInfo.name);
-                renderLists(document.getElementById('searchInput').value);
-            });
-
-            socket.on('load_history', (history) => {
-                const messagesArea = document.getElementById('messagesArea');
-                messagesArea.innerHTML = "";
-                if (!activeChatName) return;
-
-                const currentChatHistory = history.filter(msg => 
-                    (msg.from === myInfo.name && msg.to === activeChatName) || 
-                    (msg.from === activeChatName && msg.to === myInfo.name)
-                );
-
-                currentChatHistory.forEach((msg) => {
-                    const wrapper = document.createElement('div');
-                    const isMe = msg.from === myInfo.name;
-                    wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                    wrapper.innerHTML = `
-                        <div class="message-bubble">
-                            ${msg.text}
-                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                        </div>
-                    `;
-                    messagesArea.appendChild(wrapper);
-                });
-                messagesArea.scrollTop = messagesArea.scrollHeight;
-            });
-
-            socket.on('receive_direct_message', (msg) => {
-                localFriends.add(msg.from);
-                renderLists(document.getElementById('searchInput').value);
-            });
-
-            socket.on('user_typing', (data) => {
-                if (activeChatName === data.from) {
-                    document.getElementById('typingIndicator').style.display = 'block';
-                }
-            });
-
-            socket.on('user_typing_stop', (data) => {
-                if (activeChatName === data.from) {
-                    document.getElementById('typingIndicator').style.display = 'none';
-                }
-            });
-
+            // Запуск таймера ежесекундного обновления списков и сообщений (замена сокетов)
+            setInterval(syncData, 1500);
+            
             document.getElementById('messageInput').onkeypress = (e) => {
                 if (e.key === 'Enter') sendMessage();
             };
         });
+
+        async function syncData() {
+            if (!myInfo.name) return;
+            try {
+                // Обновляем список пользователей
+                const resUsers = await fetch('/api/users');
+                const users = await resUsers.json();
+                globalUsers = users.filter(u => u.name !== myInfo.name);
+                renderLists(document.getElementById('searchInput').value);
+
+                // Обновляем сообщения
+                const resMsgs = await fetch('/api/messages');
+                const history = await resMsgs.json();
+                renderMessages(history);
+            } catch(e) {}
+        }
 
         function showAuthNotification(msg, isSuccess = false) {
             const toast = document.getElementById('errorToast');
@@ -302,18 +242,52 @@
             }
         }
 
-        function handleLoginClick() {
+        async function handleLoginClick() {
             const user = document.getElementById('usernameInput').value.trim();
             const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
-            socket.emit('auth_login', { user, pass });
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    myInfo = data;
+                    document.getElementById('greetingName').textContent = data.name;
+                    document.getElementById('profileTrigger').textContent = data.avatar;
+                    document.getElementById('authScreen').style.display = 'none';
+                    syncData();
+                } else {
+                    showAuthNotification(data.error);
+                }
+            } catch(e) {
+                showAuthNotification("Ошибка подключения к серверу");
+            }
         }
 
-        function handleRegisterClick() {
+        async function handleRegisterClick() {
             const user = document.getElementById('usernameInput').value.trim();
             const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
-            socket.emit('auth_register', { user, pass });
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showAuthNotification(data.success, true);
+                } else {
+                    showAuthNotification(data.error);
+                }
+            } catch(e) {
+                showAuthNotification("Ошибка сервера");
+            }
         }
 
         function handleSearch(val) {
@@ -322,59 +296,28 @@
 
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
-            const globalList = document.getElementById('globalList');
-            const globalTitle = document.getElementById('globalTitle');
-
             friendsList.innerHTML = "";
-            globalList.innerHTML = "";
-            let hasGlobal = false;
 
             globalUsers.forEach(user => {
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
                 if (!isMatch) return;
 
-                if (localFriends.has(user.name)) {
-                    const item = document.createElement('div');
-                    item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                    item.onclick = () => openChat(user.name);
-                    item.innerHTML = `
-                        <div class="avatar">${user.avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                    `;
-                    friendsList.appendChild(item);
-                } else {
-                    hasGlobal = true;
-                    const item = document.createElement('div');
-                    item.className = "chat-item";
-                    item.style.cursor = "default";
-                    item.innerHTML = `
-                        <div class="avatar">${user.avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                        <div class="search-actions">
-                            <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
-                            <button class="action-btn" onclick="writeToUser('${user.name}')">Написать</button>
-                        </div>
-                    `;
-                    globalList.appendChild(item);
-                }
+                const item = document.createElement('div');
+                item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
+                item.onclick = () => openChat(user.name);
+                item.innerHTML = `
+                    <div class="avatar">${user.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-name">${user.name}</div>
+                        <div class="chat-status-text">${user.status}</div>
+                    </div>
+                `;
+                friendsList.appendChild(item);
             });
-
-            if (filter.trim() !== "" && hasGlobal) globalTitle.classList.remove('hidden');
-            else globalTitle.classList.add('hidden');
         }
-
-        window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
-        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
 
         function openChat(name) {
             activeChatName = name;
-            localFriends.add(name);
             
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
@@ -385,22 +328,65 @@
             document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
             document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
             
-            socket.emit('request_history');
+            syncData();
         }
 
-        function sendMessage() {
+        function renderMessages(history) {
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = "";
+            if (!activeChatName) return;
+
+            const currentChatHistory = history.filter(msg => 
+                (msg.from === myInfo.name && msg.to === activeChatName) || 
+                (msg.from === activeChatName && msg.to === myInfo.name)
+            );
+
+            currentChatHistory.forEach((msg) => {
+                const wrapper = document.createElement('div');
+                const isMe = msg.from === myInfo.name;
+                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                wrapper.innerHTML = `
+                    <div class="message-bubble">
+                        ${msg.text}
+                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
+                    </div>
+                `;
+                messagesArea.appendChild(wrapper);
+            });
+        }
+
+        async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text || !activeChatName) return;
 
-            socket.emit('send_direct_message', { toUser: activeChatName, text: text });
-            input.value = "";
-            socket.emit('typing_stop', { toUser: activeChatName });
+            try {
+                const res = await fetch('/api/messages/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
+                });
+                if (res.ok) {
+                    input.value = "";
+                    const history = await res.json();
+                    renderMessages(history);
+                }
+            } catch(e) {}
         }
 
-        window.deleteMessage = function(msgId) {
-            socket.emit('delete_message', { msgId });
-        };
+        async function deleteMessage(msgId) {
+            try {
+                const res = await fetch('/api/messages/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ msgId })
+                });
+                if (res.ok) {
+                    const history = await res.json();
+                    renderMessages(history);
+                }
+            } catch(e) {}
+        }
 
         function toggleProfileModal(show) {
             const modal = document.getElementById('profileModal');
@@ -418,22 +404,22 @@
             selectedAvatarSymbol = emo;
         };
 
-        function handleSaveProfile() {
+        async function handleSaveProfile() {
             const statusVal = document.getElementById('statusInput').value.trim() || "Доступен";
-            socket.emit('update_profile', {
-                status: statusVal,
-                avatar: selectedAvatarSymbol
-            });
-            toggleProfileModal(false);
-        }
-
-        function handleTyping() {
-            if(!activeChatName) return;
-            socket.emit('typing_start', { toUser: activeChatName });
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                socket.emit('typing_stop', { toUser: activeChatName });
-            }, 2000);
+            try {
+                const res = await fetch('/api/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: myInfo.name, status: statusVal, avatar: selectedAvatarSymbol })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    myInfo = data;
+                    document.getElementById('profileTrigger').textContent = data.avatar;
+                    toggleProfileModal(false);
+                    syncData();
+                }
+            } catch(e) {}
         }
 
         function goHome() {
@@ -441,7 +427,6 @@
             document.getElementById('navHome').classList.add('active');
             document.getElementById('homeScreen').classList.remove('hidden');
             document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
         }
 
         function toggleTheme() {
