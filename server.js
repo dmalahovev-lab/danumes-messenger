@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// Чистая и стабильная база данных в оперативной памяти сервера
+// База данных в оперативной памяти сервера — защищена от ошибок записи диска на Render
 let memoryDB = {
     users: {
         "admin": { password: "123", avatar: "🤖", status: "Создатель" }
@@ -36,7 +36,7 @@ app.post('/api/register', (req, res) => {
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// МАРШРУТ: Вход (Жесткая проверка без багов и фантомных входов)
+// МАРШРУТ: Вход (с авто-восстановлением сессии ПК)
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -45,19 +45,17 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    const user = memoryDB.users[username];
-    
-    // Если пользователя нет в базе данных сервера
-    if (!user) {
-        return res.json({ success: false, msg: 'Пользователь не зарегистрирован' });
+    // Если сервер перезапустился и стёр RAM, но клиент прислал валидные данные из localStorage ПК:
+    if (!memoryDB.users[username]) {
+        memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     }
 
-    // Если пароль не совпадает
+    const user = memoryDB.users[username];
+    
     if (user.password !== password) {
         return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
     }
 
-    // Успешный вход
     return res.json({
         success: true,
         user: { name: username, avatar: user.avatar, status: user.status }
@@ -74,7 +72,7 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: Получить историю
+// МАРШРУТ: Получить историю сообщений
 app.get('/api/messages', (req, res) => {
     res.json(memoryDB.messages);
 });
@@ -99,5 +97,5 @@ app.post('/api/messages/delete', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
