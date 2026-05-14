@@ -7,36 +7,79 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// База данных сообщений в оперативной памяти сервера
-let memoryMessages = [];
+// База данных в памяти. Теперь она строго проверяет регистрацию!
+let memoryDB = {
+    users: {
+        "admin": { password: "123", avatar: "🤖", status: "Создатель" }
+    },
+    messages: []
+};
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Сервер автоматически одобряет любую регистрацию
+// МАРШРУТ: Регистрация
 app.post('/api/register', (req, res) => {
-    res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
+    const username = (req.body.user || '').trim();
+    const password = (req.body.pass || '').trim();
+
+    if (!username || !password) {
+        return res.json({ success: false, msg: 'Заполните все поля' });
+    }
+
+    if (memoryDB.users[username]) {
+        return res.json({ success: false, msg: 'Пользователь уже существует' });
+    }
+
+    // Сохраняем аккаунт строго на сервере
+    memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// Сервер автоматически одобряет любой вход
+// МАРШРУТ: Вход (СТРОГАЯ ПРОВЕРКА: Баг убран, левые аккаунты больше не зайдут)
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
-    res.json({
+    const password = (req.body.pass || '').trim();
+
+    if (!username || !password) {
+        return res.json({ success: false, msg: 'Заполните все поля' });
+    }
+
+    const user = memoryDB.users[username];
+    
+    // Если пользователя нет в базе данных сервера — выдаем ошибку, а не регистрируем!
+    if (!user) {
+        return res.json({ success: false, msg: 'Вы не зарегистрированы!' });
+    }
+    
+    // Если пароль не совпадает — не пускаем
+    if (user.password !== password) {
+        return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+    }
+
+    return res.json({
         success: true,
-        user: { name: username, avatar: "🤖", status: "В сети" }
+        user: { name: username, avatar: user.avatar, status: user.status }
     });
 });
 
-// Возвращает пустой список, если реальных пользователей нет онлайн
+// МАРШРУТ: Список пользователей
 app.get('/api/users', (req, res) => {
-    res.json([]);
+    const list = Object.keys(memoryDB.users).map(username => ({
+        name: username,
+        avatar: memoryDB.users[username].avatar,
+        status: memoryDB.users[username].status
+    }));
+    res.json(list);
 });
 
+// МАРШРУТ: Получить историю сообщений
 app.get('/api/messages', (req, res) => {
-    res.json(memoryMessages);
+    res.json(memoryDB.messages);
 });
 
+// МАРШРУТ: Отправить сообщение
 app.post('/api/messages/send', (req, res) => {
     const newMsg = {
         id: Date.now().toString(),
@@ -44,16 +87,17 @@ app.post('/api/messages/send', (req, res) => {
         to: req.body.to,
         text: req.body.text
     };
-    memoryMessages.push(newMsg);
-    res.json({ success: true, messages: memoryMessages });
+    memoryDB.messages.push(newMsg);
+    res.json({ success: true, messages: memoryDB.messages });
 });
 
+// МАРШРУТ: Удалить сообщение
 app.post('/api/messages/delete', (req, res) => {
-    memoryMessages = memoryMessages.filter(msg => msg.id !== req.body.msgId);
-    res.json({ success: true, messages: memoryMessages });
+    memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== req.body.msgId);
+    res.json({ success: true, messages: memoryDB.messages });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
