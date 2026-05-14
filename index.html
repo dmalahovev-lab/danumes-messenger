@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
     
-    <!-- Подключение встроенного плагина Socket.io от сервера Render -->
+    <!-- Подключаем сокеты через встроенный путь вашего собственного сервера -->
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
@@ -126,7 +126,6 @@
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
             <div class="auth-buttons-row">
-                <!-- Прямая привязка функций клика в обход поиска по ID -->
                 <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
                 <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
             </div>
@@ -216,15 +215,10 @@
         let selectedAvatarSymbol = "🤖";
         let typingTimeout = null;
 
-        // Ждем полной сборки DOM структуры страницы
         document.addEventListener("DOMContentLoaded", () => {
-            // Подключение сокетов с принудительным переходом на чистый WebSocket обходя прокси хостинга
-            socket = io({
-                transports: ['websocket'],
-                upgrade: false
-            });
+            // Подключаем сокеты в полностью автоматическом режиме для работы через Render прокси
+            socket = io();
 
-            // Настройка приема ответов от сервера
             socket.on('auth_success', (data) => {
                 myInfo = data;
                 document.getElementById('greetingName').textContent = data.name;
@@ -285,7 +279,6 @@
                 }
             });
 
-            // Навешивание отправки по клавише Enter
             document.getElementById('messageInput').onkeypress = (e) => {
                 if (e.key === 'Enter') sendMessage();
             };
