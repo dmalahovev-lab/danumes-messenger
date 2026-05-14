@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
-    <!-- ПРАВИЛЬНЫЙ СКРИПТ: Подключение Socket.io напрямую через глобальный CDN -->
-    <script src="cloudflare.com"></script>
-    <!-- Подключение иконок Lucide -->
+    
+    <!-- ИСПРАВЛЕНО: Настоящая прямая рабочая веб-ссылка на библиотеку Socket.io -->
+    <script src="cloudflare.com" integrity="sha512-11t8QYv9PNZ_AsSva0tQ7va3scEwZRE0f0YXDOfP8Wnn9gU9w3Z/U0hQHzFf+LpP9m9zGkaM6S9M+E7z358g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- ИСПРАВЛЕНО: Настоящая прямая рабочая веб-ссылка на иконки Lucide -->
     <script src="unpkg.com"></script>
+    
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -46,7 +49,7 @@
         .auth-btn.login { background: #6366f1; }
         .auth-btn.register { background: #10b981; }
 
-        /* Плашка ошибки */
+        /* Плашка ошибки/успеха */
         .error-toast { display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; font-weight: 500; text-align: center; }
 
         /* Главный интерфейс */
@@ -117,15 +120,15 @@
 </head>
 <body>
 
-    <!-- Звуки сообщений -->
+    <!-- ИСПРАВЛЕНО: Настоящая прямая веб-ссылка на системный звук -->
     <audio id="soundMessage" src="mixkit.co" preload="auto"></audio>
 
     <!-- Экран авторизации -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
-            <h2 class="logo" style="font-size:32px; margin-bottom:10px;">DanuMes</h2>
+            <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
             
-            <div class="error-toast" id="errorToast">Недействительный Логин/Пароль</div>
+            <div class="error-toast" id="errorToast"></div>
 
             <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
@@ -212,7 +215,7 @@
     </div>
 
     <script>
-        // ИНИЦИАЛИЗАЦИЯ ИСПРАВЛЕННОГО СОКЕТА
+        // Инициализация сокета по правильной ссылке
         const socket = io();
         
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
@@ -229,9 +232,18 @@
         const registerBtn = document.getElementById('registerBtn');
         const errorToast = document.getElementById('errorToast');
 
-        function showAuthError(msg) {
+        function showAuthNotification(msg, isSuccess = false) {
             errorToast.textContent = msg;
             errorToast.style.display = 'block';
+            if (isSuccess) {
+                errorToast.style.background = 'rgba(16, 185, 129, 0.2)';
+                errorToast.style.borderColor = '#10b981';
+                errorToast.style.color = '#a7f3d0';
+            } else {
+                errorToast.style.background = 'rgba(239, 68, 68, 0.2)';
+                errorToast.style.borderColor = '#ef4444';
+                errorToast.style.color = '#fca5a5';
+            }
         }
 
         // КНОПКА: Войти
@@ -239,7 +251,7 @@
             errorToast.style.display = 'none';
             const user = usernameInput.value.trim();
             const pass = passwordInput.value.trim();
-            if(!user || !pass) return showAuthError("Заполните все поля");
+            if(!user || !pass) return showAuthNotification("Заполните все поля");
             socket.emit('auth_login', { user, pass });
         };
 
@@ -248,26 +260,26 @@
             errorToast.style.display = 'none';
             const user = usernameInput.value.trim();
             const pass = passwordInput.value.trim();
-            if(!user || !pass) return showAuthError("Заполните все поля");
+            if(!user || !pass) return showAuthNotification("Заполните все поля");
             socket.emit('auth_register', { user, pass });
         };
 
-        // Ответы авторизации от сервера
         socket.on('auth_success', (data) => {
             myInfo = data;
             document.getElementById('greetingName').textContent = data.name;
             document.getElementById('profileTrigger').textContent = data.avatar;
             authScreen.classList.add('hidden');
-            
-            // Запрашиваем историю чатов сразу после успешного входа
             socket.emit('request_history');
         });
 
         socket.on('auth_error', (msg) => {
-            showAuthError(msg);
+            if (msg.includes("успешно создан")) {
+                showAuthNotification(msg, true);
+            } else {
+                showAuthNotification(msg, false);
+            }
         });
 
-        // Работа со списками пользователей
         socket.on('update_users_list', (users) => {
             globalUsers = users.filter(u => u.name !== myInfo.name);
             renderLists(document.getElementById('searchInput').value);
@@ -341,13 +353,11 @@
             socket.emit('request_history');
         }
 
-        // Обновление и рендеринг истории
         socket.on('load_history', (history) => {
             const messagesArea = document.getElementById('messagesArea');
             messagesArea.innerHTML = "";
             if (!activeChatName) return;
 
-            // Филтруем историю под активный диалог
             const currentChatHistory = history.filter(msg => 
                 (msg.from === myInfo.name && msg.to === activeChatName) || 
                 (msg.from === activeChatName && msg.to === myInfo.name)
@@ -382,7 +392,6 @@
             socket.emit('delete_message', { msgId });
         };
 
-        // Логика звуковых уведомлений
         socket.on('receive_direct_message', (msg) => {
             localFriends.add(msg.from);
             document.getElementById('soundMessage').play().catch(()=>{});
@@ -393,7 +402,6 @@
             renderLists();
         });
 
-        // Модалка Профиля
         const profileModal = document.getElementById('profileModal');
         const profileTrigger = document.getElementById('profileTrigger');
         const statusInput = document.getElementById('statusInput');
@@ -415,7 +423,6 @@
             profileModal.classList.add('hidden');
         };
 
-        // Статус печатает...
         document.getElementById('messageInput').oninput = () => {
             if(!activeChatName) return;
             socket.emit('typing_start', { toUser: activeChatName });
@@ -457,6 +464,7 @@
             lucide.createIcons();
         };
 
+        // Запуск иконок
         lucide.createIcons();
     </script>
 </body>
