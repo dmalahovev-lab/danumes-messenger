@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Глобальный messanger</title>
+    <title>DanuMes — Глобальный мессенджер</title>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -52,13 +52,22 @@
         .nav-profile-trigger { margin-top: auto; font-size: 24px; background: var(--bg-active); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); }
 
         .sidebar { width: 360px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        
+        /* Заголовок сайдбара с кнопкой плюс */
         .sidebar-header { padding: 24px; display: flex; flex-direction: column; gap: 16px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-title-row { display: flex; justify-content: space-between; align-items: center; }
+        
         .logo { font-size: 22px; font-weight: 800; background: linear-gradient(45deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Кнопка плюс */
+        .add-group-btn { background: var(--bg-active); border: 1px solid var(--border-color); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .add-group-btn:hover { background: #6366f1; border-color: #6366f1; color: white; }
+
         .search-box { position: relative; display: flex; align-items: center; }
         .search-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px 16px 10px 40px; border-radius: 12px; color: var(--text-main); outline: none; }
         .search-icon { position: absolute; left: 14px; color: var(--text-muted); font-style: normal; }
         .chats-list { flex: 1; overflow-y: auto; padding: 12px; }
-        .list-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 8px 12px; text-transform: uppercase; }
+        .list-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 8px 12px; text-transform: uppercase; margin-top: 10px;}
         
         .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; cursor: pointer; margin-bottom: 4px; position: relative; }
         .chat-item:hover, .chat-item.active { background: var(--bg-active); }
@@ -93,6 +102,14 @@
         .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
+
+        /* Окно создания группы (Bento Модалка) */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .group-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 380px; box-shadow: var(--shadow); position: relative; text-align: center;}
+        .group-input { width: 100%; padding: 12px; border-radius: 10px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; outline: none; font-size: 15px; margin: 20px 0; text-align: center;}
+        .group-save-btn { width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px;}
+        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; font-weight: bold;}
+        .modal-toast { display: none; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 10px; font-weight: 500;}
     </style>
 </head>
 <body>
@@ -101,16 +118,24 @@
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
-            
             <div class="error-toast" id="errorToast"></div>
-
             <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
-            
             <div class="auth-buttons-row">
                 <button class="auth-btn login" id="loginBtn">Войти</button>
                 <button class="auth-btn register" id="registerBtn">Регистрация</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания группы -->
+    <div class="modal-overlay hidden" id="groupModal">
+        <div class="group-card">
+            <button class="close-modal-btn" onclick="toggleGroupModal(false)">✕</button>
+            <h3 style="font-size:18px;">Создать новую группу</h3>
+            <div class="modal-toast" id="modalToast"></div>
+            <input type="text" class="group-input" id="groupNameInput" placeholder="Название группы...">
+            <button class="group-save-btn" id="createGroupSubmitBtn">Создать групповой чат</button>
         </div>
     </div>
 
@@ -125,16 +150,20 @@
         <!-- Сайдбар -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">DanuMes</div>
+                <div class="sidebar-title-row">
+                    <div class="logo">DanuMes</div>
+                    <!-- Кнопка + -->
+                    <button class="add-group-btn" onclick="toggleGroupModal(true)">+</button>
+                </div>
                 <div class="search-box">
-                    <i class="search-icon" style="width:16px;height:16px;">🔍</i>
-                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
+                    <i class="search-icon">🔍</i>
+                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей или групп...">
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title">Мои друзья</div>
+                <div class="list-section-title">Мои чаты и группы</div>
                 <div id="friendsList"></div>
-                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
+                <div class="list-section-title hidden" id="globalTitle">Глобальный поиск людей</div>
                 <div id="globalList"></div>
             </div>
         </aside>
@@ -143,7 +172,7 @@
         <div class="home-screen" id="homeScreen">
             <div style="font-size: 50px;">💬</div>
             <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
-            <p>Вы успешно зашли в сеть. Откройте чат слева, чтобы продолжить.</p>
+            <p>Вы успешно зашли в сеть. Создайте группу через кнопку «+» или выберите чат слева.</p>
         </div>
 
         <!-- Окно чата -->
@@ -167,18 +196,20 @@
 
     <script>
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
-        let activeChatName = null;
+        let activeChatTarget = null; // Имя юзера ИЛИ id группы
+        let isGroupChatActive = false; // Флаг: текущий чат групповой?
         let globalUsers = [];
+        let serverGroups = [];
         let localFriends = new Set();
 
         document.addEventListener("DOMContentLoaded", () => {
             const loginBtn = document.getElementById('loginBtn');
             const registerBtn = document.getElementById('registerBtn');
+            const createGroupSubmitBtn = document.getElementById('createGroupSubmitBtn');
 
             registerBtn.onclick = async () => {
                 const user = document.getElementById('usernameInput').value.trim();
                 const pass = document.getElementById('passwordInput').value.trim();
-                
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -191,7 +222,6 @@
             loginBtn.onclick = async () => {
                 const user = document.getElementById('usernameInput').value.trim();
                 const pass = document.getElementById('passwordInput').value.trim();
-                
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -205,10 +235,30 @@
                     document.getElementById('profileTrigger').textContent = myInfo.avatar;
                     document.getElementById('authScreen').style.display = 'none';
                     
-                    await loadUsersList();
-                    setInterval(refreshChatData, 3000);
+                    await loadInitialData();
+                    setInterval(refreshChatData, 3000); // Синхронизация данных каждые 3 сек
                 } else {
                     showAuthNotification(data.msg, false);
+                }
+            };
+
+            // Кнопка подтверждения создания группы
+            createGroupSubmitBtn.onclick = async () => {
+                const groupName = document.getElementById('groupNameInput').value.trim();
+                const response = await fetch('/api/groups/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: groupName })
+                });
+                const data = await response.json();
+                
+                if(data.success) {
+                    serverGroups = data.groups;
+                    document.getElementById('groupNameInput').value = "";
+                    toggleGroupModal(false);
+                    renderLists(document.getElementById('searchInput').value);
+                } else {
+                    showModalNotification(data.msg);
                 }
             };
 
@@ -217,16 +267,27 @@
             };
         });
 
-        async function loadUsersList() {
-            const response = await fetch('/api/users');
-            const users = await response.json();
+        async function loadInitialData() {
+            const resUsers = await fetch('/api/users');
+            const users = await resUsers.json();
             globalUsers = users.filter(u => u.name !== myInfo.name);
+
+            const resGroups = await fetch('/api/groups');
+            serverGroups = await resGroups.json();
+
             renderLists(document.getElementById('searchInput').value);
         }
 
         async function refreshChatData() {
-            await loadUsersList();
-            if (activeChatName) {
+            const resUsers = await fetch('/api/users');
+            const users = await resUsers.json();
+            globalUsers = users.filter(u => u.name !== myInfo.name);
+
+            const resGroups = await fetch('/api/groups');
+            serverGroups = await resGroups.json();
+
+            renderLists(document.getElementById('searchInput').value);
+            if (activeChatTarget) {
                 await loadChatHistory();
             }
         }
@@ -235,15 +296,25 @@
             const toast = document.getElementById('errorToast');
             toast.textContent = msg;
             toast.style.display = 'block';
-            if (isSuccess) {
-                toast.style.background = 'rgba(16, 185, 129, 0.2)';
-                toast.style.borderColor = '#10b981';
-                toast.style.color = '#a7f3d0';
-            } else {
-                toast.style.background = 'rgba(239, 68, 68, 0.2)';
-                toast.style.borderColor = '#ef4444';
-                toast.style.color = '#fca5a5';
-            }
+            toast.style.background = isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+            toast.style.borderColor = isSuccess ? '#10b981' : '#ef4444';
+            toast.style.color = isSuccess ? '#a7f3d0' : '#fca5a5';
+        }
+
+        function showModalNotification(msg) {
+            const toast = document.getElementById('modalToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            toast.style.background = 'rgba(239, 68, 68, 0.2)';
+            toast.style.borderColor = '#ef4444';
+            toast.style.color = '#fca5a5';
+        }
+
+        function toggleGroupModal(show) {
+            const modal = document.getElementById('groupModal');
+            document.getElementById('modalToast').style.display = 'none';
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
         }
 
         function handleSearch(val) {
@@ -259,14 +330,32 @@
             globalList.innerHTML = "";
             let hasGlobal = false;
 
+            // 1. Сначала выводим созданные группы
+            serverGroups.forEach(group => {
+                if (group.name.toLowerCase().includes(filter.toLowerCase())) {
+                    const item = document.createElement('div');
+                    item.className = `chat-item ${activeChatTarget === group.id ? 'active' : ''}`;
+                    item.onclick = () => openChat(group.id, true);
+                    item.innerHTML = `
+                        <div class="avatar">${group.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${group.name}</div>
+                            <div class="chat-status-text" style="color:#10b981;">${group.status}</div>
+                        </div>
+                    `;
+                    friendsList.appendChild(item);
+                }
+            });
+
+            // 2. Затем выводим людей
             globalUsers.forEach(user => {
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
                 if (!isMatch) return;
 
                 if (localFriends.has(user.name)) {
                     const item = document.createElement('div');
-                    item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                    item.onclick = () => openChat(user.name);
+                    item.className = `chat-item ${activeChatTarget === user.name ? 'active' : ''}`;
+                    item.onclick = () => openChat(user.name, false);
                     item.innerHTML = `
                         <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
@@ -300,88 +389,15 @@
         }
 
         window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
-        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
+        window.writeToUser = function(name) { localFriends.add(name); openChat(name, false); document.getElementById('searchInput').value = ""; renderLists(""); };
 
-        async function openChat(name) {
-            activeChatName = name;
-            localFriends.add(name);
+        function openChat(target, isGroup) {
+            activeChatTarget = target;
+            isGroupChatActive = isGroup;
             
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
             
-            const userData = globalUsers.find(u => u.name === name);
-            document.getElementById('activeChatName').textContent = name;
-            document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
-            document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
-            
-            await loadChatHistory();
-        }
-
-        async function loadChatHistory() {
-            const response = await fetch('/api/messages');
-            const history = await response.json();
-            
-            const messagesArea = document.getElementById('messagesArea');
-            messagesArea.innerHTML = "";
-
-            const currentChatHistory = history.filter(msg => 
-                (msg.from === myInfo.name && msg.to === activeChatName) || 
-                (msg.from === activeChatName && msg.to === myInfo.name)
-            );
-
-            currentChatHistory.forEach((msg) => {
-                const wrapper = document.createElement('div');
-                const isMe = msg.from === myInfo.name;
-                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                wrapper.innerHTML = `
-                    <div class="message-bubble">
-                        ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text || !activeChatName) return;
-
-            await fetch('/api/messages/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
-            });
-            
-            input.value = "";
-            await loadChatHistory();
-        }
-
-        window.deleteMessage = async function(msgId) {
-            await fetch('/api/messages/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ msgId })
-            });
-            await loadChatHistory();
-        };
-
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
-    </script>
-</body>
-</html>
+            if (isGroup) {
+                const groupData
