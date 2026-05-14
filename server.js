@@ -8,7 +8,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-const DB_PATH = path.join('/tmp', 'database.json');
+// ИСПРАВЛЕНИЕ: Автоматический выбор папки для базы данных. 
+// Если сервер запущен на Render, пишем в рабочую директорию приложения, чтобы файлы не стирались.
+const DB_PATH = process.env.RENDER ? path.join(__dirname, 'database.json') : path.join('/tmp', 'database.json');
 
 function readDB() {
     try {
@@ -26,7 +28,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи базы данных в /tmp:", e);
+        console.error("Ошибка записи базы данных:", e);
     }
 }
 
