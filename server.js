@@ -10,23 +10,31 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname)));
 
+// Явно отдаем index.html на главной странице
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// База данных в JSON файле на сервере
+// Файловая база данных
 const DB_FILE = path.join(__dirname, 'database.json');
 let db = { users: {}, messages: {} };
 
 if (fs.existsSync(DB_FILE)) {
-    try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) { console.error("Ошибка БД", e); }
-} else { saveDB(); }
+    try {
+        db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) {
+        console.error("Ошибка чтения БД, сброс к дефолту", e);
+    }
+}
 
-function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); }
+function saveDB() {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+}
 
-let activeConnections = {}; 
+let activeConnections = {}; // socket.id -> username
 
 io.on('connection', (socket) => {
+    
     // 1. Регистрация нового аккаунта
     socket.on('register_account', (data) => {
         const username = data.username.trim();
@@ -39,12 +47,18 @@ io.on('connection', (socket) => {
             return socket.emit('auth_error', 'Пользователь с таким именем уже существует!');
         }
 
-        db.users[username] = { password: password, status: "Доступен", avatar: "🤖" };
+        // Сохраняем пользователя
+        db.users[username] = {
+            password: password,
+            avatar: "🤖",
+            status: "Доступен"
+        };
         saveDB();
+
         socket.emit('auth_success', 'Регистрация успешна! Теперь вы можете войти.');
     });
 
-    // 2. Вход в существующий аккаунт
+    // 2. Вход в аккаунт
     socket.on('login_account', (data) => {
         const username = data.username.trim();
         const password = data.password.trim();
@@ -54,26 +68,33 @@ io.on('connection', (socket) => {
         }
 
         activeConnections[socket.id] = username;
-        
+
+        // Отправляем пользователю его профиль
         socket.emit('init_self', {
             name: username,
             avatar: db.users[username].avatar,
             status: db.users[username].status
         });
+
         sendUsersList();
     });
 
     // 3. Обновление профиля
     socket.on('update_profile', (data) => {
         const username = activeConnections[socket.id];
-        if (username && db.users[username]) {
-            db.users[username].status = data.status;
-            db.users[username].avatar = data.avatar;
-            saveDB();
+        if (!username) return;
 
-            socket.emit('init_self', { name: username, avatar: data.avatar, status: data.status });
-            sendUsersList();
-        }
+        db.users[username].status = data.status;
+        db.users[username].avatar = data.avatar;
+        saveDB();
+
+        socket.emit('init_self', {
+            name: username,
+            avatar: db.users[username].avatar,
+            status: db.users[username].status
+        });
+
+        sendUsersList();
     });
 
     // 4. Запрос истории чата
@@ -83,21 +104,28 @@ io.on('connection', (socket) => {
 
         const roomKey = [username, targetUser].sort().join('_');
         const history = db.messages[roomKey] || [];
-        socket.emit('chat_history_response', { targetUser: targetUser, history: history });
+
+        socket.emit('chat_history_response', {
+            targetUser: targetUser,
+            history: history
+        });
     });
 
-    // 5. Статус набора текста "Печатает..."
+    // 5. Статус печатает
     socket.on('typing_status', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
 
         const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
         if (targetSocketId) {
-            io.to(targetSocketId).emit('user_typing', { fromUser: username, isTyping: data.isTyping });
+            io.to(targetSocketId).emit('user_typing', {
+                fromUser: username,
+                isTyping: data.isTyping
+            });
         }
     });
 
-    // 6. Отправка сообщений
+    // 6. Отправка сообщения
     socket.on('send_direct_message', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -106,6 +134,7 @@ io.on('connection', (socket) => {
         if (!db.messages[roomKey]) db.messages[roomKey] = [];
 
         const messagePayload = {
+            id: Date.now() + Math.random().toString(36).substr(2, 5),
             sender: username,
             text: data.text,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -114,11 +143,17 @@ io.on('connection', (socket) => {
         db.messages[roomKey].push(messagePayload);
         saveDB();
 
+        // Отправляем получателю
         const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
         if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_direct_message', { from: username, text: data.text });
+            io.to(targetSocketId).emit('receive_direct_message', {
+                from: username,
+                text: data.text
+            });
         }
-        socket.emit('message_sent_confirm', { toUser: data.toUser, msg: messagePayload });
+
+        // Подтверждаем отправителю
+        socket.emit('message_sent_confirm', messagePayload);
     });
 
     // 7. Удаление сообщения
@@ -127,15 +162,15 @@ io.on('connection', (socket) => {
         if (!username) return;
 
         const roomKey = [username, data.toUser].sort().join('_');
-        if (db.messages[roomKey] && db.messages[roomKey][data.index]) {
-            db.messages[roomKey].splice(data.index, 1);
+        if (db.messages[roomKey]) {
+            db.messages[roomKey] = db.messages[roomKey].filter(msg => msg.id !== data.msgId);
             saveDB();
 
-            socket.emit('message_deleted_sync', { targetUser: data.toUser, history: db.messages[roomKey] });
             const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
             if (targetSocketId) {
-                io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, history: db.messages[roomKey] });
+                io.to(targetSocketId).emit('message_deleted_sync', { fromUser: username });
             }
+            socket.emit('message_deleted_sync', { fromUser: data.toUser });
         }
     });
 
@@ -145,17 +180,18 @@ io.on('connection', (socket) => {
     });
 
     function sendUsersList() {
-        const list = Object.keys(db.users).map(name => ({
+        const activeUsersList = Object.values(activeConnections);
+        const usersArray = Object.keys(db.users).map(name => ({
             name: name,
             avatar: db.users[name].avatar,
             status: db.users[name].status,
-            isOnline: Object.values(activeConnections).includes(name)
+            isOnline: activeUsersList.includes(name)
         }));
-        io.emit('update_users_list', list);
+        io.emit('update_users_list', usersArray);
     }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен!`);
+    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
