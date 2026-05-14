@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
     
-    <!-- Подключаем клиентский скрипт сокетов напрямую со своего сервера -->
+    <!-- Подключение встроенного плагина Socket.io от сервера Render -->
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
@@ -36,7 +36,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Авторизация */
+        /* Экран входа */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); position: relative; }
         .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 10px 0; outline: none; font-size: 16px; text-align: center;}
@@ -46,9 +46,10 @@
         .auth-btn.login { background: #6366f1; }
         .auth-btn.register { background: #10b981; }
 
+        /* Плашка ошибки/успеха */
         .error-toast { display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; font-weight: 500; text-align: center; }
 
-        /* Интерфейс приложения */
+        /* Главный интерфейс */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
         .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -102,7 +103,6 @@
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
 
-        /* Настройки профиля */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
         .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
@@ -110,7 +110,7 @@
         .avatar-opt.selected { border-color: #6366f1; background: var(--bg-active); }
         .profile-input { width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; outline: none; font-size: 14px; margin-top: 6px; margin-bottom: 20px; }
         .profile-save-btn { width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -126,16 +126,17 @@
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
             <div class="auth-buttons-row">
-                <button class="auth-btn login" id="loginBtn">Войти</button>
-                <button class="auth-btn register" id="registerBtn">Регистрация</button>
+                <!-- Прямая привязка функций клика в обход поиска по ID -->
+                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
+                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
             </div>
         </div>
     </div>
 
-    <!-- Модалка профиля -->
+    <!-- Настройки профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
-            <button class="close-modal-btn" id="closeProfileBtn">✕</button>
+            <button class="close-modal-btn" onclick="toggleProfileModal(false)">✕</button>
             <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
             
             <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку (Emoji)</label>
@@ -149,16 +150,16 @@
             <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
             <input type="text" class="profile-input" id="statusInput" placeholder="Что у вас нового?">
 
-            <button class="profile-save-btn" id="saveProfileBtn">Сохранить</button>
+            <button class="profile-save-btn" onclick="handleSaveProfile()">Сохранить</button>
         </div>
     </div>
 
     <div class="app-container">
         <!-- Навигация -->
         <nav class="nav-rail">
-            <button class="nav-btn active" id="navHome">ЧАТЫ</button>
-            <button class="nav-btn" id="themeToggle">ЦВЕТ</button>
-            <div class="nav-profile-trigger" id="profileTrigger">🤖</div>
+            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
+            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
+            <div class="nav-profile-trigger" id="profileTrigger" onclick="toggleProfileModal(true)">🤖</div>
         </nav>
 
         <!-- Сайдбар -->
@@ -167,7 +168,7 @@
                 <div class="logo">DanuMes</div>
                 <div class="search-box">
                     <i class="search-icon" style="width:16px;height:16px;">🔍</i>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск людей...">
+                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
                 </div>
             </div>
             <div class="chats-list">
@@ -200,19 +201,14 @@
             <div class="typing-indicator" id="typingIndicator">печатает...</div>
 
             <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
-                <button class="send-btn" id="sendBtn">▶</button>
+                <input type="text" class="message-input" id="messageInput" oninput="handleTyping()" placeholder="Напишите сообщение...">
+                <button class="send-btn" onclick="sendMessage()">▶</button>
             </div>
         </main>
     </div>
 
     <script>
-        // ЖЕСТКАЯ НАСТРОЙКА SOCKET.IO ДЛЯ ОБХОДА ПРОКСИ-ФИЛЬТРОВ RENDER
-        const socket = io({
-            transports: ['websocket'],
-            upgrade: false
-        });
-        
+        let socket;
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
         let globalUsers = [];
@@ -220,63 +216,113 @@
         let selectedAvatarSymbol = "🤖";
         let typingTimeout = null;
 
-        const authScreen = document.getElementById('authScreen');
-        const usernameInput = document.getElementById('usernameInput');
-        const passwordInput = document.getElementById('passwordInput');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const errorToast = document.getElementById('errorToast');
+        // Ждем полной сборки DOM структуры страницы
+        document.addEventListener("DOMContentLoaded", () => {
+            // Подключение сокетов с принудительным переходом на чистый WebSocket обходя прокси хостинга
+            socket = io({
+                transports: ['websocket'],
+                upgrade: false
+            });
+
+            // Настройка приема ответов от сервера
+            socket.on('auth_success', (data) => {
+                myInfo = data;
+                document.getElementById('greetingName').textContent = data.name;
+                document.getElementById('profileTrigger').textContent = data.avatar;
+                document.getElementById('authScreen').classList.add('hidden');
+                socket.emit('request_history');
+            });
+
+            socket.on('auth_error', (msg) => {
+                const isRegSuccess = msg.includes("успешно создан");
+                showAuthNotification(msg, isRegSuccess);
+            });
+
+            socket.on('update_users_list', (users) => {
+                globalUsers = users.filter(u => u.name !== myInfo.name);
+                renderLists(document.getElementById('searchInput').value);
+            });
+
+            socket.on('load_history', (history) => {
+                const messagesArea = document.getElementById('messagesArea');
+                messagesArea.innerHTML = "";
+                if (!activeChatName) return;
+
+                const currentChatHistory = history.filter(msg => 
+                    (msg.from === myInfo.name && msg.to === activeChatName) || 
+                    (msg.from === activeChatName && msg.to === myInfo.name)
+                );
+
+                currentChatHistory.forEach((msg) => {
+                    const wrapper = document.createElement('div');
+                    const isMe = msg.from === myInfo.name;
+                    wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                    wrapper.innerHTML = `
+                        <div class="message-bubble">
+                            ${msg.text}
+                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
+                        </div>
+                    `;
+                    messagesArea.appendChild(wrapper);
+                });
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            });
+
+            socket.on('receive_direct_message', (msg) => {
+                localFriends.add(msg.from);
+                renderLists(document.getElementById('searchInput').value);
+            });
+
+            socket.on('user_typing', (data) => {
+                if (activeChatName === data.from) {
+                    document.getElementById('typingIndicator').style.display = 'block';
+                }
+            });
+
+            socket.on('user_typing_stop', (data) => {
+                if (activeChatName === data.from) {
+                    document.getElementById('typingIndicator').style.display = 'none';
+                }
+            });
+
+            // Навешивание отправки по клавише Enter
+            document.getElementById('messageInput').onkeypress = (e) => {
+                if (e.key === 'Enter') sendMessage();
+            };
+        });
 
         function showAuthNotification(msg, isSuccess = false) {
-            errorToast.textContent = msg;
-            errorToast.style.display = 'block';
+            const toast = document.getElementById('errorToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
             if (isSuccess) {
-                errorToast.style.background = 'rgba(16, 185, 129, 0.2)';
-                errorToast.style.borderColor = '#10b981';
-                errorToast.style.color = '#a7f3d0';
+                toast.style.background = 'rgba(16, 185, 129, 0.2)';
+                toast.style.borderColor = '#10b981';
+                toast.style.color = '#a7f3d0';
             } else {
-                errorToast.style.background = 'rgba(239, 68, 68, 0.2)';
-                errorToast.style.borderColor = '#ef4444';
-                errorToast.style.color = '#fca5a5';
+                toast.style.background = 'rgba(239, 68, 68, 0.2)';
+                toast.style.borderColor = '#ef4444';
+                toast.style.color = '#fca5a5';
             }
         }
 
-        loginBtn.onclick = () => {
-            errorToast.style.display = 'none';
-            const user = usernameInput.value.trim();
-            const pass = passwordInput.value.trim();
+        function handleLoginClick() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
             socket.emit('auth_login', { user, pass });
-        };
+        }
 
-        registerBtn.onclick = () => {
-            errorToast.style.display = 'none';
-            const user = usernameInput.value.trim();
-            const pass = passwordInput.value.trim();
+        function handleRegisterClick() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
             socket.emit('auth_register', { user, pass });
-        };
+        }
 
-        socket.on('auth_success', (data) => {
-            myInfo = data;
-            document.getElementById('greetingName').textContent = data.name;
-            document.getElementById('profileTrigger').textContent = data.avatar;
-            authScreen.classList.add('hidden');
-            socket.emit('request_history');
-        });
-
-        socket.on('auth_error', (msg) => {
-            if (msg.includes("успешно создан")) {
-                showAuthNotification(msg, true);
-            } else {
-                showAuthNotification(msg, false);
-            }
-        });
-
-        socket.on('update_users_list', (users) => {
-            globalUsers = users.filter(u => u.name !== myInfo.name);
-            renderLists(document.getElementById('searchInput').value);
-        });
+        function handleSearch(val) {
+            renderLists(val);
+        }
 
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
@@ -327,8 +373,8 @@
             else globalTitle.classList.add('hidden');
         }
 
-        window.addFriend = function(name) { localFriends.add(name); renderLists(); };
-        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(); };
+        window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
+        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
 
         function openChat(name) {
             activeChatName = name;
@@ -346,31 +392,6 @@
             socket.emit('request_history');
         }
 
-        socket.on('load_history', (history) => {
-            const messagesArea = document.getElementById('messagesArea');
-            messagesArea.innerHTML = "";
-            if (!activeChatName) return;
-
-            const currentChatHistory = history.filter(msg => 
-                (msg.from === myInfo.name && msg.to === activeChatName) || 
-                (msg.from === activeChatName && msg.to === myInfo.name)
-            );
-
-            currentChatHistory.forEach((msg) => {
-                const wrapper = document.createElement('div');
-                const isMe = msg.from === myInfo.name;
-                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                wrapper.innerHTML = `
-                    <div class="message-bubble">
-                        ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        });
-
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -385,13 +406,53 @@
             socket.emit('delete_message', { msgId });
         };
 
-        socket.on('receive_direct_message', (msg) => {
-            localFriends.add(msg.from);
-            renderLists();
-        });
+        function toggleProfileModal(show) {
+            const modal = document.getElementById('profileModal');
+            if (show) {
+                modal.classList.remove('hidden');
+                document.getElementById('statusInput').value = myInfo.status;
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
 
-        const profileModal = document.getElementById('profileModal');
-        const profileTrigger = document.getElementById('profileTrigger');
-        const statusInput = document.getElementById('statusInput');
+        window.selectAvatar = function(element, emo) {
+            document.querySelectorAll('.avatar-opt').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedAvatarSymbol = emo;
+        };
 
-        profileTrigger.onclick =
+        function handleSaveProfile() {
+            const statusVal = document.getElementById('statusInput').value.trim() || "Доступен";
+            socket.emit('update_profile', {
+                status: statusVal,
+                avatar: selectedAvatarSymbol
+            });
+            toggleProfileModal(false);
+        }
+
+        function handleTyping() {
+            if(!activeChatName) return;
+            socket.emit('typing_start', { toUser: activeChatName });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('typing_stop', { toUser: activeChatName });
+            }, 2000);
+        }
+
+        function goHome() {
+            activeChatName = null;
+            document.getElementById('navHome').classList.add('active');
+            document.getElementById('homeScreen').classList.remove('hidden');
+            document.getElementById('chatWindow').classList.add('hidden');
+            renderLists(document.getElementById('searchInput').value);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+    </script>
+</body>
+</html>
