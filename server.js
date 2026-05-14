@@ -7,9 +7,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// База данных в оперативной памяти — работает без ограничений на запись на Render
+// ЖЕСТКО ПРОПИСАННАЯ БАЗА ДАННЫХ — сервер всегда помнит эти аккаунты
 let memoryDB = {
-    users: {},
+    users: {
+        // Сюда автоматически встроены ваши основные тестовые аккаунты
+        "admin": { password: "123", avatar: "🤖", status: "Создатель" },
+        "test": { password: "123", avatar: "🐱", status: "В сети" },
+        "run": { password: "123", avatar: "🔥", status: "Доступен" }
+    },
     messages: []
 };
 
@@ -17,7 +22,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// МАРШРУТ: Регистрация (Полностью рабочий старый код)
+// МАРШРУТ: Регистрация (Полностью рабочий, не ломает код)
 app.post('/api/register', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -31,11 +36,10 @@ app.post('/api/register', (req, res) => {
     }
 
     memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// МАРШРУТ: Вход (ИСПРАВЛЕНО: Добавлен баг-фикс авто-восстановления сессии)
+// МАРШРУТ: Вход (ИСПРАВЛЕНО: Полная защита от пустых баз данных)
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -44,15 +48,13 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    // БАГ-ФИКС: Если сервер перезапустился и стёр память, но браузер прислал верный логин/пароль,
-    // мы автоматически заново регистрируем пользователя прямо в момент входа!
+    // Если браузер передал старый сохраненный аккаунт, принудительно восстанавливаем его на сервере
     if (!memoryDB.users[username]) {
         memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     }
 
     const user = memoryDB.users[username];
     
-    // Проверяем пароль
     if (user.password !== password) {
         return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
     }
@@ -73,7 +75,7 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: Получить историю
+// МАРШРУТ: Получить историю сообщений
 app.get('/api/messages', (req, res) => {
     res.json(memoryDB.messages);
 });
@@ -98,5 +100,5 @@ app.post('/api/messages/delete', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
