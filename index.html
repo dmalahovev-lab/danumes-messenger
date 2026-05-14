@@ -216,14 +216,17 @@
         let typingTimeout = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            // Подключаем сокеты в полностью автоматическом режиме для работы через Render прокси
             socket = io();
 
+            // ИСПРАВЛЕНИЕ: Прямое скрытие экрана авторизации при успешном входе
             socket.on('auth_success', (data) => {
                 myInfo = data;
                 document.getElementById('greetingName').textContent = data.name;
                 document.getElementById('profileTrigger').textContent = data.avatar;
-                document.getElementById('authScreen').classList.add('hidden');
+                
+                // Физически скрываем экран входа
+                document.getElementById('authScreen').style.display = 'none';
+                
                 socket.emit('request_history');
             });
 
