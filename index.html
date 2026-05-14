@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Глобальный мессенджер</title>
+    <title>DanuMes — Глобальный messanger</title>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -175,7 +175,6 @@
             const loginBtn = document.getElementById('loginBtn');
             const registerBtn = document.getElementById('registerBtn');
 
-            // ОБРАБОТЧИК: Регистрация
             registerBtn.onclick = async () => {
                 const user = document.getElementById('usernameInput').value.trim();
                 const pass = document.getElementById('passwordInput').value.trim();
@@ -189,7 +188,6 @@
                 showAuthNotification(data.msg, data.success);
             };
 
-            // ОБРАБОТЧИК: Вход
             loginBtn.onclick = async () => {
                 const user = document.getElementById('usernameInput').value.trim();
                 const pass = document.getElementById('passwordInput').value.trim();
@@ -205,11 +203,10 @@
                     myInfo = data.user;
                     document.getElementById('greetingName').textContent = myInfo.name;
                     document.getElementById('profileTrigger').textContent = myInfo.avatar;
-                    document.getElementById('authScreen').style.display = 'none'; // Убираем экран входа
+                    document.getElementById('authScreen').style.display = 'none';
                     
-                    // Загружаем список людей и переписку
                     await loadUsersList();
-                    setInterval(refreshChatData, 3000); // Авто-обновление чата каждые 3 секунды
+                    setInterval(refreshChatData, 3000);
                 } else {
                     showAuthNotification(data.msg, false);
                 }
