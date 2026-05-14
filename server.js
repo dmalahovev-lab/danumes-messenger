@@ -4,14 +4,12 @@ const fs = require('fs');
 
 const app = express();
 
-// Обязательные настройки для чтения данных из полей ввода
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 const DB_PATH = path.join(__dirname, 'database.json');
 
-// Чтение и автоматическое создание базы данных JSON
 function readDB() {
     try {
         if (!fs.existsSync(DB_PATH)) {
@@ -28,7 +26,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи в файл базы данных:", e);
+        console.error("Ошибка записи:", e);
     }
 }
 
@@ -36,7 +34,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// МАРШРУТ: Регистрация
 app.post('/api/register', (req, res) => {
     const db = readDB();
     const username = (req.body.user || '').trim();
@@ -56,7 +53,6 @@ app.post('/api/register', (req, res) => {
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// МАРШРУТ: Вход
 app.post('/api/login', (req, res) => {
     const db = readDB();
     const username = (req.body.user || '').trim();
@@ -73,7 +69,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// МАРШРУТ: Получить всех зарегистрированных пользователей мессенджера
 app.get('/api/users', (req, res) => {
     const db = readDB();
     const list = Object.keys(db.users).map(username => ({
@@ -84,13 +79,11 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: Получить всю историю переписки
 app.get('/api/messages', (req, res) => {
     const db = readDB();
     res.json(db.messages);
 });
 
-// МАРШРУТ: Отправить сообщение в базу данных
 app.post('/api/messages/send', (req, res) => {
     const db = readDB();
     const newMsg = {
@@ -104,7 +97,6 @@ app.post('/api/messages/send', (req, res) => {
     res.json({ success: true, messages: db.messages });
 });
 
-// МАРШРУТ: Удалить сообщение из базы данных по ID
 app.post('/api/messages/delete', (req, res) => {
     const db = readDB();
     db.messages = db.messages.filter(msg => msg.id !== req.body.msgId);
@@ -113,6 +105,7 @@ app.post('/api/messages/delete', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server = app.listen(PORT, '0.0.0.0', () => {
+// ИСПРАВЛЕНО: Убрана ошибочная глобальная переменная, сервер теперь запускается стабильно
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
