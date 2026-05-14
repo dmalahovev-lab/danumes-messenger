@@ -7,31 +7,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// Буфер обмена данными между активными вкладками
-let globalState = {
-    users: [],
-    messages: []
+// База данных в оперативной памяти сервера для синхронизации пользователей онлайн
+let memoryDB = {
+    users: {}
 };
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Синхронизация локальной базы с сервером
-app.post('/api/sync', (req, res) => {
-    if (req.body.users) {
-        req.body.users.forEach(u => {
-            if (!globalState.users.some(existing => existing.name === u.name)) {
-                globalState.users.push(u);
-            }
-        });
-    }
-    if (req.body.messages) {
-        globalState.messages = req.body.messages;
-    }
-    res.json(globalState);
-});
-
+// МАРШРУТ: Регистрация (Оригинальная рабочая логика)
 app.post('/api/register', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -40,27 +25,24 @@ app.post('/api/register', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    if (globalState.users.some(u => u.name === username)) {
+    if (memoryDB.users[username]) {
         return res.json({ success: false, msg: 'Пользователь уже существует' });
     }
 
-    const newUser = { name: username, password: password, avatar: "🤖", status: "Доступен" };
-    globalState.users.push(newUser);
-
-    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"', newUser });
+    memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
+// МАРШРУТ: Вход (Оригинальная рабочая логика)
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
 
-    // Авто-восстановление аккаунта в памяти сервера, если он есть у клиента локально
-    let user = globalState.users.find(u => u.name === username);
-    if (!user) {
-        user = { name: username, password: password, avatar: "🤖", status: "Доступен" };
-        globalState.users.push(user);
+    if (!memoryDB.users[username]) {
+        memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     }
 
+    const user = memoryDB.users[username];
     if (user.password !== password) {
         return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
     }
@@ -71,31 +53,17 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+// МАРШРУТ: Получить список всех пользователей
 app.get('/api/users', (req, res) => {
-    res.json(globalState.users);
-});
-
-app.get('/api/messages', (req, res) => {
-    res.json(globalState.messages);
-});
-
-app.post('/api/messages/send', (req, res) => {
-    const newMsg = {
-        id: Date.now().toString(),
-        from: req.body.from,
-        to: req.body.to,
-        text: req.body.text
-    };
-    globalState.messages.push(newMsg);
-    res.json({ success: true, messages: globalState.messages });
-});
-
-app.post('/api/messages/delete', (req, res) => {
-    globalState.messages = globalState.messages.filter(msg => msg.id !== req.body.msgId);
-    res.json({ success: true, messages: globalState.messages });
+    const list = Object.keys(memoryDB.users).map(username => ({
+        name: username,
+        avatar: memoryDB.users[username].avatar,
+        status: memoryDB.users[username].status
+    }));
+    res.json(list);
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}`);
 });
