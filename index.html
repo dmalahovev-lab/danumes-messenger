@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -90,6 +91,8 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
+        .typing-indicator { font-size: 13px; color: #10b981; padding: 4px 24px; display: none; font-style: italic; }
+
         .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
@@ -106,16 +109,12 @@
 </head>
 <body>
 
-    <!-- Экран авторизации -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
-            
             <div class="error-toast" id="errorToast"></div>
-
             <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
-            
             <div class="auth-buttons-row">
                 <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
                 <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
@@ -123,12 +122,10 @@
         </div>
     </div>
 
-    <!-- Настройки профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
             <button class="close-modal-btn" onclick="toggleProfileModal(false)">✕</button>
             <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
-            
             <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку (Emoji)</label>
             <div class="profile-avatar-select">
                 <span class="avatar-opt selected" onclick="selectAvatar(this, '🤖')">🤖</span>
@@ -136,23 +133,19 @@
                 <span class="avatar-opt" onclick="selectAvatar(this, '🐱')">🐱</span>
                 <span class="avatar-opt" onclick="selectAvatar(this, '🔥')">🔥</span>
             </div>
-
             <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
             <input type="text" class="profile-input" id="statusInput" placeholder="Что у вас нового?">
-
             <button class="profile-save-btn" onclick="handleSaveProfile()">Сохранить</button>
         </div>
     </div>
 
     <div class="app-container">
-        <!-- Навигация -->
         <nav class="nav-rail">
             <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
             <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
             <div class="nav-profile-trigger" id="profileTrigger" onclick="toggleProfileModal(true)">🤖</div>
         </nav>
 
-        <!-- Сайдбар -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">DanuMes</div>
@@ -162,21 +155,19 @@
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title">Все пользователи</div>
+                <div class="list-section-title">Мои друзья</div>
                 <div id="friendsList"></div>
                 <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
                 <div id="globalList"></div>
             </div>
         </aside>
 
-        <!-- Главный экран -->
         <div class="home-screen" id="homeScreen">
             <div style="font-size: 50px;">💬</div>
             <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
             <p>Вы успешно зашли в сеть. Откройте чат слева, чтобы продолжить.</p>
         </div>
 
-        <!-- Окно чата -->
         <main class="chat-window hidden" id="chatWindow">
             <div class="chat-header">
                 <div class="avatar" id="activeAvatar">🤖</div>
@@ -185,47 +176,93 @@
                     <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
                 </div>
             </div>
-            
             <div class="messages-area" id="messagesArea"></div>
-
+            <div class="typing-indicator" id="typingIndicator">печатает...</div>
             <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+                <input type="text" class="message-input" id="messageInput" oninput="handleTyping()" placeholder="Напишите сообщение...">
                 <button class="send-btn" onclick="sendMessage()">▶</button>
             </div>
         </main>
     </div>
 
     <script>
+        let socket;
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
         let selectedAvatarSymbol = "🤖";
+        let typingTimeout = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            // Запуск таймера ежесекундного обновления списков и сообщений (замена сокетов)
-            setInterval(syncData, 1500);
-            
+            socket = io();
+
+            socket.on('auth_success', (data) => {
+                myInfo = data;
+                document.getElementById('greetingName').textContent = data.name;
+                document.getElementById('profileTrigger').textContent = data.avatar;
+                document.getElementById('authScreen').style.display = 'none';
+                
+                // Передаем бэкенду имя авторизованного пользователя
+                socket.emit('set_online', data.name);
+            });
+
+            socket.on('init_self', (data) => {
+                myInfo = data;
+                document.getElementById('profileTrigger').textContent = data.avatar;
+            });
+
+            socket.on('update_users_list', (users) => {
+                globalUsers = users.filter(u => u.name !== myInfo.name);
+                renderLists(document.getElementById('searchInput').value);
+            });
+
+            socket.on('load_history', (history) => {
+                const messagesArea = document.getElementById('messagesArea');
+                messagesArea.innerHTML = "";
+                if (!activeChatName) return;
+
+                const currentChatHistory = history.filter(msg => 
+                    (msg.from === myInfo.name && msg.to === activeChatName) || 
+                    (msg.from === activeChatName && msg.to === myInfo.name)
+                );
+
+                currentChatHistory.forEach((msg) => {
+                    const wrapper = document.createElement('div');
+                    const isMe = msg.from === myInfo.name;
+                    wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                    wrapper.innerHTML = `
+                        <div class="message-bubble">
+                            ${msg.text}
+                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
+                        </div>
+                    `;
+                    messagesArea.appendChild(wrapper);
+                });
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            });
+
+            socket.on('receive_direct_message', (msg) => {
+                localFriends.add(msg.from);
+                renderLists(document.getElementById('searchInput').value);
+            });
+
+            socket.on('user_typing', (data) => {
+                if (activeChatName === data.from) {
+                    document.getElementById('typingIndicator').style.display = 'block';
+                }
+            });
+
+            socket.on('user_typing_stop', (data) => {
+                if (activeChatName === data.from) {
+                    document.getElementById('typingIndicator').style.display = 'none';
+                }
+            });
+
             document.getElementById('messageInput').onkeypress = (e) => {
                 if (e.key === 'Enter') sendMessage();
             };
         });
-
-        async function syncData() {
-            if (!myInfo.name) return;
-            try {
-                // Обновляем список пользователей
-                const resUsers = await fetch('/api/users');
-                const users = await resUsers.json();
-                globalUsers = users.filter(u => u.name !== myInfo.name);
-                renderLists(document.getElementById('searchInput').value);
-
-                // Обновляем сообщения
-                const resMsgs = await fetch('/api/messages');
-                const history = await resMsgs.json();
-                renderMessages(history);
-            } catch(e) {}
-        }
 
         function showAuthNotification(msg, isSuccess = false) {
             const toast = document.getElementById('errorToast');
@@ -242,198 +279,103 @@
             }
         }
 
-        async function handleLoginClick() {
+        // ОТПРАВКА НА ИСПРАВЛЕННЫЙ HTTP API
+        function handleLoginClick() {
             const user = document.getElementById('usernameInput').value.trim();
             const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
 
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user, pass })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    myInfo = data;
-                    document.getElementById('greetingName').textContent = data.name;
-                    document.getElementById('profileTrigger').textContent = data.avatar;
-                    document.getElementById('authScreen').style.display = 'none';
-                    syncData();
-                } else {
-                    showAuthNotification(data.error);
-                }
-            } catch(e) {
-                showAuthNotification("Ошибка подключения к серверу");
-            }
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, pass })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) showAuthNotification(data.error, false);
+                if (data.success) socket.emit('auth_success', data.user);
+            })
+            .catch(() => showAuthNotification("Ошибка связи с сервером", false));
         }
 
-        async function handleRegisterClick() {
+        function handleRegisterClick() {
             const user = document.getElementById('usernameInput').value.trim();
             const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля");
 
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user, pass })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showAuthNotification(data.success, true);
-                } else {
-                    showAuthNotification(data.error);
-                }
-            } catch(e) {
-                showAuthNotification("Ошибка сервера");
-            }
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, pass })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) showAuthNotification(data.error, false);
+                if (data.success) showAuthNotification(data.message, true);
+            })
+            .catch(() => showAuthNotification("Ошибка связи с сервером", false));
         }
 
-        function handleSearch(val) {
-            renderLists(val);
-        }
+        function handleSearch(val) { renderLists(val); }
 
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
+            const globalList = document.getElementById('globalList');
+            const globalTitle = document.getElementById('globalTitle');
+
             friendsList.innerHTML = "";
+            globalList.innerHTML = "";
+            let hasGlobal = false;
 
             globalUsers.forEach(user => {
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
                 if (!isMatch) return;
 
-                const item = document.createElement('div');
-                item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                item.onclick = () => openChat(user.name);
-                item.innerHTML = `
-                    <div class="avatar">${user.avatar}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${user.name}</div>
-                        <div class="chat-status-text">${user.status}</div>
-                    </div>
-                `;
-                friendsList.appendChild(item);
+                if (localFriends.has(user.name)) {
+                    const item = document.createElement('div');
+                    item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
+                    item.onclick = () => openChat(user.name);
+                    item.innerHTML = `
+                        <div class="avatar">${user.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${user.name}</div>
+                            <div class="chat-status-text">${user.status}</div>
+                        </div>
+                    `;
+                    friendsList.appendChild(item);
+                } else {
+                    hasGlobal = true;
+                    const item = document.createElement('div');
+                    item.className = "chat-item";
+                    item.style.cursor = "default";
+                    item.innerHTML = `
+                        <div class="avatar">${user.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${user.name}</div>
+                            <div class="chat-status-text">${user.status}</div>
+                        </div>
+                        <div class="search-actions">
+                            <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
+                            <button class="action-btn" onclick="writeToUser('${user.name}')">Написать</button>
+                        </div>
+                    `;
+                    globalList.appendChild(item);
+                }
             });
+
+            if (filter.trim() !== "" && hasGlobal) globalTitle.classList.remove('hidden');
+            else globalTitle.classList.add('hidden');
         }
+
+        window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
+        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
 
         function openChat(name) {
             activeChatName = name;
+            localFriends.add(name);
             
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
             
-            const userData = globalUsers.find(u => u.name === name);
-            document.getElementById('activeChatName').textContent = name;
-            document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
-            document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
-            
-            syncData();
-        }
-
-        function renderMessages(history) {
-            const messagesArea = document.getElementById('messagesArea');
-            messagesArea.innerHTML = "";
-            if (!activeChatName) return;
-
-            const currentChatHistory = history.filter(msg => 
-                (msg.from === myInfo.name && msg.to === activeChatName) || 
-                (msg.from === activeChatName && msg.to === myInfo.name)
-            );
-
-            currentChatHistory.forEach((msg) => {
-                const wrapper = document.createElement('div');
-                const isMe = msg.from === myInfo.name;
-                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                wrapper.innerHTML = `
-                    <div class="message-bubble">
-                        ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text || !activeChatName) return;
-
-            try {
-                const res = await fetch('/api/messages/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
-                });
-                if (res.ok) {
-                    input.value = "";
-                    const history = await res.json();
-                    renderMessages(history);
-                }
-            } catch(e) {}
-        }
-
-        async function deleteMessage(msgId) {
-            try {
-                const res = await fetch('/api/messages/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ msgId })
-                });
-                if (res.ok) {
-                    const history = await res.json();
-                    renderMessages(history);
-                }
-            } catch(e) {}
-        }
-
-        function toggleProfileModal(show) {
-            const modal = document.getElementById('profileModal');
-            if (show) {
-                modal.classList.remove('hidden');
-                document.getElementById('statusInput').value = myInfo.status;
-            } else {
-                modal.classList.add('hidden');
-            }
-        }
-
-        window.selectAvatar = function(element, emo) {
-            document.querySelectorAll('.avatar-opt').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-            selectedAvatarSymbol = emo;
-        };
-
-        async function handleSaveProfile() {
-            const statusVal = document.getElementById('statusInput').value.trim() || "Доступен";
-            try {
-                const res = await fetch('/api/profile/update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: myInfo.name, status: statusVal, avatar: selectedAvatarSymbol })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    myInfo = data;
-                    document.getElementById('profileTrigger').textContent = data.avatar;
-                    toggleProfileModal(false);
-                    syncData();
-                }
-            } catch(e) {}
-        }
-
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
-    </script>
-</body>
-</html>
+            const userData = globalUsers.find(u
