@@ -8,21 +8,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// База данных в папке /tmp с полными правами записи для Render
 const DB_PATH = path.join('/tmp', 'database.json');
 
 function readDB() {
     try {
         if (!fs.existsSync(DB_PATH)) {
-            fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, messages: [], groups: {} }), 'utf8');
+            fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, messages: [] }), 'utf8');
         }
         const data = fs.readFileSync(DB_PATH, 'utf8');
-        const json = JSON.parse(data);
-        // Защита: гарантируем наличие объекта групп в базе
-        if (!json.groups) json.groups = {};
-        return json;
+        return JSON.parse(data);
     } catch (e) {
-        return { users: {}, messages: [], groups: {} };
+        return { users: {}, messages: [] };
     }
 }
 
@@ -30,7 +26,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи:", e);
+        console.error("Ошибка записи базы данных в /tmp:", e);
     }
 }
 
@@ -38,7 +34,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// СТАБИЛЬНАЯ РЕГИСТРАЦИЯ
 app.post('/api/register', (req, res) => {
     try {
         const db = readDB();
@@ -62,7 +57,6 @@ app.post('/api/register', (req, res) => {
     }
 });
 
-// СТАБИЛЬНЫЙ ВХОД
 app.post('/api/login', (req, res) => {
     try {
         const db = readDB();
@@ -104,8 +98,7 @@ app.post('/api/messages/send', (req, res) => {
         id: Date.now().toString(),
         from: req.body.from,
         to: req.body.to,
-        text: req.body.text,
-        isGroup: req.body.isGroup || false
+        text: req.body.text
     };
     db.messages.push(newMsg);
     writeDB(db);
@@ -117,25 +110,6 @@ app.post('/api/messages/delete', (req, res) => {
     db.messages = db.messages.filter(msg => msg.id !== req.body.msgId);
     writeDB(db);
     res.json({ success: true, messages: db.messages });
-});
-
-// НОВОЕ: Создать группу
-app.post('/api/groups/create', (req, res) => {
-    const db = readDB();
-    const groupName = (req.body.name || '').trim();
-    
-    if(!groupName) return res.json({ success: false, msg: 'Введите имя группы' });
-    if(db.groups[groupName]) return res.json({ success: false, msg: 'Группа с таким именем уже есть' });
-
-    db.groups[groupName] = { creator: req.body.creator };
-    writeDB(db);
-    res.json({ success: true, msg: 'Группа создана!' });
-});
-
-// НОВОЕ: Получить список групп
-app.get('/api/groups', (req, res) => {
-    const db = readDB();
-    res.json(Object.keys(db.groups));
 });
 
 const PORT = process.env.PORT || 3000;
