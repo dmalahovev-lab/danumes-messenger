@@ -18,7 +18,7 @@ if (fs.existsSync(DB_FILE)) {
         if (!db.users) db.users = {};
         if (!db.messages) db.messages = {};
     } catch (e) {
-        console.error("Ошибка чтения базы, создаем чистую...");
+        console.error("Ошибка чтения БД, создаем чистую...");
     }
 }
 
@@ -26,16 +26,18 @@ function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
 
-app.use(express.static(path.join(__dirname)));
-
+// ИСПРАВЛЕНИЕ: Жестко прописываем отдачу index.html при главном запросе
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Отдача остальных статических файлов (скрипты, звуки)
+app.use(express.static(__dirname));
+
 let activeConnections = {}; // socket.id -> username
 
 io.on('connection', (socket) => {
-
+    
     // 1. Регистрация нового аккаунта
     socket.on('register_account', (data) => {
         const username = data.username.trim();
@@ -73,7 +75,7 @@ io.on('connection', (socket) => {
             avatar: db.users[username].avatar,
             status: db.users[username].status
         });
-
+        
         sendUsersList();
     });
 
@@ -84,7 +86,7 @@ io.on('connection', (socket) => {
             db.users[username].status = data.status;
             db.users[username].avatar = data.avatar;
             saveDB();
-
+            
             socket.emit('init_self', {
                 name: username,
                 avatar: db.users[username].avatar,
@@ -115,7 +117,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 6. Отправка сообщения
+    // 6. Отправка сообщений
     socket.on('send_direct_message', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -124,6 +126,7 @@ io.on('connection', (socket) => {
         if (!db.messages[roomKey]) db.messages[roomKey] = [];
 
         const messagePayload = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
             sender: username,
             text: data.text,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -132,13 +135,10 @@ io.on('connection', (socket) => {
         db.messages[roomKey].push(messagePayload);
         saveDB();
 
-        // Отправка получателю (если он онлайн)
         const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
         if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_direct_message', { from: username, text: data.text });
+            io.to(targetSocketId).emit('receive_direct_message', messagePayload);
         }
-
-        // Подтверждение отправителю
         socket.emit('message_sent_confirm', messagePayload);
     });
 
@@ -148,12 +148,12 @@ io.on('connection', (socket) => {
         if (!username) return;
 
         const roomKey = [username, data.toUser].sort().join('_');
-        if (db.messages[roomKey] && db.messages[roomKey][data.index]) {
-            db.messages[roomKey].splice(data.index, 1);
+        if (db.messages[roomKey]) {
+            db.messages[roomKey] = db.messages[roomKey].filter(msg => msg.id !== data.msgId);
             saveDB();
 
             socket.emit('message_deleted_sync', { targetUser: data.toUser, history: db.messages[roomKey] });
-
+            
             const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
             if (targetSocketId) {
                 io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, history: db.messages[roomKey] });
@@ -165,17 +165,17 @@ io.on('connection', (socket) => {
         delete activeConnections[socket.id];
         sendUsersList();
     });
-
-    function sendUsersList() {
-        const list = Object.keys(db.users).map(name => ({
-            name: name,
-            avatar: db.users[name].avatar,
-            status: db.users[name].status,
-            isOnline: Object.values(activeConnections).includes(name)
-        }));
-        io.emit('update_users_list', list);
-    }
 });
+
+function sendUsersList() {
+    const list = Object.keys(db.users).map(name => ({
+        name: name,
+        avatar: db.users[name].avatar,
+        status: db.users[name].status,
+        isOnline: Object.values(activeConnections).includes(name)
+    }));
+    io.emit('update_users_list', list);
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
