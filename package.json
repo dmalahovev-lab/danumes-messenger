@@ -1,7 +1,7 @@
 {
-  "name": "danumes",
+  "name": "danumes-messenger",
   "version": "1.0.0",
-  "description": "DanuMes Messenger Pro",
+  "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
