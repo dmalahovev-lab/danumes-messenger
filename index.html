@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
     
-    <!-- ИСПРАВЛЕНИЕ: Подключаем сокеты через собственный сервер без внешних сайтов -->
+    <!-- Подключаем клиентский скрипт сокетов напрямую со своего сервера -->
     <script src="/socket.io/socket.io.js"></script>
     
-    <!-- ИСПРАВЛЕНИЕ: Отключаем блокируемый скрипт иконок и переходим на встроенный текстовый режим -->
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -37,7 +36,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Экран входа */
+        /* Авторизация */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); position: relative; }
         .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 10px 0; outline: none; font-size: 16px; text-align: center;}
@@ -47,13 +46,12 @@
         .auth-btn.login { background: #6366f1; }
         .auth-btn.register { background: #10b981; }
 
-        /* Плашка ошибки/успеха */
         .error-toast { display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; font-weight: 500; text-align: center; }
 
-        /* Главный интерфейс */
+        /* Интерфейс приложения */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
-        .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+        .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
         .nav-btn:hover, .nav-btn.active { background: var(--bg-active); color: var(--text-main); }
         .nav-btn.active { color: #6366f1; border: 1px solid var(--border-color); }
         
@@ -98,14 +96,13 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        /* Печатает... */
         .typing-indicator { font-size: 13px; color: #10b981; padding: 4px 24px; display: none; font-style: italic; }
 
         .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
 
-        /* Модалка профиля */
+        /* Настройки профиля */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
         .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
@@ -113,7 +110,7 @@
         .avatar-opt.selected { border-color: #6366f1; background: var(--bg-active); }
         .profile-input { width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; outline: none; font-size: 14px; margin-top: 6px; margin-bottom: 20px; }
         .profile-save-btn { width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: bold;}
+        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -135,7 +132,7 @@
         </div>
     </div>
 
-    <!-- Настройки профиля -->
+    <!-- Модалка профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
             <button class="close-modal-btn" id="closeProfileBtn">✕</button>
@@ -160,7 +157,7 @@
         <!-- Навигация -->
         <nav class="nav-rail">
             <button class="nav-btn active" id="navHome">ЧАТЫ</button>
-            <button class="nav-btn" id="themeToggle">ТЕМА</button>
+            <button class="nav-btn" id="themeToggle">ЦВЕТ</button>
             <div class="nav-profile-trigger" id="profileTrigger">🤖</div>
         </nav>
 
@@ -210,8 +207,11 @@
     </div>
 
     <script>
-        // Подключаемся напрямую к сокетам встроенного сервера
-        const socket = io();
+        // ЖЕСТКАЯ НАСТРОЙКА SOCKET.IO ДЛЯ ОБХОДА ПРОКСИ-ФИЛЬТРОВ RENDER
+        const socket = io({
+            transports: ['websocket'],
+            upgrade: false
+        });
         
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
@@ -241,7 +241,6 @@
             }
         }
 
-        // КНОПКА: Войти
         loginBtn.onclick = () => {
             errorToast.style.display = 'none';
             const user = usernameInput.value.trim();
@@ -250,7 +249,6 @@
             socket.emit('auth_login', { user, pass });
         };
 
-        // КНОПКА: Регистрация
         registerBtn.onclick = () => {
             errorToast.style.display = 'none';
             const user = usernameInput.value.trim();
@@ -396,62 +394,4 @@
         const profileTrigger = document.getElementById('profileTrigger');
         const statusInput = document.getElementById('statusInput');
 
-        profileTrigger.onclick = () => profileModal.classList.remove('hidden');
-        document.getElementById('closeProfileBtn').onclick = () => profileModal.classList.add('hidden');
-        
-        window.selectAvatar = function(element, emo) {
-            document.querySelectorAll('.avatar-opt').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-            selectedAvatarSymbol = emo;
-        };
-
-        document.getElementById('saveProfileBtn').onclick = () => {
-            socket.emit('update_profile', {
-                status: statusInput.value.trim() || "Доступен",
-                avatar: selectedAvatarSymbol
-            });
-            profileModal.classList.add('hidden');
-        };
-
-        document.getElementById('messageInput').oninput = () => {
-            if(!activeChatName) return;
-            socket.emit('typing_start', { toUser: activeChatName });
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                socket.emit('typing_stop', { toUser: activeChatName });
-            }, 2000);
-        };
-
-        socket.on('user_typing', (data) => {
-            if (activeChatName === data.from) {
-                document.getElementById('typingIndicator').style.display = 'block';
-            }
-        });
-
-        socket.on('user_typing_stop', (data) => {
-            if (activeChatName === data.from) {
-                document.getElementById('typingIndicator').style.display = 'none';
-            }
-        });
-
-        document.getElementById('navHome').onclick = function() {
-            activeChatName = null;
-            this.classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists();
-        };
-
-        document.getElementById('searchInput').oninput = (e) => renderLists(e.target.value);
-        document.getElementById('sendBtn').onclick = sendMessage;
-        document.getElementById('messageInput').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
-
-        document.getElementById('themeToggle').onclick = function() {
-            const html = document.documentElement;
-            const target = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', target);
-        };
-const socket = io();
-
-</body>
-</html>
+        profileTrigger.onclick =
