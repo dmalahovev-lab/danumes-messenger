@@ -461,15 +461,16 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Фикс пробела во всех текстовых инпутах
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space') {
-                const activeElem = document.activeElement;
-                if (activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA')) {
-                    e.stopPropagation();
-                }
-            }
-        });
+// ИСПРАВЛЕНИЕ БАГА: Пробел теперь работает во всех полях ввода без блокировки текста
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space') {
+        const activeElem = document.activeElement;
+        // Если курсор стоит в поле ввода текста, разрешаем стандартное поведение браузера (ввод пробела)
+        if (activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA')) {
+            return; 
+        }
+    }
+});
     </script>
 </head>
 <body>
