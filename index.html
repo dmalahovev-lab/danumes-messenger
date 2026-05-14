@@ -32,6 +32,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
+        /* Экран входа */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); position: relative; }
         .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 10px 0; outline: none; font-size: 16px; text-align: center;}
@@ -62,7 +63,6 @@
         .search-box { position: relative; display: flex; align-items: center; }
         .search-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px 16px 10px 40px; border-radius: 12px; color: var(--text-main); outline: none; }
         .search-icon { position: absolute; left: 14px; color: var(--text-muted); font-style: normal; }
-        
         .chats-list { flex: 1; overflow-y: auto; padding: 12px; }
         .list-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 8px 12px; text-transform: uppercase; }
         
@@ -83,7 +83,7 @@
         .hidden { display: none !important; }
         .chat-header { padding: 18px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; background: var(--bg-sidebar); }
         
-        /* ИСПРАВЛЕННЫЙ ДИЗАЙН: Четкая высота для скролла сообщений */
+        /* Исправление уродливой верстки сообщений */
         .messages-area { 
             flex: 1; 
             overflow-y: auto; 
@@ -106,7 +106,7 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        /* ИСПРАВЛЕННЫЙ ДИЗАЙН: Красивая bento панель ввода без уродливых белых рамок */
+        /* Исправление уродливой панели ввода */
         .input-area { 
             padding: 20px 24px; 
             border-top: 1px solid var(--border-color); 
@@ -159,9 +159,10 @@
         let activeChatName = null;
         let globalUsers = [];
         
-        // ИСПРАВЛЕНИЕ БАГА: Подгружаем кэшированные списки из памяти ПК, чтобы они не обнулялись
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Хранилища чатов и групп подгружаются напрямую из памяти ПК (localStorage)
         let localFriends = new Set(JSON.parse(localStorage.getItem('danumes_friends') || '[]'));
         let createdGroups = new Set(JSON.parse(localStorage.getItem('danumes_groups') || '[]'));
+        let localMessages = JSON.parse(localStorage.getItem('danumes_messages_db') || '[]');
 
         async function checkAutoLogin() {
             const savedUser = localStorage.getItem('danumes_user');
@@ -170,7 +171,6 @@
                 await performLogin(savedUser, savedPass, true);
             }
         }
-        
         setTimeout(checkAutoLogin, 100);
 
         function showAuthNotification(msg, isSuccess = false) {
@@ -228,22 +228,15 @@
                 document.getElementById('authScreen').style.display = 'none';
                 
                 await loadUsersList();
-                
-                // ИСПРАВЛЕНИЕ БАГА: Если до перезагрузки был открыт чат, восстанавливаем его
-                const lastChat = localStorage.getItem('danumes_active_chat');
-                if(lastChat) {
-                    const isGroup = createdGroups.has(lastChat);
-                    openChat(lastChat, isGroup);
-                }
-
-                setInterval(refreshChatData, 3000);
+                setInterval(refreshChatData, 2000);
             } else {
                 if(!isAuto) showAuthNotification(data.msg, false);
             }
         }
 
         function logOut() {
-            localStorage.clear(); // Полная очистка при выходе
+            localStorage.removeItem('danumes_user');
+            localStorage.removeItem('danumes_pass');
             window.location.reload();
         }
 
@@ -257,7 +250,7 @@
         async function refreshChatData() {
             await loadUsersList();
             if (activeChatName) {
-                await loadChatHistory();
+                renderMessages();
             }
         }
 
@@ -342,26 +335,24 @@
 
         window.addFriend = function(name) { 
             localFriends.add(name); 
-            localStorage.setItem('danumes_friends', JSON.stringify(Array.from(localFriends))); // Сохраняем друга
+            localStorage.setItem('danumes_friends', JSON.stringify([...localFriends]));
             renderLists(document.getElementById('searchInput').value); 
         };
         
         window.writeToUser = function(name) { 
             localFriends.add(name); 
-            localStorage.setItem('danumes_friends', JSON.stringify(Array.from(localFriends)));
+            localStorage.setItem('danumes_friends', JSON.stringify([...localFriends]));
             openChat(name, false); 
             document.getElementById('searchInput').value = ""; 
             renderLists(""); 
         };
 
-        async function openChat(name, isGroup = false) {
+        function openChat(name, isGroup = false) {
             activeChatName = name;
-            localStorage.setItem('danumes_active_chat', name); // Сохраняем вкладку активного чата
             
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
-            
             document.getElementById('activeChatName').textContent = name;
             
             if (isGroup) {
@@ -369,25 +360,23 @@
                 document.getElementById('activeChatStatus').textContent = "Группа участников";
             } else {
                 localFriends.add(name);
-                localStorage.setItem('danumes_friends', JSON.stringify(Array.from(localFriends)));
+                localStorage.setItem('danumes_friends', JSON.stringify([...localFriends]));
                 const userData = globalUsers.find(u => u.name === name);
                 document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
                 document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
             }
             
-            await loadChatHistory();
+            renderMessages();
             renderLists(document.getElementById('searchInput').value);
         }
 
-        async function loadChatHistory() {
-            const response = await fetch('/api/messages');
-            const history = await response.json();
-            
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Вывод сообщений из постоянного локального хранилища ПК
+        function renderMessages() {
             const messagesArea = document.getElementById('messagesArea');
-            if(!messagesArea) return;
+            if(!messagesArea || !activeChatName) return;
             messagesArea.innerHTML = "";
 
-            const currentChatHistory = history.filter(msg => 
+            const currentChatHistory = localMessages.filter(msg => 
                 (msg.from === myInfo.name && msg.to === activeChatName) || 
                 (msg.from === activeChatName && msg.to === myInfo.name)
             );
@@ -407,29 +396,32 @@
             messagesArea.scrollTop = messagesArea.scrollHeight;
         }
 
-        async function sendMessage() {
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Жесткое сохранение сообщений в память браузера ПК
+        function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text || !activeChatName) return;
 
-            await fetch('/api/messages/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
-            });
+            const newMsg = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                from: myInfo.name,
+                to: activeChatName,
+                text: text
+            };
+
+            localMessages.push(newMsg);
+            localStorage.setItem('danumes_messages_db', JSON.stringify(localMessages));
             
             input.value = "";
-            await loadChatHistory();
+            renderMessages();
         }
 
-        window.deleteMessage = async function(msgId) {
-            await fetch('/api/messages/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ msgId })
-            });
-            await loadChatHistory();
-        };
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Удаление из памяти ПК
+        function deleteMessage(msgId) {
+            localMessages = localMessages.filter(msg => msg.id !== msgId);
+            localStorage.setItem('danumes_messages_db', JSON.stringify(localMessages));
+            renderMessages();
+        }
 
         function openGroupModal() {
             const selector = document.getElementById('groupUsersSelector');
@@ -462,14 +454,13 @@
             if(!gName) return;
             
             createdGroups.add(gName);
-            localStorage.setItem('danumes_groups', JSON.stringify(Array.from(createdGroups))); // Сохраняем группу
+            localStorage.setItem('danumes_groups', JSON.stringify([...createdGroups]));
             closeGroupModal();
             renderLists(document.getElementById('searchInput').value);
         }
 
         function goHome() {
             activeChatName = null;
-            localStorage.removeItem('danumes_active_chat');
             document.getElementById('navHome').classList.add('active');
             document.getElementById('homeScreen').classList.remove('hidden');
             document.getElementById('chatWindow').classList.add('hidden');
@@ -482,7 +473,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // ИСПРАВЛЕНИЕ: Фикс пробела для корректной печати
+        // ИСПРАВЛЕНИЕ БАГА С ПРОБЕЛОМ: Разрешаем нажатие пробела во всех полях ввода без перехвата браузером
         document.addEventListener('keydown', function(e) {
             if (e.code === 'Space') {
                 const activeElem = document.activeElement;
@@ -507,51 +498,4 @@
             
             <div class="auth-buttons-row">
                 <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
-                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Всплывающая плашка создания группы -->
-    <div class="group-modal" id="groupModal">
-        <div class="group-card">
-            <button class="group-close-btn" onclick="closeGroupModal()">✕</button>
-            <h3>Создать новую группу</h3>
-            <input type="text" class="group-input" id="groupNameInput" placeholder="Название группы...">
-            
-            <label style="font-size: 12px; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px;">Добавить участников:</label>
-            <div class="group-users-selector" id="groupUsersSelector"></div>
-
-            <button class="group-submit-btn" onclick="submitCreateGroup()">Создать группу</button>
-        </div>
-    </div>
-
-    <div class="app-container">
-        <!-- Навигация -->
-        <nav class="nav-rail">
-            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
-            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
-            <button class="nav-btn" style="color: #ef4444;" onclick="logOut()">ВЫЙТИ</button>
-            <div class="nav-profile-trigger" id="profileTrigger" onclick="logOut()">🤖</div>
-        </nav>
-
-        <!-- Сайдбар -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-row">
-                    <div class="logo">DanuMes</div>
-                    <button class="add-group-btn" onclick="openGroupModal()">+</button>
-                </div>
-                <div class="search-box">
-                    <i class="search-icon" style="width:16px;height:16px;">🔍</i>
-                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
-                </div>
-            </div>
-            <div class="chats-list">
-                <div class="list-section-title" id="groupsSectionTitle" style="display: none;">Мои группы</div>
-                <div id="groupsList"></div>
-
-                <div class="list-section-title">Мои друзья</div>
-                <div id="friendsList"></div>
-                
-                
+                <button class="auth
