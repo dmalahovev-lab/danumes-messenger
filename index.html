@@ -54,7 +54,6 @@
         .sidebar { width: 360px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .sidebar-header { padding: 24px; display: flex; flex-direction: column; gap: 16px; border-bottom: 1px solid var(--border-color); }
         
-        /* Изменение для шапки сайдбара с кнопкой плюс */
         .logo-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .logo { font-size: 22px; font-weight: 800; background: linear-gradient(45deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .add-group-btn { background: var(--bg-active); border: 1px solid var(--border-color); color: var(--text-main); font-size: 18px; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
@@ -100,7 +99,6 @@
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
 
-        /* Всплывающее окно для создания групп */
         .group-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .group-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative; text-align: center;}
         .group-card h3 { margin-bottom: 14px; font-size: 18px; }
@@ -151,7 +149,6 @@
             <div class="sidebar-header">
                 <div class="logo-row">
                     <div class="logo">DanuMes</div>
-                    <!-- Добавлена кнопка плюса -->
                     <button class="add-group-btn" onclick="openGroupModal()">+</button>
                 </div>
                 <div class="search-box">
@@ -160,8 +157,13 @@
                 </div>
             </div>
             <div class="chats-list">
+                <!-- Блок для отображения Групп -->
+                <div class="list-section-title" id="groupsSectionTitle" style="display: none;">Мои группы</div>
+                <div id="groupsList"></div>
+
                 <div class="list-section-title">Мои друзья</div>
                 <div id="friendsList"></div>
+                
                 <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
                 <div id="globalList"></div>
             </div>
@@ -194,10 +196,12 @@
     </div>
 
     <script>
-        let myInfo = { name: "", status: "Доступen", avatar: "🤖" };
+        let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
+        // ИСПРАВЛЕНИЕ: Отдельное независимое хранилище для созданных групп
+        let createdGroups = new Set();
 
         document.addEventListener("DOMContentLoaded", () => {
             const loginBtn = document.getElementById('loginBtn');
@@ -282,10 +286,35 @@
             const friendsList = document.getElementById('friendsList');
             const globalList = document.getElementById('globalList');
             const globalTitle = document.getElementById('globalTitle');
+            const groupsList = document.getElementById('groupsList');
+            const groupsSectionTitle = document.getElementById('groupsSectionTitle');
 
             friendsList.innerHTML = "";
             globalList.innerHTML = "";
+            groupsList.innerHTML = "";
             let hasGlobal = false;
+
+            // ИСПРАВЛЕНИЕ: Самостоятельный чистый рендеринг групп в отдельный блок
+            if (createdGroups.size > 0) {
+                groupsSectionTitle.style.display = 'block';
+                createdGroups.forEach(gName => {
+                    if (gName.toLowerCase().includes(filter.toLowerCase())) {
+                        const item = document.createElement('div');
+                        item.className = `chat-item ${activeChatName === gName ? 'active' : ''}`;
+                        item.onclick = () => openChat(gName, true);
+                        item.innerHTML = `
+                            <div class="avatar">👥</div>
+                            <div class="chat-info">
+                                <div class="chat-name">${gName}</div>
+                                <div class="chat-status-text">Групповой чат</div>
+                            </div>
+                        `;
+                        groupsList.appendChild(item);
+                    }
+                });
+            } else {
+                groupsSectionTitle.style.display = 'none';
+            }
 
             globalUsers.forEach(user => {
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
@@ -294,7 +323,7 @@
                 if (localFriends.has(user.name)) {
                     const item = document.createElement('div');
                     item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                    item.onclick = () => openChat(user.name);
+                    item.onclick = () => openChat(user.name, false);
                     item.innerHTML = `
                         <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
@@ -328,22 +357,29 @@
         }
 
         window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
-        window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
+        window.writeToUser = function(name) { localFriends.add(name); openChat(name, false); document.getElementById('searchInput').value = ""; renderLists(""); };
 
-        async function openChat(name) {
+        async function openChat(name, isGroup = false) {
             activeChatName = name;
-            localFriends.add(name);
             
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
             
-            const userData = globalUsers.find(u => u.name === name);
             document.getElementById('activeChatName').textContent = name;
-            document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
-            document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+            
+            if (isGroup) {
+                document.getElementById('activeAvatar').textContent = "👥";
+                document.getElementById('activeChatStatus').textContent = "Участники сети";
+            } else {
+                localFriends.add(name);
+                const userData = globalUsers.find(u => u.name === name);
+                document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
+                document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+            }
             
             await loadChatHistory();
+            renderLists(document.getElementById('searchInput').value);
         }
 
         async function loadChatHistory() {
@@ -397,7 +433,6 @@
             await loadChatHistory();
         };
 
-        // Функции модального окна групп
         function openGroupModal() {
             document.getElementById('groupModal').style.display = 'flex';
         }
@@ -407,12 +442,12 @@
             document.getElementById('groupNameInput').value = '';
         }
 
+        // ИСПРАВЛЕНИЕ: Группа корректно добавляется в изолированное созданное хранилище и выводится на экран
         function submitCreateGroup() {
             const gName = document.getElementById('groupNameInput').value.trim();
             if(!gName) return;
             
-            // Добавляем созданную группу в список локальных чатов как виртуального собеседника Группу
-            localFriends.add("👥 " + gName);
+            createdGroups.add(gName);
             closeGroupModal();
             renderLists(document.getElementById('searchInput').value);
         }
