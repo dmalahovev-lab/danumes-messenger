@@ -548,5 +548,23 @@
             <p style="color: var(--text-muted); margin-top: 10px;">Вы успешно зашли в сеть. Нажмите на пользователя или группу слева, чтобы открыть чат.</p>
         </div>
 
-        <!-- Окно чата -->
-        <main class="chat
+        <!-- Окно чата с исправленной разметкой контента -->
+        <main class="chat-window hidden" id="chatWindow">
+            <div class="chat-header">
+                <div class="avatar" id="activeAvatar">🤖</div>
+                <div>
+                    <h4 id="activeChatName">Чат</h4>
+                    <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
+                </div>
+            </div>
+            
+            <!-- Сюда будут присылаться сообщения -->
+            <div class="messages-area" id="messagesArea"></div>
+
+            <!-- Bento-панель ввода сообщений, зафиксированная строго внизу -->
+            <div class="input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+                <button class="send-btn" onclick="sendMessage()">▶</button>
+            </div>
+        </main>
+
