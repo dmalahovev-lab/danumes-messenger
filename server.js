@@ -8,15 +8,21 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-const DB_FILE = path.join(__dirname, 'database.json');
+app.use(express.static(path.join(__dirname)));
 
-// Инициализация базы данных
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Файл базы данных на сервере
+const DB_FILE = path.join(__dirname, 'database.json');
 let db = { users: {}, messages: {} };
+
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     } catch (e) {
-        console.error("Ошибка чтения БД, сброс к пустой:", e);
+        console.error("Ошибка чтения базы данных, сброс к пустой:", e);
     }
 } else {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
@@ -26,22 +32,18 @@ function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
 
-app.use(express.static(path.join(__dirname)));
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 let activeConnections = {}; // socket.id -> username
 
 io.on('connection', (socket) => {
+    console.log(`Подключился клиент: ${socket.id}`);
 
-    // 1. Регистрация нового аккаунта
+    // 1. Регистрация аккаунта
     socket.on('register_account', (data) => {
         const username = data.username.trim();
         const password = data.password.trim();
 
         if (!username || !password) {
-            return socket.emit('auth_error', 'Заполните все поля!');
+            return socket.emit('auth_error', 'Заполните все поля поля!');
         }
         if (db.users[username]) {
             return socket.emit('auth_error', 'Пользователь с таким именем уже существует!');
@@ -49,10 +51,11 @@ io.on('connection', (socket) => {
 
         db.users[username] = {
             password: password,
-            avatar: "🤖",
-            status: "Доступен"
+            status: "Доступен",
+            avatar: "🤖"
         };
         saveDB();
+
         socket.emit('auth_success', 'Регистрация успешна! Теперь вы можете войти.');
     });
 
@@ -61,12 +64,16 @@ io.on('connection', (socket) => {
         const username = data.username.trim();
         const password = data.password.trim();
 
+        if (!username || !password) {
+            return socket.emit('auth_error', 'Заполните все поля!');
+        }
         if (!db.users[username] || db.users[username].password !== password) {
-            return socket.emit('auth_error', 'Недействительный Логин/Пароль');
+            return socket.emit('auth_error', 'Недействительный Логин/Пароль.');
         }
 
         activeConnections[socket.id] = username;
-        
+
+        // Отправляем личные данные пользователя
         socket.emit('init_self', {
             name: username,
             avatar: db.users[username].avatar,
@@ -103,7 +110,7 @@ io.on('connection', (socket) => {
         socket.emit('chat_history_response', { targetUser: targetUser, history: history });
     });
 
-    // 5. Статус "Печатает..."
+    // 5. Обработка статуса набора текста
     socket.on('typing_status', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -148,6 +155,7 @@ io.on('connection', (socket) => {
             saveDB();
 
             socket.emit('message_deleted_sync', { targetUser: data.toUser, history: db.messages[roomKey] });
+
             const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
             if (targetSocketId) {
                 io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, history: db.messages[roomKey] });
@@ -158,17 +166,19 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete activeConnections[socket.id];
         sendUsersList();
+        console.log(`Клиент отключился: ${socket.id}`);
     });
 
     function sendUsersList() {
-        const onlineList = Object.values(activeConnections);
-        const list = Object.keys(db.users).map(name => ({
-            name: name,
-            avatar: db.users[name].avatar,
-            status: db.users[name].status,
-            isOnline: onlineList.includes(name)
-        }));
-        io.emit('update_users_list', list);
+        const usersList = Object.keys(db.users).map(name => {
+            return {
+                name: name,
+                avatar: db.users[name].avatar,
+                status: db.users[name].status,
+                isOnline: Object.values(activeConnections).includes(name)
+            };
+        });
+        io.emit('update_users_list', usersList);
     }
 });
 
