@@ -28,7 +28,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи базы данных:", e);
+        console.error("Ошибка записи:", e);
     }
 }
 
@@ -37,28 +37,46 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/register', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const db = readDB();
+        const username = (req.body.user || '').trim();
+        const password = (req.body.pass || '').trim();
 
-    if (!username || !password) return res.json({ success: false, msg: 'Заполните все поля' });
-    if (db.users[username]) return res.json({ success: false, msg: 'Пользователь уже существует' });
+        if (!username || !password) {
+            return res.json({ success: false, msg: 'Заполните все поля' });
+        }
 
-    db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    writeDB(db);
-    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
+        if (db.users[username]) {
+            return res.json({ success: false, msg: 'Пользователь уже существует' });
+        }
+
+        db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+        writeDB(db);
+
+        return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
+    } catch (err) {
+        return res.json({ success: false, msg: 'Внутренняя ошибка регистрации' });
+    }
 });
 
 app.post('/api/login', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const db = readDB();
+        const username = (req.body.user || '').trim();
+        const password = (req.body.pass || '').trim();
 
-    const user = db.users[username];
-    if (!user || user.password !== password) {
-        return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+        const user = db.users[username];
+        if (!user || user.password !== password) {
+            return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+        }
+
+        return res.json({
+            success: true,
+            user: { name: username, avatar: user.avatar, status: user.status }
+        });
+    } catch (err) {
+        return res.json({ success: false, msg: 'Внутренняя ошибка авторизации' });
     }
-    return res.json({ success: true, user: { name: username, avatar: user.avatar, status: user.status } });
 });
 
 app.get('/api/users', (req, res) => {
@@ -66,38 +84,9 @@ app.get('/api/users', (req, res) => {
     const list = Object.keys(db.users).map(username => ({
         name: username,
         avatar: db.users[username].avatar,
-        status: db.users[username].status,
-        isGroup: false
+        status: db.users[username].status
     }));
     res.json(list);
-});
-
-// МАРШРУТ: Создать новую группу
-app.post('/api/groups/create', (req, res) => {
-    const db = readDB();
-    const groupName = (req.body.name || '').trim();
-    
-    if (!groupName) return res.json({ success: false, msg: 'Введите название группы' });
-    
-    const exists = db.groups.some(g => g.name.toLowerCase() === groupName.toLowerCase());
-    if (exists) return res.json({ success: false, msg: 'Группа с таким названием уже есть' });
-
-    const newGroup = {
-        id: 'group_' + Date.now(),
-        name: groupName,
-        avatar: "👥",
-        status: "Групповой чат"
-    };
-
-    db.groups.push(newGroup);
-    writeDB(db);
-    res.json({ success: true, msg: 'Группа успешно создана!', groups: db.groups });
-});
-
-// МАРШРУТ: Получить все группы
-app.get('/api/groups', (req, res) => {
-    const db = readDB();
-    res.json(db.groups || []);
 });
 
 app.get('/api/messages', (req, res) => {
@@ -110,9 +99,8 @@ app.post('/api/messages/send', (req, res) => {
     const newMsg = {
         id: Date.now().toString(),
         from: req.body.from,
-        to: req.body.to, // Сюда может приходить как имя юзера, так и id группы
-        text: req.body.text,
-        isGroup: req.body.isGroup || false
+        to: req.body.to,
+        text: req.body.text
     };
     db.messages.push(newMsg);
     writeDB(db);
@@ -124,6 +112,30 @@ app.post('/api/messages/delete', (req, res) => {
     db.messages = db.messages.filter(msg => msg.id !== req.body.msgId);
     writeDB(db);
     res.json({ success: true, messages: db.messages });
+});
+
+// МАРШРУТЫ ДЛЯ ГРУПП
+app.get('/api/groups', (req, res) => {
+    const db = readDB();
+    res.json(db.groups || []);
+});
+
+app.post('/api/groups/create', (req, res) => {
+    const db = readDB();
+    const groupName = (req.body.name || '').trim();
+    
+    if (!groupName) return res.json({ success: false, msg: 'Введите имя группы' });
+
+    const newGroup = {
+        id: 'group_' + Date.now(),
+        name: groupName,
+        avatar: "👥",
+        status: "Групповой чат"
+    };
+
+    db.groups.push(newGroup);
+    writeDB(db);
+    res.json({ success: true, groups: db.groups });
 });
 
 const PORT = process.env.PORT || 3000;
