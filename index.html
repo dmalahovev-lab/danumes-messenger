@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
-    <script src="/socket.io/socket.io.js"></script>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -50,7 +49,7 @@
         .nav-btn:hover, .nav-btn.active { background: var(--bg-active); color: var(--text-main); }
         .nav-btn.active { color: #6366f1; border: 1px solid var(--border-color); }
         
-        .nav-profile-trigger { margin-top: auto; font-size: 24px; cursor: pointer; background: var(--bg-active); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); }
+        .nav-profile-trigger { margin-top: auto; font-size: 24px; background: var(--bg-active); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); }
 
         .sidebar { width: 360px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .sidebar-header { padding: 24px; display: flex; flex-direction: column; gap: 16px; border-bottom: 1px solid var(--border-color); }
@@ -91,61 +90,39 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        .typing-indicator { font-size: 13px; color: #10b981; padding: 4px 24px; display: none; font-style: italic; }
-
         .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
-        .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
-        .avatar-opt { cursor: pointer; padding: 6px; border-radius: 10px; border: 1px solid transparent; }
-        .avatar-opt.selected { border-color: #6366f1; background: var(--bg-active); }
-        .profile-input { width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; outline: none; font-size: 14px; margin-top: 6px; margin-bottom: 20px; }
-        .profile-save-btn { width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        .close-modal-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: bold;}
     </style>
 </head>
 <body>
 
+    <!-- Экран авторизации -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
+            
             <div class="error-toast" id="errorToast"></div>
+
             <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
+            
             <div class="auth-buttons-row">
-                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
-                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
+                <button class="auth-btn login" id="loginBtn">Войти</button>
+                <button class="auth-btn register" id="registerBtn">Регистрация</button>
             </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay hidden" id="profileModal">
-        <div class="profile-card">
-            <button class="close-modal-btn" onclick="toggleProfileModal(false)">✕</button>
-            <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
-            <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку (Emoji)</label>
-            <div class="profile-avatar-select">
-                <span class="avatar-opt selected" onclick="selectAvatar(this, '🤖')">🤖</span>
-                <span class="avatar-opt" onclick="selectAvatar(this, '🥷')">🥷</span>
-                <span class="avatar-opt" onclick="selectAvatar(this, '🐱')">🐱</span>
-                <span class="avatar-opt" onclick="selectAvatar(this, '🔥')">🔥</span>
-            </div>
-            <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
-            <input type="text" class="profile-input" id="statusInput" placeholder="Что у вас нового?">
-            <button class="profile-save-btn" onclick="handleSaveProfile()">Сохранить</button>
         </div>
     </div>
 
     <div class="app-container">
+        <!-- Навигация -->
         <nav class="nav-rail">
             <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
             <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
-            <div class="nav-profile-trigger" id="profileTrigger" onclick="toggleProfileModal(true)">🤖</div>
+            <div class="nav-profile-trigger" id="profileTrigger">🤖</div>
         </nav>
 
+        <!-- Сайдбар -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">DanuMes</div>
@@ -162,12 +139,14 @@
             </div>
         </aside>
 
+        <!-- Главный экран -->
         <div class="home-screen" id="homeScreen">
             <div style="font-size: 50px;">💬</div>
             <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
             <p>Вы успешно зашли в сеть. Откройте чат слева, чтобы продолжить.</p>
         </div>
 
+        <!-- Окно чата -->
         <main class="chat-window hidden" id="chatWindow">
             <div class="chat-header">
                 <div class="avatar" id="activeAvatar">🤖</div>
@@ -176,93 +155,84 @@
                     <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
                 </div>
             </div>
+            
             <div class="messages-area" id="messagesArea"></div>
-            <div class="typing-indicator" id="typingIndicator">печатает...</div>
+
             <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" oninput="handleTyping()" placeholder="Напишите сообщение...">
+                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
                 <button class="send-btn" onclick="sendMessage()">▶</button>
             </div>
         </main>
     </div>
 
     <script>
-        let socket;
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
-        let selectedAvatarSymbol = "🤖";
-        let typingTimeout = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            socket = io();
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
 
-            socket.on('auth_success', (data) => {
-                myInfo = data;
-                document.getElementById('greetingName').textContent = data.name;
-                document.getElementById('profileTrigger').textContent = data.avatar;
-                document.getElementById('authScreen').style.display = 'none';
+            // ОБРАБОТЧИК: Регистрация
+            registerBtn.onclick = async () => {
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
                 
-                // Передаем бэкенду имя авторизованного пользователя
-                socket.emit('set_online', data.name);
-            });
-
-            socket.on('init_self', (data) => {
-                myInfo = data;
-                document.getElementById('profileTrigger').textContent = data.avatar;
-            });
-
-            socket.on('update_users_list', (users) => {
-                globalUsers = users.filter(u => u.name !== myInfo.name);
-                renderLists(document.getElementById('searchInput').value);
-            });
-
-            socket.on('load_history', (history) => {
-                const messagesArea = document.getElementById('messagesArea');
-                messagesArea.innerHTML = "";
-                if (!activeChatName) return;
-
-                const currentChatHistory = history.filter(msg => 
-                    (msg.from === myInfo.name && msg.to === activeChatName) || 
-                    (msg.from === activeChatName && msg.to === myInfo.name)
-                );
-
-                currentChatHistory.forEach((msg) => {
-                    const wrapper = document.createElement('div');
-                    const isMe = msg.from === myInfo.name;
-                    wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                    wrapper.innerHTML = `
-                        <div class="message-bubble">
-                            ${msg.text}
-                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                        </div>
-                    `;
-                    messagesArea.appendChild(wrapper);
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
                 });
-                messagesArea.scrollTop = messagesArea.scrollHeight;
-            });
+                const data = await response.json();
+                showAuthNotification(data.msg, data.success);
+            };
 
-            socket.on('receive_direct_message', (msg) => {
-                localFriends.add(msg.from);
-                renderLists(document.getElementById('searchInput').value);
-            });
-
-            socket.on('user_typing', (data) => {
-                if (activeChatName === data.from) {
-                    document.getElementById('typingIndicator').style.display = 'block';
+            // ОБРАБОТЧИК: Вход
+            loginBtn.onclick = async () => {
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
+                
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    myInfo = data.user;
+                    document.getElementById('greetingName').textContent = myInfo.name;
+                    document.getElementById('profileTrigger').textContent = myInfo.avatar;
+                    document.getElementById('authScreen').style.display = 'none'; // Убираем экран входа
+                    
+                    // Загружаем список людей и переписку
+                    await loadUsersList();
+                    setInterval(refreshChatData, 3000); // Авто-обновление чата каждые 3 секунды
+                } else {
+                    showAuthNotification(data.msg, false);
                 }
-            });
-
-            socket.on('user_typing_stop', (data) => {
-                if (activeChatName === data.from) {
-                    document.getElementById('typingIndicator').style.display = 'none';
-                }
-            });
+            };
 
             document.getElementById('messageInput').onkeypress = (e) => {
                 if (e.key === 'Enter') sendMessage();
             };
         });
+
+        async function loadUsersList() {
+            const response = await fetch('/api/users');
+            const users = await response.json();
+            globalUsers = users.filter(u => u.name !== myInfo.name);
+            renderLists(document.getElementById('searchInput').value);
+        }
+
+        async function refreshChatData() {
+            await loadUsersList();
+            if (activeChatName) {
+                await loadChatHistory();
+            }
+        }
 
         function showAuthNotification(msg, isSuccess = false) {
             const toast = document.getElementById('errorToast');
@@ -279,44 +249,9 @@
             }
         }
 
-        // ОТПРАВКА НА ИСПРАВЛЕННЫЙ HTTP API
-        function handleLoginClick() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            if(!user || !pass) return showAuthNotification("Заполните все поля");
-
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) showAuthNotification(data.error, false);
-                if (data.success) socket.emit('auth_success', data.user);
-            })
-            .catch(() => showAuthNotification("Ошибка связи с сервером", false));
+        function handleSearch(val) {
+            renderLists(val);
         }
-
-        function handleRegisterClick() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            if(!user || !pass) return showAuthNotification("Заполните все поля");
-
-            fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) showAuthNotification(data.error, false);
-                if (data.success) showAuthNotification(data.message, true);
-            })
-            .catch(() => showAuthNotification("Ошибка связи с сервером", false));
-        }
-
-        function handleSearch(val) { renderLists(val); }
 
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
@@ -370,7 +305,7 @@
         window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
         window.writeToUser = function(name) { localFriends.add(name); openChat(name); document.getElementById('searchInput').value = ""; renderLists(""); };
 
-        function openChat(name) {
+        async function openChat(name) {
             activeChatName = name;
             localFriends.add(name);
             
@@ -378,4 +313,78 @@
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
             
-            const userData = globalUsers.find(u
+            const userData = globalUsers.find(u => u.name === name);
+            document.getElementById('activeChatName').textContent = name;
+            document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
+            document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+            
+            await loadChatHistory();
+        }
+
+        async function loadChatHistory() {
+            const response = await fetch('/api/messages');
+            const history = await response.json();
+            
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = "";
+
+            const currentChatHistory = history.filter(msg => 
+                (msg.from === myInfo.name && msg.to === activeChatName) || 
+                (msg.from === activeChatName && msg.to === myInfo.name)
+            );
+
+            currentChatHistory.forEach((msg) => {
+                const wrapper = document.createElement('div');
+                const isMe = msg.from === myInfo.name;
+                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                wrapper.innerHTML = `
+                    <div class="message-bubble">
+                        ${msg.text}
+                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
+                    </div>
+                `;
+                messagesArea.appendChild(wrapper);
+            });
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !activeChatName) return;
+
+            await fetch('/api/messages/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
+            });
+            
+            input.value = "";
+            await loadChatHistory();
+        }
+
+        window.deleteMessage = async function(msgId) {
+            await fetch('/api/messages/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msgId })
+            });
+            await loadChatHistory();
+        };
+
+        function goHome() {
+            activeChatName = null;
+            document.getElementById('navHome').classList.add('active');
+            document.getElementById('homeScreen').classList.remove('hidden');
+            document.getElementById('chatWindow').classList.add('hidden');
+            renderLists(document.getElementById('searchInput').value);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+    </script>
+</body>
+</html>
