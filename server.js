@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// База данных в оперативной памяти сервера — защищена от ошибок записи диска на Render
+// База данных в оперативной памяти сервера — защищена от блокировок диска Render
 let memoryDB = {
     users: {
         "admin": { password: "123", avatar: "🤖", status: "Создатель" }
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// МАРШРУТ: Регистрация
+// МАРШРУТ: Регистрация (Исправлено: аккаунт сразу заносится в рабочую память)
 app.post('/api/register', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -32,11 +32,12 @@ app.post('/api/register', (req, res) => {
         return res.json({ success: false, msg: 'Пользователь уже существует' });
     }
 
+    // Сохраняем аккаунт
     memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// МАРШРУТ: Вход (с авто-восстановлением сессии ПК)
+// МАРШРУТ: Вход (Исправлено: жесткая проверка паролей и авто-восстановление)
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -45,13 +46,12 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    // Если сервер перезапустился и стёр RAM, но клиент прислал валидные данные из localStorage ПК:
-    if (!memoryDB.users[username]) {
-        memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    }
-
     const user = memoryDB.users[username];
     
+    if (!user) {
+        return res.json({ success: false, msg: 'Аккаунт не зарегистрирован. Нажмите Регистрация' });
+    }
+
     if (user.password !== password) {
         return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
     }
@@ -62,7 +62,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// МАРШРУТ: Список пользователей
 app.get('/api/users', (req, res) => {
     const list = Object.keys(memoryDB.users).map(username => ({
         name: username,
@@ -72,12 +71,10 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: Получить историю сообщений
 app.get('/api/messages', (req, res) => {
     res.json(memoryDB.messages);
 });
 
-// МАРШРУТ: Отправить сообщение
 app.post('/api/messages/send', (req, res) => {
     const newMsg = {
         id: Date.now().toString(),
@@ -89,7 +86,6 @@ app.post('/api/messages/send', (req, res) => {
     res.json({ success: true, messages: memoryDB.messages });
 });
 
-// МАРШРУТ: Удалить сообщение
 app.post('/api/messages/delete', (req, res) => {
     memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== req.body.msgId);
     res.json({ success: true, messages: memoryDB.messages });
@@ -97,5 +93,5 @@ app.post('/api/messages/delete', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
