@@ -1,134 +1,147 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname)));
 
-const DB_PATH = path.join(__dirname, 'database.json');
+// НАДЕЖНОЕ ХРАНИЛИЩЕ В ПАМЯТИ (Исключает краш файловой системы)
+let memoryDB = {
+    users: {},
+    messages: []
+};
 
-function readDB() {
-    try {
-        if (!fs.existsSync(DB_PATH)) {
-            fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, messages: [] }), 'utf8');
-        }
-        const data = fs.readFileSync(DB_PATH, 'utf8');
-        return JSON.parse(data);
-    } catch (e) {
-        return { users: {}, messages: [] };
-    }
-}
-
-function writeDB(data) {
-    try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
-    } catch (e) {
-        console.error(e);
-    }
-}
+let onlineUsers = {};
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Роут регистрации
+// HTTP API: Регистрация (Исправлена ошибка 500)
 app.post('/api/register', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const username = (req.body.user || "").trim();
+        const password = (req.body.pass || "").trim();
 
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Заполните все поля' });
-    }
-    if (db.users[username]) {
-        return res.status(400).json({ error: 'Пользователь уже существует' });
-    }
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Заполните все поля' });
+        }
+        if (memoryDB.users[username]) {
+            return res.status(400).json({ error: 'Пользователь уже существует' });
+        }
 
-    db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    writeDB(db);
-    res.json({ success: 'Аккаунт создан! Нажмите "Войти"' });
+        memoryDB.users[username] = {
+            password: password,
+            avatar: "🤖",
+            status: "Доступен"
+        };
+
+        return res.json({ success: true, message: 'Аккаунт успешно создан! Нажмите "Войти"' });
+    } catch (e) {
+        return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
 });
 
-// Роут входа
+// HTTP API: Вход
 app.post('/api/login', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const username = (req.body.user || "").trim();
+        const password = (req.body.pass || "").trim();
 
-    const user = db.users[username];
-    if (!user || user.password !== password) {
-        return res.status(400).json({ error: 'Недействительный Логин/Пароль' });
+        const user = memoryDB.users[username];
+        if (!user || user.password !== password) {
+            return res.status(400).json({ error: 'Недействительный Логин/Пароль' });
+        }
+
+        return res.json({ success: true, user: { name: username, avatar: user.avatar, status: user.status } });
+    } catch (e) {
+        return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
-
-    res.json({ name: username, avatar: user.avatar, status: user.status });
 });
 
-// Получить список всех пользователей
-app.get('/api/users', (req, res) => {
-    const db = readDB();
-    const list = Object.keys(db.users).map(name => ({
-        name: name,
-        avatar: db.users[name].avatar,
-        status: db.users[name].status
-    }));
-    res.json(list);
-});
+// SOCKET.IO РАБОТА С СЕТЬЮ
+io.on('connection', (socket) => {
+    socket.on('set_online', (username) => {
+        const user = memoryDB.users[username];
+        if (user) {
+            onlineUsers[socket.id] = { name: username, avatar: user.avatar, status: user.status };
+            io.emit('update_users_list', Object.values(onlineUsers));
+            socket.emit('load_history', memoryDB.messages);
+        }
+    });
 
-// Получить историю сообщений
-app.get('/api/messages', (req, res) => {
-    const db = readDB();
-    res.json(db.messages);
-});
+    socket.on('request_history', () => {
+        socket.emit('load_history', memoryDB.messages);
+    });
 
-// Отправить сообщение
-app.post('/api/messages/send', (req, res) => {
-    const db = readDB();
-    const { from, to, text } = req.body;
+    socket.on('send_direct_message', (data) => {
+        const me = onlineUsers[socket.id];
+        if (!me) return;
 
-    if (!from || !to || !text) return res.status(400).json({ error: 'Ошибка данных' });
+        const newMsg = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            from: me.name,
+            to: data.toUser,
+            text: data.text
+        };
 
-    const newMsg = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        from,
-        to,
-        text
-    };
+        memoryDB.messages.push(newMsg);
 
-    db.messages.push(newMsg);
-    writeDB(db);
-    res.json(db.messages);
-});
+        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('receive_direct_message', newMsg);
+        }
+        socket.emit('message_sent_confirm', newMsg);
+        io.emit('load_history', memoryDB.messages);
+    });
 
-// Удалить сообщение
-app.post('/api/messages/delete', (req, res) => {
-    const db = readDB();
-    const { msgId } = req.body;
+    socket.on('delete_message', (data) => {
+        memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== data.msgId);
+        io.emit('load_history', memoryDB.messages);
+    });
 
-    db.messages = db.messages.filter(msg => msg.id !== msgId);
-    writeDB(db);
-    res.json(db.messages);
-});
+    socket.on('typing_start', (data) => {
+        const me = onlineUsers[socket.id];
+        if (!me) return;
+        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
+        if (targetSocketId) io.to(targetSocketId).emit('user_typing', { from: me.name });
+    });
 
-// Обновление профиля
-app.post('/api/profile/update', (req, res) => {
-    const db = readDB();
-    const { username, status, avatar } = req.body;
+    socket.on('typing_stop', (data) => {
+        const me = onlineUsers[socket.id];
+        if (!me) return;
+        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
+        if (targetSocketId) io.to(targetSocketId).emit('user_typing_stop', { from: me.name });
+    });
 
-    if (db.users[username]) {
-        db.users[username].status = status;
-        db.users[username].avatar = avatar;
-        writeDB(db);
-        res.json({ name: username, avatar, status });
-    } else {
-        res.status(404).json({ error: 'Пользователь не найден' });
-    }
+    socket.on('update_profile', (data) => {
+        const me = onlineUsers[socket.id];
+        if (!me) return;
+
+        if (memoryDB.users[me.name]) {
+            memoryDB.users[me.name].status = data.status;
+            memoryDB.users[me.name].avatar = data.avatar;
+
+            onlineUsers[socket.id].status = data.status;
+            onlineUsers[socket.id].avatar = data.avatar;
+
+            socket.emit('init_self', onlineUsers[socket.id]);
+            io.emit('update_users_list', Object.values(onlineUsers));
+        }
+    });
+
+    socket.on('disconnect', () => {
+        delete onlineUsers[socket.id];
+        io.emit('update_users_list', Object.values(onlineUsers));
+    });
 });
 
 const PORT = process.env.PORT || 3000;
-server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Сервер запущен`);
 });
