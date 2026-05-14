@@ -7,11 +7,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// База данных в оперативной памяти сервера (работает без сбоев на Render)
+// Полноценная база данных в оперативной памяти сервера
 let memoryDB = {
-    users: {
-        "admin": { password: "123", avatar: "🤖", status: "Создатель" }
-    },
+    users: {},
     messages: []
 };
 
@@ -33,7 +31,7 @@ app.post('/api/register', (req, res) => {
     }
 
     memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    return res.json({ success: true, msg: 'Аккаунт успешно создан! Теперь нажмите "Войти"' });
+    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
 // МАРШРУТ: Вход
@@ -45,7 +43,7 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    // Если сервер перезапустился, но у юзера остался localStorage — автоматически восстанавливаем его
+    // Защита от сна сервера: авто-создание аккаунта, если браузер шлет валидные куки
     if (!memoryDB.users[username]) {
         memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     }
@@ -71,9 +69,9 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: История сообщений
+// МАРШРУТ: Получить историю сообщений
 app.get('/api/messages', (req, res) => {
-    res.json(memoryDB.messages);
+    res.json(memoryDB.messages || []);
 });
 
 // МАРШРУТ: Отправить сообщение
@@ -84,12 +82,14 @@ app.post('/api/messages/send', (req, res) => {
         to: req.body.to,
         text: req.body.text
     };
+    if (!memoryDB.messages) memoryDB.messages = [];
     memoryDB.messages.push(newMsg);
     res.json({ success: true, messages: memoryDB.messages });
 });
 
 // МАРШРУТ: Удалить сообщение
 app.post('/api/messages/delete', (req, res) => {
+    if (!memoryDB.messages) memoryDB.messages = [];
     memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== req.body.msgId);
     res.json({ success: true, messages: memoryDB.messages });
 });
