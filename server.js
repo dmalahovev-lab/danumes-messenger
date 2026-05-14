@@ -1,25 +1,16 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const cors = require('cors');
 
 const app = express();
-const server = http.createServer(app);
 
-// Настройка CORS для работы сокетов на Render
-const io = new Server(server, { 
-    cors: { 
-        origin: "*",
-        methods: ["GET", "POST"]
-    } 
-});
-
+app.use(cors());
+app.use(express.json());
 app.use(express.static(__dirname));
 
 const DB_PATH = path.join(__dirname, 'database.json');
 
-// Проверка и создание файла базы данных при старте
 function readDB() {
     try {
         if (!fs.existsSync(DB_PATH)) {
@@ -36,7 +27,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка базы данных:", e);
+        console.error(e);
     }
 }
 
@@ -44,122 +35,100 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let onlineUsers = {};
+// Роут регистрации
+app.post('/api/register', (req, res) => {
+    const db = readDB();
+    const username = (req.body.user || '').trim();
+    const password = (req.body.pass || '').trim();
 
-io.on('connection', (socket) => {
-    console.log(`Клиент подключился: ${socket.id}`);
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Заполните все поля' });
+    }
+    if (db.users[username]) {
+        return res.status(400).json({ error: 'Пользователь уже существует' });
+    }
 
-    // Обработчик регистрации
-    socket.on('auth_register', (data) => {
-        const db = readDB();
-        const username = data.user.trim();
-        const password = data.pass.trim();
+    db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+    writeDB(db);
+    res.json({ success: 'Аккаунт создан! Нажмите "Войти"' });
+});
 
-        if (db.users[username]) {
-            return socket.emit('auth_error', 'Пользователь уже существует');
-        }
+// Роут входа
+app.post('/api/login', (req, res) => {
+    const db = readDB();
+    const username = (req.body.user || '').trim();
+    const password = (req.body.pass || '').trim();
 
-        db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+    const user = db.users[username];
+    if (!user || user.password !== password) {
+        return res.status(400).json({ error: 'Недействительный Логин/Пароль' });
+    }
+
+    res.json({ name: username, avatar: user.avatar, status: user.status });
+});
+
+// Получить список всех пользователей
+app.get('/api/users', (req, res) => {
+    const db = readDB();
+    const list = Object.keys(db.users).map(name => ({
+        name: name,
+        avatar: db.users[name].avatar,
+        status: db.users[name].status
+    }));
+    res.json(list);
+});
+
+// Получить историю сообщений
+app.get('/api/messages', (req, res) => {
+    const db = readDB();
+    res.json(db.messages);
+});
+
+// Отправить сообщение
+app.post('/api/messages/send', (req, res) => {
+    const db = readDB();
+    const { from, to, text } = req.body;
+
+    if (!from || !to || !text) return res.status(400).json({ error: 'Ошибка данных' });
+
+    const newMsg = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        from,
+        to,
+        text
+    };
+
+    db.messages.push(newMsg);
+    writeDB(db);
+    res.json(db.messages);
+});
+
+// Удалить сообщение
+app.post('/api/messages/delete', (req, res) => {
+    const db = readDB();
+    const { msgId } = req.body;
+
+    db.messages = db.messages.filter(msg => msg.id !== msgId);
+    writeDB(db);
+    res.json(db.messages);
+});
+
+// Обновление профиля
+app.post('/api/profile/update', (req, res) => {
+    const db = readDB();
+    const { username, status, avatar } = req.body;
+
+    if (db.users[username]) {
+        db.users[username].status = status;
+        db.users[username].avatar = avatar;
         writeDB(db);
-        socket.emit('auth_error', 'Аккаунт успешно создан! Нажмите "Войти"');
-    });
-
-    // Обработчик входа
-    socket.on('auth_login', (data) => {
-        const db = readDB();
-        const username = data.user.trim();
-        const password = data.pass.trim();
-
-        const user = db.users[username];
-        if (!user || user.password !== password) {
-            return socket.emit('auth_error', 'Недействительный Логин/Пароль');
-        }
-
-        onlineUsers[socket.id] = { name: username, avatar: user.avatar, status: user.status };
-        socket.emit('auth_success', onlineUsers[socket.id]);
-        
-        io.emit('update_users_list', Object.values(onlineUsers));
-    });
-
-    // Запрос истории
-    socket.on('request_history', () => {
-        const db = readDB();
-        socket.emit('load_history', db.messages);
-    });
-
-    // Отправка сообщений
-    socket.on('send_direct_message', (data) => {
-        const me = onlineUsers[socket.id];
-        if (!me) return;
-
-        const db = readDB();
-        const newMsg = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-            from: me.name,
-            to: data.toUser,
-            text: data.text
-        };
-
-        db.messages.push(newMsg);
-        writeDB(db);
-
-        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_direct_message', newMsg);
-        }
-        socket.emit('message_sent_confirm', newMsg);
-        io.emit('load_history', db.messages);
-    });
-
-    // Удаление сообщений
-    socket.on('delete_message', (data) => {
-        const db = readDB();
-        db.messages = db.messages.filter(msg => msg.id !== data.msgId);
-        writeDB(db);
-        io.emit('load_history', db.messages);
-    });
-
-    // Статусы ввода текста
-    socket.on('typing_start', (data) => {
-        const me = onlineUsers[socket.id];
-        if (!me) return;
-        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
-        if (targetSocketId) io.to(targetSocketId).emit('user_typing', { from: me.name });
-    });
-
-    socket.on('typing_stop', (data) => {
-        const me = onlineUsers[socket.id];
-        if (!me) return;
-        const targetSocketId = Object.keys(onlineUsers).find(key => onlineUsers[key].name === data.toUser);
-        if (targetSocketId) io.to(targetSocketId).emit('user_typing_stop', { from: me.name });
-    });
-
-    // Обновление профиля
-    socket.on('update_profile', (data) => {
-        const me = onlineUsers[socket.id];
-        if (!me) return;
-
-        const db = readDB();
-        if (db.users[me.name]) {
-            db.users[me.name].status = data.status;
-            db.users[me.name].avatar = data.avatar;
-            writeDB(db);
-
-            onlineUsers[socket.id].status = data.status;
-            onlineUsers[socket.id].avatar = data.avatar;
-
-            socket.emit('init_self', onlineUsers[socket.id]);
-            io.emit('update_users_list', Object.values(onlineUsers));
-        }
-    });
-
-    socket.on('disconnect', () => {
-        delete onlineUsers[socket.id];
-        io.emit('update_users_list', Object.values(onlineUsers));
-    });
+        res.json({ name: username, avatar, status });
+    } else {
+        res.status(404).json({ error: 'Пользователь не найден' });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
