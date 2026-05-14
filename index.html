@@ -95,12 +95,8 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
-        .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
-        .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-weight: bold; }
-
         .group-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .group-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 380px; box-shadow: var(--shadow); position: relative; text-align: center;}
+        .group-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative; text-align: center;}
         .group-card h3 { margin-bottom: 14px; font-size: 18px; }
         .group-input { width: 100%; padding: 12px; border-radius: 8px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; outline: none; font-size: 14px; margin-bottom: 14px; text-align: center; }
         
@@ -125,9 +121,8 @@
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
             <div class="auth-buttons-row">
-                <!-- Прямая, железная привязка функций по клику -->
-                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
-                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
+                <button class="auth-btn login" id="loginBtn">Войти</button>
+                <button class="auth-btn register" id="registerBtn">Регистрация</button>
             </div>
         </div>
     </div>
@@ -211,54 +206,61 @@
         let localFriends = new Set();
         let createdGroups = new Set();
 
-        // Проверка автосохранения аккаунта вынесена на самый верх скрипта
-        async function checkAutoLogin() {
+        // Полноценная встроенная клиентская база данных на твоем ПК
+        let clientDB = JSON.parse(localStorage.getItem('danumes_local_db')) || { registeredUsers: [] };
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+
+            // Регистрация на стороне ПК + синхронизация
+            registerBtn.onclick = async () => {
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
+                
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Жестко сохраняем аккаунт в память твоего браузера
+                    if (!clientDB.registeredUsers.some(u => u.name === user)) {
+                        clientDB.registeredUsers.push({ name: user, password: pass });
+                        localStorage.setItem('danumes_local_db', JSON.stringify(clientDB));
+                    }
+                }
+                showAuthNotification(data.msg, data.success);
+            };
+
+            loginBtn.onclick = async () => {
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
+                await performLogin(user, pass);
+            };
+
+            // Автоматический мгновенный вход из локального хранилища ПК
             const savedUser = localStorage.getItem('danumes_user');
             const savedPass = localStorage.getItem('danumes_pass');
             if (savedUser && savedPass) {
                 await performLogin(savedUser, savedPass, true);
             }
-        }
-        checkAutoLogin();
 
-        function showAuthNotification(msg, isSuccess = false) {
-            const toast = document.getElementById('errorToast');
-            toast.textContent = msg;
-            toast.style.display = 'block';
-            if (isSuccess) {
-                toast.style.background = 'rgba(16, 185, 129, 0.2)';
-                toast.style.borderColor = '#10b981';
-                toast.style.color = '#a7f3d0';
-            } else {
-                toast.style.background = 'rgba(239, 68, 68, 0.2)';
-                toast.style.borderColor = '#ef4444';
-                toast.style.color = '#fca5a5';
-            }
-        }
-
-        // Вызов функций при нажатии на кнопки
-        async function handleRegisterClick() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            if(!user || !pass) return showAuthNotification("Заполните все поля", false);
-
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            });
-            const data = await response.json();
-            showAuthNotification(data.msg, data.success);
-        }
-
-        async function handleLoginClick() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            if(!user || !pass) return showAuthNotification("Заполните все поля", false);
-            await performLogin(user, pass, false);
-        }
+            document.getElementById('messageInput').onkeypress = (e) => {
+                if (e.key === 'Enter') sendMessage();
+            };
+        });
 
         async function performLogin(user, pass, isAuto = false) {
+            // Перед входом синхронизируем всех локально созданных людей с оперативной памятью сервера
+            await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ users: clientDB.registeredUsers })
+            });
+
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -273,7 +275,7 @@
 
                 document.getElementById('greetingName').textContent = myInfo.name;
                 document.getElementById('profileTrigger').textContent = myInfo.avatar;
-                document.getElementById('authScreen').style.display = 'none'; // Скрываем окно входа
+                document.getElementById('authScreen').style.display = 'none';
                 
                 await loadUsersList();
                 setInterval(refreshChatData, 3000);
@@ -299,6 +301,21 @@
             await loadUsersList();
             if (activeChatName) {
                 await loadChatHistory();
+            }
+        }
+
+        function showAuthNotification(msg, isSuccess = false) {
+            const toast = document.getElementById('errorToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            if (isSuccess) {
+                toast.style.background = 'rgba(16, 185, 129, 0.2)';
+                toast.style.borderColor = '#10b981';
+                toast.style.color = '#a7f3d0';
+            } else {
+                toast.style.background = 'rgba(239, 68, 68, 0.2)';
+                toast.style.borderColor = '#ef4444';
+                toast.style.color = '#fca5a5';
             }
         }
 
@@ -386,11 +403,9 @@
 
         async function openChat(name, isGroup = false) {
             activeChatName = name;
-            
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
-            
             document.getElementById('activeChatName').textContent = name;
             
             if (isGroup) {
@@ -410,7 +425,6 @@
         async function loadChatHistory() {
             const response = await fetch('/api/messages');
             const history = await response.json();
-            
             const messagesArea = document.getElementById('messagesArea');
             messagesArea.innerHTML = "";
 
@@ -426,86 +440,4 @@
                 wrapper.innerHTML = `
                     <div class="message-bubble">
                         ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text || !activeChatName) return;
-
-            await fetch('/api/messages/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
-            });
-            
-            input.value = "";
-            await loadChatHistory();
-        }
-
-        window.deleteMessage = async function(msgId) {
-            await fetch('/api/messages/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ msgId })
-            });
-            await loadChatHistory();
-        };
-
-        function openGroupModal() {
-            const selector = document.getElementById('groupUsersSelector');
-            if(selector) {
-                selector.innerHTML = "";
-                if(globalUsers.length === 0) {
-                    selector.innerHTML = "<div style='color:var(--text-muted);font-size:13px;'>Нет доступных пользователей сети</div>";
-                } else {
-                    globalUsers.forEach(user => {
-                        const label = document.createElement('label');
-                        label.className = "selector-item";
-                        label.innerHTML = `
-                            <input type="checkbox" value="${user.name}">
-                            <span>${user.avatar} ${user.name}</span>
-                        `;
-                        selector.appendChild(label);
-                    });
-                }
-            }
-            document.getElementById('groupModal').style.display = 'flex';
-        }
-
-        function closeGroupModal() {
-            document.getElementById('groupModal').style.display = 'none';
-            document.getElementById('groupNameInput').value = '';
-        }
-
-        function submitCreateGroup() {
-            const gName = document.getElementById('groupNameInput').value.trim();
-            if(!gName) return;
-            
-            createdGroups.add(gName);
-            closeGroupModal();
-            renderLists(document.getElementById('searchInput').value);
-        }
-
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
-    </script>
-</body>
-</html>
+                        <
