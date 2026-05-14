@@ -8,43 +8,38 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(express.static(path.join(__dirname)));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Автоматическое создание локальной базы данных
 const DB_FILE = path.join(__dirname, 'database.json');
-let db = { users: {}, messages: {} };
 
+// Проверка и инициализация базы данных
+let db = { users: {}, messages: {} };
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
         if (!db.users) db.users = {};
         if (!db.messages) db.messages = {};
     } catch (e) {
-        console.error("Ошибка чтения БД, сброс к пустой:", e);
+        console.error("Ошибка чтения базы, создаем чистую...");
     }
-} else {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
 
 function saveDB() {
-    try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
-    } catch (e) {
-        console.error("Ошибка сохранения БД:", e);
-    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
+
+app.use(express.static(path.join(__dirname)));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 let activeConnections = {}; // socket.id -> username
 
 io.on('connection', (socket) => {
+
     // 1. Регистрация нового аккаунта
     socket.on('register_account', (data) => {
-        const username = (data.username || '').trim();
-        const password = (data.password || '').trim();
+        const username = data.username.trim();
+        const password = data.password.trim();
 
         if (!username || !password) {
             return socket.emit('auth_error', 'Заполните все поля!');
@@ -62,14 +57,11 @@ io.on('connection', (socket) => {
         socket.emit('auth_success', 'Регистрация успешна! Теперь вы можете войти.');
     });
 
-    // 2. Вход в систему
+    // 2. Вход в существующий аккаунт
     socket.on('login_account', (data) => {
-        const username = (data.username || '').trim();
-        const password = (data.password || '').trim();
+        const username = data.username.trim();
+        const password = data.password.trim();
 
-        if (!username || !password) {
-            return socket.emit('auth_error', 'Заполните все поля!');
-        }
         if (!db.users[username] || db.users[username].password !== password) {
             return socket.emit('auth_error', 'Недействительный Логин/Пароль');
         }
@@ -112,7 +104,7 @@ io.on('connection', (socket) => {
         socket.emit('chat_history_response', { targetUser, history });
     });
 
-    // 5. Статус ввода текста ("Печатает...")
+    // 5. Обработка статуса "Печатает..."
     socket.on('typing_status', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -123,7 +115,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 6. Отправка сообщений
+    // 6. Отправка сообщения
     socket.on('send_direct_message', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -140,10 +132,13 @@ io.on('connection', (socket) => {
         db.messages[roomKey].push(messagePayload);
         saveDB();
 
+        // Отправка получателю (если он онлайн)
         const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
         if (targetSocketId) {
             io.to(targetSocketId).emit('receive_direct_message', { from: username, text: data.text });
         }
+
+        // Подтверждение отправителю
         socket.emit('message_sent_confirm', messagePayload);
     });
 
@@ -184,5 +179,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}!`);
+    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
