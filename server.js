@@ -8,18 +8,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// ИСПРАВЛЕНИЕ: Автоматический выбор папки для базы данных. 
-// Если сервер запущен на Render, пишем в рабочую директорию приложения, чтобы файлы не стирались.
-const DB_PATH = process.env.RENDER ? path.join(__dirname, 'database.json') : path.join('/tmp', 'database.json');
+const DB_PATH = path.join('/tmp', 'database.json');
 
+// Улучшенное безопасное чтение базы без возможности падения сервера
 function readDB() {
     try {
         if (!fs.existsSync(DB_PATH)) {
             fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, messages: [] }), 'utf8');
         }
         const data = fs.readFileSync(DB_PATH, 'utf8');
+        // Проверяем, что файл не пустой и содержит валидный JSON
+        if (!data || data.trim() === "") {
+            return { users: {}, messages: [] };
+        }
         return JSON.parse(data);
     } catch (e) {
+        // Защита: если файл повредился, мгновенно создаем чистую структуру
         return { users: {}, messages: [] };
     }
 }
@@ -28,7 +32,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи базы данных:", e);
+        console.error("Ошибка записи базы данных в /tmp:", e);
     }
 }
 
@@ -36,15 +40,23 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Защищенный маршрут регистрации
 app.post('/api/register', (req, res) => {
     try {
         const db = readDB();
-        const username = (req.body.user || '').trim();
-        const password = (req.body.pass || '').trim();
+        if (!req.body || !req.body.user || !req.body.pass) {
+            return res.json({ success: false, msg: 'Заполните все поля' });
+        }
+
+        const username = req.body.user.trim();
+        const password = req.body.pass.trim();
 
         if (!username || !password) {
             return res.json({ success: false, msg: 'Заполните все поля' });
         }
+
+        // Если структуры users почему-то нет в объекте, создаем её на лету
+        if (!db.users) db.users = {};
 
         if (db.users[username]) {
             return res.json({ success: false, msg: 'Пользователь уже существует' });
@@ -55,15 +67,27 @@ app.post('/api/register', (req, res) => {
 
         return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
     } catch (err) {
-        return res.json({ success: false, msg: 'Внутренняя ошибка регистрации' });
+        console.error(err);
+        return res.json({ success: false, msg: 'Ошибка сервера. Попробуйте еще раз.' });
     }
 });
 
+// Защищенный маршрут авторизации
 app.post('/api/login', (req, res) => {
     try {
         const db = readDB();
-        const username = (req.body.user || '').trim();
-        const password = (req.body.pass || '').trim();
+        if (!req.body || !req.body.user || !req.body.pass) {
+            return res.json({ success: false, msg: 'Заполните все поля' });
+        }
+
+        const username = req.body.user.trim();
+        const password = req.body.pass.trim();
+
+        if (!username || !password) {
+            return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+        }
+
+        if (!db.users) db.users = {};
 
         const user = db.users[username];
         if (!user || user.password !== password) {
@@ -75,43 +99,64 @@ app.post('/api/login', (req, res) => {
             user: { name: username, avatar: user.avatar, status: user.status }
         });
     } catch (err) {
+        console.error(err);
         return res.json({ success: false, msg: 'Внутренняя ошибка авторизации' });
     }
 });
 
 app.get('/api/users', (req, res) => {
-    const db = readDB();
-    const list = Object.keys(db.users).map(username => ({
-        name: username,
-        avatar: db.users[username].avatar,
-        status: db.users[username].status
-    }));
-    res.json(list);
+    try {
+        const db = readDB();
+        if (!db.users) db.users = {};
+        const list = Object.keys(db.users).map(username => ({
+            name: username,
+            avatar: db.users[username].avatar,
+            status: db.users[username].status
+        }));
+        res.json(list);
+    } catch (e) {
+        res.json([]);
+    }
 });
 
 app.get('/api/messages', (req, res) => {
-    const db = readDB();
-    res.json(db.messages);
+    try {
+        const db = readDB();
+        if (!db.messages) db.messages = [];
+        res.json(db.messages);
+    } catch (e) {
+        res.json([]);
+    }
 });
 
 app.post('/api/messages/send', (req, res) => {
-    const db = readDB();
-    const newMsg = {
-        id: Date.now().toString(),
-        from: req.body.from,
-        to: req.body.to,
-        text: req.body.text
-    };
-    db.messages.push(newMsg);
-    writeDB(db);
-    res.json({ success: true, messages: db.messages });
+    try {
+        const db = readDB();
+        if (!db.messages) db.messages = [];
+        const newMsg = {
+            id: Date.now().toString(),
+            from: req.body.from,
+            to: req.body.to,
+            text: req.body.text
+        };
+        db.messages.push(newMsg);
+        writeDB(db);
+        res.json({ success: true, messages: db.messages });
+    } catch (e) {
+        res.json({ success: false });
+    }
 });
 
 app.post('/api/messages/delete', (req, res) => {
-    const db = readDB();
-    db.messages = db.messages.filter(msg => msg.id !== req.body.msgId);
-    writeDB(db);
-    res.json({ success: true, messages: db.messages });
+    try {
+        const db = readDB();
+        if (!db.messages) db.messages = [];
+        db.messages = db.messages.filter(msg => msg.id !== req.body.msgId);
+        writeDB(db);
+        res.json({ success: true, messages: db.messages });
+    } catch (e) {
+        res.json({ success: false });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
