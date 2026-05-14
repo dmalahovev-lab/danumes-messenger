@@ -10,49 +10,62 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname)));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Файл базы данных на сервере
 const DB_FILE = path.join(__dirname, 'database.json');
-let db = { users: {}, messages: {} };
 
+// Инициализация базы данных
+let db = { users: {}, messages: {} };
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        if (!db.users) db.users = {};
+        if (!db.messages) db.messages = {};
     } catch (e) {
         console.error("Ошибка чтения базы данных, сброс к пустой:", e);
     }
-} else {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
 
 function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
 }
 
-let activeConnections = {}; // socket.id -> username
+// Активные онлайн подключения (socket.id -> username)
+let activeConnections = {};
+
+function sendUsersList() {
+    const list = Object.keys(db.users).map(username => {
+        const isOnline = Object.values(activeConnections).includes(username);
+        return {
+            name: username,
+            avatar: db.users[username].avatar || "🤖",
+            status: db.users[username].status || "Доступен",
+            isOnline: isOnline
+        };
+    });
+    io.emit('update_users_list', list);
+}
 
 io.on('connection', (socket) => {
-    console.log(`Подключился клиент: ${socket.id}`);
+    console.log(`Подключение к сокету: ${socket.id}`);
 
-    // 1. Регистрация аккаунта
+    // 1. Регистрация нового аккаунта
     socket.on('register_account', (data) => {
         const username = data.username.trim();
         const password = data.password.trim();
 
         if (!username || !password) {
-            return socket.emit('auth_error', 'Заполните все поля поля!');
+            socket.emit('auth_error', 'Заполните все поля текста!');
+            return;
         }
+
         if (db.users[username]) {
-            return socket.emit('auth_error', 'Пользователь с таким именем уже существует!');
+            socket.emit('auth_error', 'Пользователь с таким именем уже существует!');
+            return;
         }
 
         db.users[username] = {
             password: password,
-            status: "Доступен",
-            avatar: "🤖"
+            avatar: "🤖",
+            status: "Доступен"
         };
         saveDB();
 
@@ -64,16 +77,13 @@ io.on('connection', (socket) => {
         const username = data.username.trim();
         const password = data.password.trim();
 
-        if (!username || !password) {
-            return socket.emit('auth_error', 'Заполните все поля!');
-        }
         if (!db.users[username] || db.users[username].password !== password) {
-            return socket.emit('auth_error', 'Недействительный Логин/Пароль.');
+            socket.emit('auth_error', 'Недействительный Логин/Пароль');
+            return;
         }
 
         activeConnections[socket.id] = username;
 
-        // Отправляем личные данные пользователя
         socket.emit('init_self', {
             name: username,
             avatar: db.users[username].avatar,
@@ -83,7 +93,7 @@ io.on('connection', (socket) => {
         sendUsersList();
     });
 
-    // 3. Обновление профиля
+    // 3. Обновление настроек профиля
     socket.on('update_profile', (data) => {
         const username = activeConnections[socket.id];
         if (username && db.users[username]) {
@@ -93,14 +103,14 @@ io.on('connection', (socket) => {
 
             socket.emit('init_self', {
                 name: username,
-                avatar: db.users[username].avatar,
-                status: db.users[username].status
+                avatar: data.avatar,
+                status: data.status
             });
             sendUsersList();
         }
     });
 
-    // 4. Запрос истории чата
+    // 4. Запрос истории переписки
     socket.on('get_chat_history', (targetUser) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -110,7 +120,7 @@ io.on('connection', (socket) => {
         socket.emit('chat_history_response', { targetUser: targetUser, history: history });
     });
 
-    // 5. Обработка статуса набора текста
+    // 5. Обработка индикатора набора текста
     socket.on('typing_status', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -121,7 +131,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 6. Отправка сообщений
+    // 6. Отправка и сохранение сообщений
     socket.on('send_direct_message', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -154,11 +164,11 @@ io.on('connection', (socket) => {
             db.messages[roomKey].splice(data.index, 1);
             saveDB();
 
-            socket.emit('message_deleted_sync', { targetUser: data.toUser, history: db.messages[roomKey] });
-
+            socket.emit('message_deleted_sync', { targetUser: data.toUser, index: data.index });
+            
             const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
             if (targetSocketId) {
-                io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, history: db.messages[roomKey] });
+                io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, index: data.index });
             }
         }
     });
@@ -166,23 +176,11 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete activeConnections[socket.id];
         sendUsersList();
-        console.log(`Клиент отключился: ${socket.id}`);
+        console.log(`Пользователь отключился: ${socket.id}`);
     });
-
-    function sendUsersList() {
-        const usersList = Object.keys(db.users).map(name => {
-            return {
-                name: name,
-                avatar: db.users[name].avatar,
-                status: db.users[name].status,
-                isOnline: Object.values(activeConnections).includes(name)
-            };
-        });
-        io.emit('update_users_list', usersList);
-    }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}!`);
 });
