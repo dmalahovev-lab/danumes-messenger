@@ -132,7 +132,6 @@
             font-size: 15px;
         }
         .message-input:focus { border-color: #6366f1; }
-        
         .send-btn { 
             background: #6366f1; 
             border: none; 
@@ -175,6 +174,7 @@
             .messages-area { padding: 16px; height: calc(100vh - 150px); }
         }
     </style>
+    
     <script>
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
@@ -189,6 +189,7 @@
                 await performLogin(savedUser, savedPass, true);
             }
         }
+        
         setTimeout(checkAutoLogin, 100);
 
         function showAuthNotification(msg, isSuccess = false) {
@@ -275,7 +276,9 @@
             }
         }
 
-        function handleSearch(val) { renderLists(val); }
+        function handleSearch(val) {
+            renderLists(val);
+        }
 
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
@@ -306,7 +309,9 @@
                         groupsList.appendChild(item);
                     }
                 });
-            } else if(groupsSectionTitle) { groupsSectionTitle.style.display = 'none'; }
+            } else if(groupsSectionTitle) {
+                groupsSectionTitle.style.display = 'none';
+            }
 
             globalUsers.forEach(user => {
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
@@ -355,6 +360,7 @@
 
         async function openChat(name, isGroup = false) {
             activeChatName = name;
+            
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
@@ -387,6 +393,9 @@
             if(!messagesArea) return;
             messagesArea.innerHTML = "";
 
+            // ИСПРАВЛЕНИЕ: Жесткая проверка на пустую базу данных сообщений, чтобы код не падал
+            if (!Array.isArray(history) || history.length === 0) return;
+
             const currentChatHistory = history.filter(msg => 
                 (msg.from === myInfo.name && msg.to === activeChatName) || 
                 (msg.from === activeChatName && msg.to === myInfo.name)
@@ -417,6 +426,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
             });
+            
             input.value = "";
             await loadChatHistory();
         }
@@ -440,95 +450,5 @@
                     globalUsers.forEach(user => {
                         const label = document.createElement('label');
                         label.className = "selector-item";
-                        label.innerHTML = `<input type="checkbox" value="${user.name}"> <span>${user.avatar} ${user.name}</span>`;
-                        selector.appendChild(label);
-                    });
-                }
-            }
-            document.getElementById('groupModal').style.display = 'flex';
-        }
-
-        function closeGroupModal() {
-            document.getElementById('groupModal').style.display = 'none';
-            document.getElementById('groupNameInput').value = '';
-        }
-
-        function submitCreateGroup() {
-            const gName = document.getElementById('groupNameInput').value.trim();
-            if(!gName) return;
-            createdGroups.add(gName);
-            closeGroupModal();
-            renderLists(document.getElementById('searchInput').value);
-        }
-
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
-
-            const sidebar = document.querySelector('.sidebar');
-            const chatWin = document.getElementById('chatWindow');
-            if (sidebar) sidebar.classList.remove('mobile-hidden');
-            if (chatWin) chatWin.classList.add('mobile-hidden');
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
-    </script>
-</head>
-<body>
-
-    <!-- Экран авторизации -->
-    <div class="auth-screen" id="authScreen">
-        <div class="auth-card">
-            <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
-            <div class="error-toast" id="errorToast"></div>
-            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
-            <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
-            <div class="auth-buttons-row">
-                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
-                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Всплывающая плашка создания группы -->
-    <div class="group-modal" id="groupModal">
-        <div class="group-card">
-            <button class="group-close-btn" onclick="closeGroupModal()">✕</button>
-            <h3>Создать новую группу</h3>
-            <input type="text" class="group-input" id="groupNameInput" placeholder="Название группы...">
-            <label style="font-size: 12px; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px;">Добавить участников:</label>
-            <div class="group-users-selector" id="groupUsersSelector"></div>
-            <button class="group-submit-btn" onclick="submitCreateGroup()">Создать группу</button>
-        </div>
-    </div>
-
-    <div class="app-container">
-        <!-- Навигация -->
-        <nav class="nav-rail">
-            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
-            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
-            <button class="nav-btn" style="color: #ef4444;" onclick="logOut()">ВЫЙТИ</button>
-            <div class="nav-profile-trigger" id="profileTrigger" onclick="logOut()">🤖</div>
-        </nav>
-
-        <!-- Сайдбар -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-row">
-                    <div class="logo">DanuMes</div>
-                    <button class="add-group-btn" onclick="openGroupModal()">+</button>
-                </div>
-                <div class="search-box">
-                    <i class="search-icon">🔍</i>
-                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
-                </div>
-            </div>
-            <div class="chats-list">
-                <div class="list-section-title" id="groupsSectionTitle"
+                        label.innerHTML = `
+                            <input type="checkbox" value="${user.
