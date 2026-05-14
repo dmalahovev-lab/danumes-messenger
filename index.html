@@ -132,6 +132,7 @@
             font-size: 15px;
         }
         .message-input:focus { border-color: #6366f1; }
+        
         .send-btn { 
             background: #6366f1; 
             border: none; 
@@ -174,7 +175,99 @@
             .messages-area { padding: 16px; height: calc(100vh - 150px); }
         }
     </style>
-    
+</head>
+<body>
+
+    <!-- Экран авторизации -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
+            
+            <div class="error-toast" id="errorToast"></div>
+
+            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
+            <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
+            
+            <div class="auth-buttons-row">
+                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
+                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Всплывающая плашка создания группы -->
+    <div class="group-modal" id="groupModal">
+        <div class="group-card">
+            <button class="group-close-btn" onclick="closeGroupModal()">✕</button>
+            <h3>Создать новую группу</h3>
+            <input type="text" class="group-input" id="groupNameInput" placeholder="Название группы...">
+            
+            <label style="font-size: 12px; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px;">Добавить участников:</label>
+            <div class="group-users-selector" id="groupUsersSelector"></div>
+
+            <button class="group-submit-btn" onclick="submitCreateGroup()">Создать группу</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Навигация -->
+        <nav class="nav-rail">
+            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
+            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
+            <button class="nav-btn" style="color: #ef4444;" onclick="logOut()">ВЫЙТИ</button>
+            <div class="nav-profile-trigger" id="profileTrigger" onclick="goHome()">🤖</div>
+        </nav>
+
+        <!-- Сайдбар -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-row">
+                    <div class="logo">DanuMes</div>
+                    <button class="add-group-btn" onclick="openGroupModal()">+</button>
+                </div>
+                <div class="search-box">
+                    <i class="search-icon" style="width:16px;height:16px;">🔍</i>
+                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
+                </div>
+            </div>
+            <div class="chats-list">
+                <div class="list-section-title" id="groupsSectionTitle" style="display: none;">Мои группы</div>
+                <div id="groupsList"></div>
+
+                <div class="list-section-title">Мои друзья</div>
+                <div id="friendsList"></div>
+                
+                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
+                <div id="globalList"></div>
+            </div>
+        </aside>
+
+        <!-- Главный экран приветствия -->
+        <div class="home-screen" id="homeScreen">
+            <div style="font-size: 50px; margin-bottom: 20px;">💬</div>
+            <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
+            <p style="color: var(--text-muted); margin-top: 10px;">Вы успешно зашли в сеть. Нажмите на пользователя или группу слева, чтобы открыть чат.</p>
+        </div>
+
+        <!-- Окно чата -->
+        <main class="chat-window hidden" id="chatWindow">
+            <div class="chat-header">
+                <div class="avatar" id="activeAvatar">🤖</div>
+                <div>
+                    <h4 id="activeChatName">Чат</h4>
+                    <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
+                </div>
+            </div>
+            
+            <div class="messages-area" id="messagesArea"></div>
+
+            <div class="input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+                <button class="send-btn" onclick="sendMessage()">▶</button>
+            </div>
+        </main>
+    </div>
+
     <script>
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
@@ -189,7 +282,7 @@
                 await performLogin(savedUser, savedPass, true);
             }
         }
-        setTimeout(checkAutoLogin, 200);
+        setTimeout(checkAutoLogin, 50);
 
         function showAuthNotification(msg, isSuccess = false) {
             const toast = document.getElementById('errorToast');
@@ -262,10 +355,12 @@
         }
 
         async function loadUsersList() {
-            const response = await fetch('/api/users');
-            const users = await response.json();
-            globalUsers = users.filter(u => u.name !== myInfo.name);
-            renderLists(document.getElementById('searchInput').value);
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                globalUsers = Array.isArray(users) ? users.filter(u => u.name !== myInfo.name) : [];
+                renderLists(document.getElementById('searchInput').value || "");
+            } catch(e) { globalUsers = []; }
         }
 
         async function refreshChatData() {
@@ -323,221 +418,4 @@
                     item.innerHTML = `
                         <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
-                            <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                    `;
-                    friendsList.appendChild(item);
-                } else if(globalList) {
-                    hasGlobal = true;
-                    const item = document.createElement('div');
-                    item.className = "chat-item";
-                    item.style.cursor = "default";
-                    item.innerHTML = `
-                        <div class="avatar">${user.avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                        <div class="search-actions">
-                            <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
-                            <button class="action-btn" onclick="writeToUser('${user.name}')">Написать</button>
-                        </div>
-                    `;
-                    globalList.appendChild(item);
-                }
-            });
-
-            if(globalTitle) {
-                if (filter.trim() !== "" && hasGlobal) globalTitle.classList.remove('hidden');
-                else globalTitle.classList.add('hidden');
-            }
-        }
-
-        window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
-        window.writeToUser = function(name) { localFriends.add(name); openChat(name, false); document.getElementById('searchInput').value = ""; renderLists(""); };
-
-        async function openChat(name, isGroup = false) {
-            activeChatName = name;
-            
-            document.getElementById('homeScreen').classList.add('hidden');
-            document.getElementById('chatWindow').classList.remove('hidden');
-            document.getElementById('navHome').classList.remove('active');
-            document.getElementById('activeChatName').textContent = name;
-            
-            if (isGroup) {
-                document.getElementById('activeAvatar').textContent = "👥";
-                document.getElementById('activeChatStatus').textContent = "Группа участников";
-            } else {
-                localFriends.add(name);
-                const userData = globalUsers.find(u => u.name === name);
-                document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
-                document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
-            }
-            
-            await loadChatHistory();
-            renderLists(document.getElementById('searchInput').value);
-
-            const sidebar = document.querySelector('.sidebar');
-            const chatWin = document.getElementById('chatWindow');
-            if (sidebar) sidebar.classList.add('mobile-hidden');
-            if (chatWin) chatWin.classList.remove('mobile-hidden');
-        }
-
-        async function loadChatHistory() {
-            const response = await fetch('/api/messages');
-            const history = await response.json();
-            
-            const messagesArea = document.getElementById('messagesArea');
-            if(!messagesArea) return;
-            messagesArea.innerHTML = "";
-
-            const currentChatHistory = history.filter(msg => 
-                (msg.from === myInfo.name && msg.to === activeChatName) || 
-                (msg.from === activeChatName && msg.to === myInfo.name)
-            );
-
-            currentChatHistory.forEach((msg) => {
-                const wrapper = document.createElement('div');
-                const isMe = msg.from === myInfo.name;
-                wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
-                wrapper.innerHTML = `
-                    <div class="message-bubble">
-                        ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text || !activeChatName) return;
-
-            await fetch('/api/messages/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
-            });
-            
-            input.value = "";
-            await loadChatHistory();
-        }
-
-        window.deleteMessage = async function(msgId) {
-            await fetch('/api/messages/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ msgId })
-            });
-            await loadChatHistory();
-        };
-
-        function openGroupModal() {
-            const selector = document.getElementById('groupUsersSelector');
-            if(selector) {
-                selector.innerHTML = "";
-                if(globalUsers.length === 0) {
-                    selector.innerHTML = "<div style='color:var(--text-muted);font-size:13px;'>Нет доступных пользователей сети</div>";
-                } else {
-                    globalUsers.forEach(user => {
-                        const label = document.createElement('label');
-                        label.className = "selector-item";
-                        label.innerHTML = `
-                            <input type="checkbox" value="${user.name}">
-                            <span>${user.avatar} ${user.name}</span>
-                        `;
-                        selector.appendChild(label);
-                    });
-                }
-            }
-            document.getElementById('groupModal').style.display = 'flex';
-        }
-
-        function closeGroupModal() {
-            document.getElementById('groupModal').style.display = 'none';
-            document.getElementById('groupNameInput').value = '';
-        }
-
-        function submitCreateGroup() {
-            const gName = document.getElementById('groupNameInput').value.trim();
-            if(!gName) return;
-            
-            createdGroups.add(gName);
-            closeGroupModal();
-            renderLists(document.getElementById('searchInput').value);
-        }
-
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
-
-            const sidebar = document.querySelector('.sidebar');
-            const chatWin = document.getElementById('chatWindow');
-            if (sidebar) sidebar.classList.remove('mobile-hidden');
-            if (chatWin) chatWin.classList.add('mobile-hidden');
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space') {
-                const activeElem = document.activeElement;
-                if (activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA')) {
-                    return; 
-                }
-            }
-        });
-    </script>
-</head>
-<body>
-
-    <div class="auth-screen" id="authScreen">
-        <div class="auth-card">
-            <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
-            <div class="error-toast" id="errorToast"></div>
-            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
-            <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
-            <div class="auth-buttons-row">
-                <button class="auth-btn login" onclick="handleLoginClick()">Войти</button>
-                <button class="auth-btn register" onclick="handleRegisterClick()">Регистрация</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="group-modal" id="groupModal">
-        <div class="group-card">
-            <button class="group-close-btn" onclick="closeGroupModal()">✕</button>
-            <h3>Создать новую группу</h3>
-            <input type="text" class="group-input" id="groupNameInput" placeholder="Название группы...">
-            <label style="font-size: 12px; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px;">Добавить участников:</label>
-            <div class="group-users-selector" id="groupUsersSelector"></div>
-            <button class="group-submit-btn" onclick="submitCreateGroup()">Создать группу</button>
-        </div>
-    </div>
-
-    <div class="app-container">
-        <nav class="nav-rail">
-            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
-            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
-            <button class="nav-btn" style="color: #ef4444;" onclick="logOut()">ВЫЙТИ</button>
-            <div class="nav-profile-trigger" id="profileTrigger" onclick="logOut()">🤖</div>
-        </nav>
-
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-row">
-                    <div class="logo">DanuMes</div>
-                    <button class="add-group-btn" onclick="openGroupModal()">+</button>
-                </div>
-                <div class="search-box">
+                            <div class="chat
