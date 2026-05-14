@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Глобальный Мессенджер</title>
-    <!-- Подключаем только работающие CDN библиотеки напрямую через HTTPS -->
-    <script src="socket.io"></script>
+    <title>DanuMes — Modern Web Messenger</title>
+    
+    <!-- Подключаем только стабильные официальные CDN с HTTPS -->
     <script src="cloudflare.com"></script>
+    <script src="cloudflare.com"></script>
+
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a12;
@@ -35,21 +37,21 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Экран входа */
+        /* Авторизация */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
-        .logo { font-size: 32px; font-weight: 800; background: linear-gradient(45deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;}
-        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin-bottom: 12px; outline: none; font-size: 16px; text-align: center;}
+        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 10px 0; outline: none; font-size: 16px; text-align: center;}
         
-        .auth-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .auth-btn { flex: 1; padding: 14px; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px; }
+        .auth-buttons-row { display: flex; gap: 12px; margin-top: 15px; }
+        .auth-btn { flex: 1; padding: 14px; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; }
         .btn-login { background: #6366f1; }
         .btn-reg { background: #10b981; }
 
         /* Красивая плашка ошибки */
-        .error-toast { display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; text-align: center; }
+        .error-alert { display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 15px; text-align: center; }
+        .success-alert { display: none; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #a7f3d0; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 15px; text-align: center; }
 
-        /* Интерфейс мессенджера */
+        /* Интерфейс */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
         .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -59,6 +61,7 @@
 
         .sidebar { width: 360px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .sidebar-header { padding: 24px; display: flex; flex-direction: column; gap: 16px; border-bottom: 1px solid var(--border-color); }
+        .logo { font-size: 22px; font-weight: 800; background: linear-gradient(45deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .search-box { position: relative; display: flex; align-items: center; }
         .search-input { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px 16px 10px 40px; border-radius: 12px; color: var(--text-main); outline: none; }
         .search-icon { position: absolute; left: 14px; color: var(--text-muted); }
@@ -71,6 +74,7 @@
         .chat-info { flex: 1; overflow: hidden; }
         .chat-name { font-weight: 600; font-size: 15px; }
         .chat-status-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .online-badge { width: 8px; height: 8px; background: #10b981; border-radius: 50%; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
 
         .search-actions { display: flex; gap: 4px; }
         .action-btn { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
@@ -94,14 +98,14 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        /* Статус печатает */
-        .typing-indicator { font-size: 12px; color: #10b981; padding: 4px 24px; display: none; }
-
-        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
+        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); position: relative;}
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; }
+        
+        /* Печатает */
+        .typing-indicator { position: absolute; top: -25px; left: 24px; font-size: 12px; color: #10b981; display: none; }
 
-        /* Модалка настроек профиля */
+        /* Профиль */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
         .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
@@ -114,30 +118,32 @@
 </head>
 <body>
 
-    <!-- Экран входа / Регистрации -->
+    <!-- Экран входа -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
-            <h2 class="logo">DanuMes</h2>
+            <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
             
-            <!-- Место для уведомления об ошибке -->
-            <div class="error-toast" id="errorToast">Недействительный Логин/Пароль</div>
+            <!-- Оповещения -->
+            <div class="error-alert" id="errorAlert"></div>
+            <div class="success-alert" id="successAlert"></div>
 
-            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин (Никнейм)..." autofocus>
+            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
-            <div class="auth-buttons">
+            <div class="auth-buttons-row">
                 <button class="auth-btn btn-login" id="loginBtn">Войти</button>
                 <button class="auth-btn btn-reg" id="regBtn">Регистрация</button>
             </div>
         </div>
     </div>
 
-    <!-- Настройки Профиля -->
+    <!-- Модальное окно Профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
             <button class="close-modal-btn" id="closeProfileBtn"><i data-lucide="x"></i></button>
             <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
             
+            <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку (Emoji)</label>
             <div class="profile-avatar-select">
                 <span class="avatar-opt selected" onclick="selectAvatar(this, '🤖')">🤖</span>
                 <span class="avatar-opt" onclick="selectAvatar(this, '🥷')">🥷</span>
@@ -146,13 +152,13 @@
             </div>
 
             <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
-            <input type="text" class="profile-input" id="statusInput" placeholder="Что нового?">
-            <button class="profile-save-btn" id="saveProfileBtn">Сохранить изменения</button>
+            <input type="text" class="profile-input" id="statusInput" placeholder="Что у вас нового?">
+
+            <button class="profile-save-btn" id="saveProfileBtn">Сохранить</button>
         </div>
     </div>
 
     <div class="app-container">
-        <!-- Боковой рельс управления -->
         <nav class="nav-rail">
             <button class="nav-btn active" id="navHome"><i data-lucide="home"></i></button>
             <button class="nav-btn" id="themeToggle"><i data-lucide="sun" id="themeIcon"></i></button>
@@ -161,41 +167,37 @@
 
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo" style="font-size:22px;">DanuMes</div>
+                <div class="logo">DanuMes</div>
                 <div class="search-box">
                     <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Глобальный поиск людей...">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск людей...">
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title">Мои контакты</div>
+                <div class="list-section-title" id="friendsTitle">Мои друзья</div>
                 <div id="friendsList"></div>
-                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Результаты поиска</div>
+                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
                 <div id="globalList"></div>
             </div>
         </aside>
 
-        <!-- Заставка -->
         <div class="home-screen" id="homeScreen">
-            <i data-lucide="message-square" style="width:64px; height:64px; color:#6366f1;"></i>
-            <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span>!</h2>
-            <p>Используйте глобальный поиск слева, чтобы найти людей и начать защищенное общение.</p>
+            <i data-lucide="message-square" style="width: 64px; height: 64px; color: #6366f1;"></i>
+            <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
+            <p>Используйте глобальный поиск слева, чтобы найти друзей и начать переписку.</p>
         </div>
 
-        <!-- Окно активного чата -->
         <main class="chat-window hidden" id="chatWindow">
             <div class="chat-header">
                 <div class="avatar" id="activeAvatar">🤖</div>
                 <div>
-                    <h4 id="activeChatName">Собеседник</h4>
-                    <span id="activeChatStatus" style="font-size:12px; color:var(--text-muted);">Доступен</span>
+                    <h4 id="activeChatName"></h4>
+                    <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
                 </div>
             </div>
-            
             <div class="messages-area" id="messagesArea"></div>
-            <div class="typing-indicator" id="typingIndicator">печатает...</div>
-            
             <div class="input-area">
+                <div class="typing-indicator" id="typingIndicator">печатает...</div>
                 <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
                 <button class="send-btn" id="sendBtn"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
             </div>
@@ -203,299 +205,119 @@
     </div>
 
     <script>
-        // Инициализация звуков уведомлений через Audio API
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playNotifySound() {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+        // Использование встроенного в браузер синтезатора звука AudioContext (без файлов картинок и звуков на сервере)
+        function playNotificationSound() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Ре-нота
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Ре-нота
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // Ля-нота
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            osc.stop(ctx.currentTime + 0.4);
         }
 
-        // Подключаем Socket.IO с защитой от сбоев
-        const socket = io({ transports: ['websocket', 'polling'] });
-        
-        // Локальное хранилище данных аккаунтов для надежности кнопок
-        if(!localStorage.getItem('danumes_accounts')) {
-            localStorage.setItem('danumes_accounts', JSON.stringify({
-                "алина": "123", "артем": "123", "иван": "123", "мария": "123"
-            }));
-        }
-
-        let myName = "";
-        let myAvatar = "🤖";
-        let myStatus = "Доступен";
+        const socket = io();
+        let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
-        let localFriends = new Set(JSON.parse(localStorage.getItem('danumes_friends') || '[]'));
+        let globalUsers = [];
+        let localFriends = new Set();
+        let selectedAvatarSymbol = "🤖";
+        let typingTimeout;
 
-        // Хранилище переписок
-        let chatHistories = JSON.parse(localStorage.getItem('danumes_history') || '{}');
-
-        // Элементы
         const authScreen = document.getElementById('authScreen');
         const usernameInput = document.getElementById('usernameInput');
         const passwordInput = document.getElementById('passwordInput');
-        const errorToast = document.getElementById('errorToast');
         const loginBtn = document.getElementById('loginBtn');
         const regBtn = document.getElementById('regBtn');
+        const errorAlert = document.getElementById('errorAlert');
+        const successAlert = document.getElementById('successAlert');
 
-        // Функция показа красивой плашки ошибки
-        function showAuthError(text) {
-            errorToast.textContent = text;
-            errorToast.style.display = 'block';
-            setTimeout(() => { errorToast.style.display = 'none'; }, 4000);
+        function showAlert(err, text) {
+            errorAlert.style.display = err ? 'block' : 'none';
+            successAlert.style.display = err ? 'none' : 'block';
+            if(err) errorAlert.textContent = text;
+            else successAlert.textContent = text;
         }
 
-        // КНОПКА РЕГИСТРАЦИИ (100% рабочая)
-        regBtn.onclick = function() {
-            const user = usernameInput.value.trim().toLowerCase();
-            const pass = passwordInput.value.trim();
-            if(!user || !pass) { showAuthError("Заполните все поля!"); return; }
-
-            let db = JSON.parse(localStorage.getItem('danumes_accounts'));
-            if(db[user]) { showAuthError("Этот логин уже занят!"); return; }
-
-            db[user] = pass;
-            localStorage.setItem('danumes_accounts', JSON.stringify(db));
-            
-            // Успех
-            errorToast.style.background = 'rgba(16, 185, 129, 0.2)';
-            errorToast.style.borderColor = '#10b981';
-            errorToast.style.color = '#a7f3d0';
-            showAuthError("Аккаунт успешно создан! Теперь войдите.");
-            setTimeout(() => {
-                errorToast.style.background = 'rgba(239, 68, 68, 0.2)';
-                errorToast.style.borderColor = '#ef4444';
-                errorToast.style.color = '#fca5a5';
-            }, 4000);
+        // Кнопки авторизации
+        regBtn.onclick = () => {
+            socket.emit('register_account', { username: usernameInput.value, password: passwordInput.value });
         };
 
-        // КНОПКА ВХОДА (100% рабочая)
-        loginBtn.onclick = function() {
-            const user = usernameInput.value.trim().toLowerCase();
-            const pass = passwordInput.value.trim();
-            if(!user || !pass) { showAuthError("Введите логин и пароль!"); return; }
-
-            let db = JSON.parse(localStorage.getItem('danumes_accounts'));
-            if(db[user] && db[user] === pass) {
-                // Вход выполнен успешно
-                myName = usernameInput.value.trim();
-                document.getElementById('greetingName').textContent = myName;
-                authScreen.classList.add('hidden');
-                
-                // Передаем данные на сервер
-                socket.emit('register_user', myName);
-                renderLists();
-            } else {
-                showAuthError("Недействительный Логин/Пароль");
-            }
+        loginBtn.onclick = () => {
+            socket.emit('login_account', { username: usernameInput.value, password: passwordInput.value });
         };
 
-        // Логика списков контактов
+        socket.on('auth_error', (text) => showAlert(true, text));
+        socket.on('auth_success_msg', (text) => showAlert(false, text));
+
+        socket.on('init_self', (data) => {
+            myInfo = data;
+            document.getElementById('greetingName').textContent = data.name;
+            document.getElementById('profileTrigger').textContent = data.avatar;
+            document.getElementById('statusInput').value = data.status;
+            authScreen.classList.add('hidden');
+        });
+
+        // Работа со списками
+        socket.on('update_users_list', (users) => {
+            globalUsers = users.filter(u => u.name !== myInfo.name);
+            renderLists(document.getElementById('searchInput').value);
+        });
+
         function renderLists(filter = "") {
             const friendsList = document.getElementById('friendsList');
             const globalList = document.getElementById('globalList');
             const globalTitle = document.getElementById('globalTitle');
-            
+
             friendsList.innerHTML = "";
             globalList.innerHTML = "";
-            
-            let allSystemUsers = Object.keys(JSON.parse(localStorage.getItem('danumes_accounts')));
-            let hasGlobalResults = false;
+            let hasGlobal = false;
 
-            allSystemUsers.forEach(userKey => {
-                if(userKey === myName.toLowerCase()) return;
-                
-                // Форматируем имя для вывода красивым регистром
-                let nameToShow = userKey.charAt(0).toUpperCase() + userKey.slice(1);
-                if(!nameToShow.toLowerCase().includes(filter.toLowerCase())) return;
+            globalUsers.forEach(user => {
+                const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
+                if (!isMatch) return;
 
-                if(localFriends.has(nameToShow)) {
-                    let history = chatHistories[nameToShow] || [];
-                    let lastMsg = history.length > 0 ? history[history.length - 1].text : "Нет сообщений";
-                    
-                    let item = document.createElement('div');
-                    item.className = `chat-item ${activeChatName === nameToShow ? 'active' : ''}`;
-                    item.onclick = () => openChat(nameToShow);
+                if (localFriends.has(user.name)) {
+                    const item = document.createElement('div');
+                    item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
+                    item.onclick = () => openChat(user.name);
                     item.innerHTML = `
-                        <div class="avatar">🤖</div>
+                        <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
-                            <div class="chat-name">${nameToShow}</div>
-                            <div class="chat-status-text">${lastMsg}</div>
+                            <div class="chat-name">${user.name}</div>
+                            <div class="chat-status-text">${user.status}</div>
                         </div>
+                        ${user.isOnline ? '<div class="online-badge"></div>' : ''}
                     `;
                     friendsList.appendChild(item);
-                } else if(filter.trim() !== "") {
-                    hasGlobalResults = true;
-                    let item = document.createElement('div');
+                } else {
+                    hasGlobal = true;
+                    const item = document.createElement('div');
                     item.className = "chat-item";
                     item.style.cursor = "default";
                     item.innerHTML = `
-                        <div class="avatar">🥷</div>
+                        <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
-                            <div class="chat-name">${nameToShow}</div>
-                            <div class="chat-status-text">Новый пользователь</div>
+                            <div class="chat-name">${user.name}</div>
+                            <div class="chat-status-text">${user.status}</div>
                         </div>
                         <div class="search-actions">
-                            <button class="action-btn primary" onclick="addFriend('${nameToShow}')">Добавить</button>
-                            <button class="action-btn" onclick="writeToUser('${nameToShow}')">Написать</button>
+                            <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
+                            <button class="action-btn" onclick="writeToUser('${user.name}')">Чат</button>
                         </div>
                     `;
                     globalList.appendChild(item);
                 }
             });
 
-            if (filter.trim() !== "" && hasGlobalResults) globalTitle.classList.remove('hidden');
+            if (filter.trim() !== "" && hasGlobal) globalTitle.classList.remove('hidden');
             else globalTitle.classList.add('hidden');
         }
 
-        window.addFriend = function(name) {
-            localFriends.add(name);
-            localStorage.setItem('danumes_friends', JSON.stringify(Array.from(localFriends)));
-            renderLists();
-        };
-
-        window.writeToUser = function(name) {
-            addFriend(name);
-            openChat(name);
-            document.getElementById('searchInput').value = "";
-            renderLists();
-        };
-
-        function openChat(name) {
-            activeChatName = name;
-            document.getElementById('homeScreen').classList.add('hidden');
-            document.getElementById('chatWindow').classList.remove('hidden');
-            document.getElementById('navHome').classList.remove('active');
-            
-            document.getElementById('activeChatName').textContent = name;
-            renderMessages();
-            renderLists();
-        }
-
-        function renderMessages() {
-            const messagesArea = document.getElementById('messagesArea');
-            messagesArea.innerHTML = "";
-            let history = chatHistories[activeChatName] || [];
-
-            history.forEach((msg, index) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = `message-wrapper ${msg.sender === 'user' ? 'sent' : 'received'}`;
-                wrapper.innerHTML = `
-                    <div class="message-bubble">
-                        ${msg.text}
-                        <button class="delete-msg-btn" onclick="deleteMessage(${index})">Удалить</button>
-                    </div>
-                `;
-                messagesArea.appendChild(wrapper);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        window.deleteMessage = function(index) {
-            if(chatHistories[activeChatName]) {
-                chatHistories[activeChatName].splice(index, 1);
-                localStorage.setItem('danumes_history', JSON.stringify(chatHistories));
-                renderMessages();
-                renderLists();
-            }
-        };
-
-        // Отправка сообщений
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (!text || !activeChatName) return;
-
-            if (!chatHistories[activeChatName]) chatHistories[activeChatName] = [];
-            chatHistories[activeChatName].push({ sender: 'user', text: text });
-            localStorage.setItem('danumes_history', JSON.stringify(chatHistories));
-
-            socket.emit('send_direct_message', { toUser: activeChatName, text: text });
-            
-            input.value = "";
-            renderMessages();
-            renderLists();
-            playNotifySound();
-        }
-
-        // Получение сообщений от сервера
-        socket.on('receive_direct_message', (msg) => {
-            let senderName = msg.from;
-            addFriend(senderName);
-
-            if (!chatHistories[senderName]) chatHistories[senderName] = [];
-            chatHistories[senderName].push({ sender: 'friend', text: msg.text });
-            localStorage.setItem('danumes_history', JSON.stringify(chatHistories));
-
-            if (activeChatName === senderName) renderMessages();
-            renderLists();
-            playNotifySound();
-        });
-
-        // Статус "Печатает..." через сетевые события
-        const messageInput = document.getElementById('messageInput');
-        messageInput.oninput = () => {
-            if(activeChatName) {
-                socket.emit('typing_status', { toUser: activeChatName, isTyping: true });
-            }
-        };
-
-        socket.on('receive_typing', (data) => {
-            const indicator = document.getElementById('typingIndicator');
-            if(activeChatName === data.fromUser && data.isTyping) {
-                indicator.style.display = 'block';
-                setTimeout(() => { indicator.style.display = 'none'; }, 2000);
-            }
-        });
-
-        // Управление профилем (Модалка)
-        const profileModal = document.getElementById('profileModal');
-        const profileTrigger = document.getElementById('profileTrigger');
-        document.getElementById('profileTrigger').onclick = () => profileModal.classList.remove('hidden');
-        document.getElementById('closeProfileBtn').onclick = () => profileModal.classList.add('hidden');
-        
-        window.selectAvatar = function(el, emoji) {
-            document.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-            myAvatar = emoji;
-        };
-
-        document.getElementById('saveProfileBtn').onclick = () => {
-            myStatus = document.getElementById('statusInput').value.trim() || "Доступен";
-            profileTrigger.textContent = myAvatar;
-            profileModal.classList.add('hidden');
-        };
-
-        // Главная кнопка и поиск
-        document.getElementById('navHome').onclick = function() {
-            activeChatName = null;
-            this.classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists();
-        };
-        document.getElementById('searchInput').oninput = (e) => renderLists(e.target.value);
-        document.getElementById('sendBtn').onclick = sendMessage;
-        messageInput.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
-
-        // Переключение тем оформления
-        document.getElementById('themeToggle').onclick = function() {
-            const html = document.documentElement;
-            const target = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', target);
-            document.getElementById('themeIcon').setAttribute('data-lucide', target === 'dark' ? 'sun' : 'moon');
-            lucide.createIcons();
-        };
-
-        // Инициализация интерфейса
-        lucide.createIcons();
-        renderLists();
-    </script>
-</body>
-</html>
+        window.addFriend = function(name) { localFriends.add(name); render
