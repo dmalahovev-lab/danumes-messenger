@@ -8,7 +8,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-const DB_PATH = path.join(__dirname, 'database.json');
+// ИСПРАВЛЕНИЕ: Переносим файл базы данных в папку /tmp, разрешенную для записи на Render
+const DB_PATH = path.join('/tmp', 'database.json');
 
 function readDB() {
     try {
@@ -18,6 +19,7 @@ function readDB() {
         const data = fs.readFileSync(DB_PATH, 'utf8');
         return JSON.parse(data);
     } catch (e) {
+        // Если произошел сбой, возвращаем чистую структуру, чтобы сервер не падал с ошибкой 500
         return { users: {}, messages: [] };
     }
 }
@@ -26,7 +28,7 @@ function writeDB(data) {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 4), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи:", e);
+        console.error("Ошибка записи базы данных в /tmp:", e);
     }
 }
 
@@ -35,38 +37,46 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/register', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const db = readDB();
+        const username = (req.body.user || '').trim();
+        const password = (req.body.pass || '').trim();
 
-    if (!username || !password) {
-        return res.json({ success: false, msg: 'Заполните все поля' });
+        if (!username || !password) {
+            return res.json({ success: false, msg: 'Заполните все поля' });
+        }
+
+        if (db.users[username]) {
+            return res.json({ success: false, msg: 'Пользователь уже существует' });
+        }
+
+        db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
+        writeDB(db);
+
+        return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
+    } catch (err) {
+        return res.json({ success: false, msg: 'Внутренняя ошибка регистрации' });
     }
-
-    if (db.users[username]) {
-        return res.json({ success: false, msg: 'Пользователь уже существует' });
-    }
-
-    db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    writeDB(db);
-
-    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
 app.post('/api/login', (req, res) => {
-    const db = readDB();
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    try {
+        const db = readDB();
+        const username = (req.body.user || '').trim();
+        const password = (req.body.pass || '').trim();
 
-    const user = db.users[username];
-    if (!user || user.password !== password) {
-        return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+        const user = db.users[username];
+        if (!user || user.password !== password) {
+            return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
+        }
+
+        return res.json({
+            success: true,
+            user: { name: username, avatar: user.avatar, status: user.status }
+        });
+    } catch (err) {
+        return res.json({ success: false, msg: 'Внутренняя ошибка авторизации' });
     }
-
-    return res.json({
-        success: true,
-        user: { name: username, avatar: user.avatar, status: user.status }
-    });
 });
 
 app.get('/api/users', (req, res) => {
@@ -105,7 +115,6 @@ app.post('/api/messages/delete', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-// ИСПРАВЛЕНО: Убрана ошибочная глобальная переменная, сервер теперь запускается стабильно
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
