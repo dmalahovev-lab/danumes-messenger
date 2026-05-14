@@ -155,7 +155,7 @@
 
         .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .group-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
-            /* АДАПТИВНОСТЬ ДЛЯ СМАРТФОНОВ */
+        /* АДАПТИВНОСТЬ ДЛЯ СМАРТФОНОВ — ИСПРАВЛЕННАЯ ВЕРСИЯ */
         @media (max-width: 768px) {
             body {
                 position: fixed;
@@ -166,7 +166,6 @@
                 height: 100vh;
                 position: relative;
             }
-            /* Сужаем боковую панель навигации */
             .nav-rail {
                 width: 60px;
                 padding: 16px 0;
@@ -177,21 +176,21 @@
                 height: 40px;
                 font-size: 10px;
             }
-            /* Сайдбар занимает всё оставшееся место на мобильном */
             .sidebar {
                 width: calc(100vw - 60px);
                 flex: 1;
             }
-            /* Если открыт чат, скрываем сайдбар, чтобы показать переписку во весь экран */
-            .app-container:has(.chat-window:not(.hidden)) .sidebar {
+            /* Класс-переключатель для мобильных телефонов */
+            .sidebar.mobile-hidden {
                 display: none !important;
             }
-            /* Окно чата на телефоне занимает всю ширину экрана */
             .chat-window {
                 width: calc(100vw - 60px);
                 flex: 1;
             }
-            /* Оптимизируем bento-панель ввода под мобильную клавиатуру */
+            .chat-window.mobile-hidden {
+                display: none !important;
+            }
             .input-area {
                 padding: 12px 16px;
                 height: 75px;
@@ -199,13 +198,12 @@
             }
             .message-input {
                 padding: 10px 14px;
-                font-size: 16px; /* Защита от авто-зума экрана в iOS/Android */
+                font-size: 16px;
             }
             .send-btn {
                 padding: 10px 14px;
                 font-size: 14px;
             }
-            /* Уменьшаем размер пузырьков сообщений, чтобы они аккуратно ложились в экран */
             .message-bubble {
                 max-width: 80%;
                 padding: 10px 14px;
@@ -273,28 +271,33 @@
             await performLogin(user, pass, false);
         }
 
-        async function performLogin(user, pass, isAuto = false) {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                myInfo = data.user;
-                localStorage.setItem('danumes_user', user);
-                localStorage.setItem('danumes_pass', pass);
+async function performLogin(user, pass, isAuto = false) {
+    const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, pass })
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+        myInfo = data.user;
+        localStorage.setItem('danumes_user', user);
+        localStorage.setItem('danumes_pass', pass);
 
-                document.getElementById('greetingName').textContent = myInfo.name;
-                document.getElementById('profileTrigger').textContent = myInfo.avatar;
-                document.getElementById('authScreen').style.display = 'none';
-                
-                await loadUsersList();
-                setInterval(refreshChatData, 3000);
-            } else {
-                if(!isAuto) showAuthNotification(data.msg, false);
-            }
+        document.getElementById('greetingName').textContent = myInfo.name;
+        document.getElementById('profileTrigger').textContent = myInfo.avatar;
+        document.getElementById('authScreen').style.display = 'none';
+        
+        // ДЛЯ ТЕЛЕФОНОВ: Изначально скрываем пустое окно чата, оставляя только список людей
+        const chatWin = document.getElementById('chatWindow');
+        if (chatWin) chatWin.classList.add('mobile-hidden');
+
+        await loadUsersList();
+        setInterval(refreshChatData, 3000);
+    } else {
+        if(!isAuto) showAuthNotification(data.msg, false);
+    }
+}
         }
 
         function logOut() {
@@ -399,27 +402,32 @@
         window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
         window.writeToUser = function(name) { localFriends.add(name); openChat(name, false); document.getElementById('searchInput').value = ""; renderLists(""); };
 
-        async function openChat(name, isGroup = false) {
-            activeChatName = name;
-            
-            document.getElementById('homeScreen').classList.add('hidden');
-            document.getElementById('chatWindow').classList.remove('hidden');
-            document.getElementById('navHome').classList.remove('active');
-            document.getElementById('activeChatName').textContent = name;
-            
-            if (isGroup) {
-                document.getElementById('activeAvatar').textContent = "👥";
-                document.getElementById('activeChatStatus').textContent = "Группа участников";
-            } else {
-                localFriends.add(name);
-                const userData = globalUsers.find(u => u.name === name);
-                document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
-                document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
-            }
-            
-            await loadChatHistory();
-            renderLists(document.getElementById('searchInput').value);
-        }
+async function openChat(name, isGroup = false) {
+    activeChatName = name;
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('chatWindow').classList.remove('hidden');
+    document.getElementById('navHome').classList.remove('active');
+    document.getElementById('activeChatName').textContent = name;
+    
+    if (isGroup) {
+        document.getElementById('activeAvatar').textContent = "👥";
+        document.getElementById('activeChatStatus').textContent = "Группа участников";
+    } else {
+        localFriends.add(name);
+        const userData = globalUsers.find(u => u.name === name);
+        document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
+        document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+    }
+    
+    await loadChatHistory();
+    renderLists(document.getElementById('searchInput').value);
+
+    // ДЛЯ ТЕЛЕФОНОВ: Скрываем левый сайдбар, показывая только открытый чат
+    const sidebar = document.querySelector('.sidebar');
+    const chatWin = document.getElementById('chatWindow');
+    if (sidebar) sidebar.classList.add('mobile-hidden');
+    if (chatWin) chatWin.classList.remove('mobile-hidden');
+}
 
         async function loadChatHistory() {
             const response = await fetch('/api/messages');
@@ -508,13 +516,20 @@
             renderLists(document.getElementById('searchInput').value);
         }
 
-        function goHome() {
-            activeChatName = null;
-            document.getElementById('navHome').classList.add('active');
-            document.getElementById('homeScreen').classList.remove('hidden');
-            document.getElementById('chatWindow').classList.add('hidden');
-            renderLists(document.getElementById('searchInput').value);
-        }
+function goHome() {
+    activeChatName = null;
+    document.getElementById('navHome').classList.add('active');
+    document.getElementById('homeScreen').classList.remove('hidden');
+    document.getElementById('chatWindow').classList.add('hidden');
+    renderLists(document.getElementById('searchInput').value);
+
+    // ДЛЯ ТЕЛЕФОНОВ: Возвращаем сайдбар на экран при нажатии на кнопку "ЧАТЫ"
+    const sidebar = document.querySelector('.sidebar');
+    const chatWin = document.getElementById('chatWindow');
+    if (sidebar) sidebar.classList.remove('mobile-hidden');
+    if (chatWin) chatWin.classList.add('mobile-hidden');
+}
+
 
         function toggleTheme() {
             const html = document.documentElement;
