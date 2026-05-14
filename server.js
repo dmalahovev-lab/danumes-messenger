@@ -8,6 +8,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
+// База данных в защищенной tmp-папке Render
 const DB_PATH = path.join('/tmp', 'database.json');
 
 function readDB() {
@@ -16,9 +17,9 @@ function readDB() {
             fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, messages: [], groups: [] }), 'utf8');
         }
         const data = fs.readFileSync(DB_PATH, 'utf8');
-        const parsed = JSON.parse(data);
-        if (!parsed.groups) parsed.groups = []; // Гарантируем наличие массива групп
-        return parsed;
+        const json = JSON.parse(data);
+        if (!json.groups) json.groups = []; // Защита от старой структуры
+        return json;
     } catch (e) {
         return { users: {}, messages: [], groups: [] };
     }
@@ -36,6 +37,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// АВТОРpatchИЗАЦИЯ: Регистрация
 app.post('/api/register', (req, res) => {
     try {
         const db = readDB();
@@ -45,20 +47,19 @@ app.post('/api/register', (req, res) => {
         if (!username || !password) {
             return res.json({ success: false, msg: 'Заполните все поля' });
         }
-
         if (db.users[username]) {
             return res.json({ success: false, msg: 'Пользователь уже существует' });
         }
 
         db.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
         writeDB(db);
-
         return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
     } catch (err) {
-        return res.json({ success: false, msg: 'Внутренняя ошибка регистрации' });
+        return res.json({ success: false, msg: 'Ошибка сервера при регистрации' });
     }
 });
 
+// АВТОРpatchИЗАЦИЯ: Вход
 app.post('/api/login', (req, res) => {
     try {
         const db = readDB();
@@ -69,16 +70,16 @@ app.post('/api/login', (req, res) => {
         if (!user || user.password !== password) {
             return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
         }
-
         return res.json({
             success: true,
             user: { name: username, avatar: user.avatar, status: user.status }
         });
     } catch (err) {
-        return res.json({ success: false, msg: 'Внутренняя ошибка авторизации' });
+        return res.json({ success: false, msg: 'Ошибка сервера при входе' });
     }
 });
 
+// Пользователи мессенджера
 app.get('/api/users', (req, res) => {
     const db = readDB();
     const list = Object.keys(db.users).map(username => ({
@@ -89,6 +90,29 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
+// Список групп
+app.get('/api/groups', (req, res) => {
+    const db = readDB();
+    res.json(db.groups || []);
+});
+
+// Создание группы
+app.post('/api/groups/create', (req, res) => {
+    const db = readDB();
+    const groupName = (req.body.name || '').trim();
+    if (!groupName) return res.json({ success: false, msg: 'Имя группы не может быть пустым' });
+
+    const newGroup = {
+        id: 'group_' + Date.now(),
+        name: groupName,
+        avatar: "👥"
+    };
+    db.groups.push(newGroup);
+    writeDB(db);
+    res.json({ success: true, groups: db.groups });
+});
+
+// Переписка (ЛС + группы)
 app.get('/api/messages', (req, res) => {
     const db = readDB();
     res.json(db.messages);
@@ -114,31 +138,7 @@ app.post('/api/messages/delete', (req, res) => {
     res.json({ success: true, messages: db.messages });
 });
 
-// МАРШРУТЫ ДЛЯ ГРУПП
-app.get('/api/groups', (req, res) => {
-    const db = readDB();
-    res.json(db.groups || []);
-});
-
-app.post('/api/groups/create', (req, res) => {
-    const db = readDB();
-    const groupName = (req.body.name || '').trim();
-    
-    if (!groupName) return res.json({ success: false, msg: 'Введите имя группы' });
-
-    const newGroup = {
-        id: 'group_' + Date.now(),
-        name: groupName,
-        avatar: "👥",
-        status: "Групповой чат"
-    };
-
-    db.groups.push(newGroup);
-    writeDB(db);
-    res.json({ success: true, groups: db.groups });
-});
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes запущен`);
 });
