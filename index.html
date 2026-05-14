@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Modern Web Messenger</title>
+    <title>DanuMes — Premium Messenger</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="unpkg.com"></script>
     <style>
@@ -34,27 +34,21 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Авторизационный экран */
+        /* Экран входа */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
-        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin-bottom: 12px; outline: none; font-size: 15px; text-align: center;}
+        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 8px 0; outline: none; font-size: 16px; text-align: center;}
         
-        .auth-buttons-row { display: flex; gap: 10px; margin-top: 10px; }
-        .auth-btn { flex: 1; padding: 14px; background: #6366f1; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px; }
-        .auth-btn.secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
-        .auth-btn:hover { opacity: 0.9; }
+        .auth-buttons-row { display: flex; gap: 10px; margin-top: 14px; }
+        .auth-btn { flex: 1; padding: 14px; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-login { background: #6366f1; }
+        .btn-register { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); }
+        
+        /* Красивое уведомление об ошибке */
+        .error-toast { display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; font-weight: 500; text-align: center;}
+        .success-toast { display: none; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #a7f3d0; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; font-weight: 500; text-align: center;}
 
-        /* Трендовая красная плашка ошибок */
-        .error-toast { background: #ef4444; color: white; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 500; margin-bottom: 16px; text-align: center; display: none; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); animation: shake 0.3s ease; }
-        .success-toast { background: #10b981; color: white; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 500; margin-bottom: 16px; text-align: center; display: none; }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-6px); }
-            75% { transform: translateX(6px); }
-        }
-
-        /* Контейнер приложения */
+        /* Стили контейнера мессенджера */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
         .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -79,10 +73,7 @@
         .chat-info { flex: 1; overflow: hidden; }
         .chat-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; }
         .chat-status-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        /* Индикатор онлайна */
-        .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; }
-        .offline-dot { width: 8px; height: 8px; background: #6b7280; border-radius: 50%; display: inline-block; }
+        .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; position: absolute; bottom: 12px; left: 44px; border: 2px solid var(--bg-sidebar); }
 
         .search-actions { display: flex; gap: 4px; }
         .action-btn { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
@@ -106,16 +97,14 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        .chat-footer-area { background: var(--bg-sidebar); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; }
-        .typing-indicator { font-size: 12px; color: #6366f1; padding: 4px 24px; display: none; font-style: italic; }
-
-        .input-area { padding: 16px 24px 20px 24px; display: flex; align-items: center; gap: 12px; }
+        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); position: relative;}
+        .typing-indicator-text { position: absolute; top: -25px; left: 24px; font-size: 12px; color: #6366f1; font-weight: 500; display: none;}
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; }
 
         /* Окно профиля */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; position: relative;}
+        .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
         .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
         .avatar-opt { cursor: pointer; padding: 6px; border-radius: 10px; border: 1px solid transparent; }
         .avatar-opt.selected { border-color: #6366f1; background: var(--bg-active); }
@@ -126,30 +115,31 @@
 </head>
 <body>
 
-    <!-- Экран авторизации -->
+    <!-- Экран входа / регистрации -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
-            <h2 class="logo" style="font-size:32px; margin-bottom:10px;">DanuMes</h2>
+            <h2 class="logo" style="font-size:32px; margin-bottom:14px;">DanuMes</h2>
             
             <div class="error-toast" id="errorToast"></div>
             <div class="success-toast" id="successToast"></div>
 
-            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин (Никнейм)..." autofocus>
+            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин (Никнейм)..." autocomplete="off">
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
             <div class="auth-buttons-row">
-                <button class="auth-btn" id="loginBtn">Войти</button>
-                <button class="auth-btn secondary" id="registerBtn">Регистрация</button>
+                <button class="auth-btn btn-login" id="loginBtn">Войти</button>
+                <button class="auth-btn btn-register" id="regBtn">Регистрация</button>
             </div>
         </div>
     </div>
 
-    <!-- Модалка Профиля -->
+    <!-- Настройки профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
             <button class="close-modal-btn" id="closeProfileBtn"><i data-lucide="x"></i></button>
             <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
             
+            <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку</label>
             <div class="profile-avatar-select">
                 <span class="avatar-opt selected" onclick="selectAvatar(this, '🤖')">🤖</span>
                 <span class="avatar-opt" onclick="selectAvatar(this, '🥷')">🥷</span>
@@ -157,8 +147,10 @@
                 <span class="avatar-opt" onclick="selectAvatar(this, '🔥')">🔥</span>
             </div>
 
-            <input type="text" class="profile-input" id="statusInput" placeholder="Ваш статус...">
-            <button class="profile-save-btn" id="saveProfileBtn">Сохранить изменения</button>
+            <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
+            <input type="text" class="profile-input" id="statusInput" placeholder="Что нового?">
+
+            <button class="profile-save-btn" id="saveProfileBtn">Сохранить</button>
         </div>
     </div>
 
@@ -174,21 +166,19 @@
                 <div class="logo">DanuMes</div>
                 <div class="search-box">
                     <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск людей...">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск по логину...">
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title" id="friendsTitle">Мои друзья</div>
+                <div class="list-section-title">Все пользователи сети</div>
                 <div id="friendsList"></div>
-                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Все пользователи</div>
-                <div id="globalList"></div>
             </div>
         </aside>
 
         <div class="home-screen" id="homeScreen">
             <i data-lucide="message-square" style="width: 64px; height: 64px; color: #6366f1;"></i>
-            <h2>Добро пожаловать, <span id="greetingName">Пользователь</span></h2>
-            <p>Вы в сети. Воспользуйтесь поиском, чтобы найти пользователей и начать защищенный чат.</p>
+            <h2>Добро пожаловать в DanuMes</h2>
+            <p>Выберите собеседника из списка слева, чтобы начать безопасный диалог.</p>
         </div>
 
         <main class="chat-window hidden" id="chatWindow">
@@ -200,122 +190,121 @@
                 </div>
             </div>
             <div class="messages-area" id="messagesArea"></div>
-            
-            <div class="chat-footer-area">
-                <div class="typing-indicator" id="typingIndicator">печатает...</div>
-                <div class="input-area">
-                    <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
-                    <button class="send-btn" id="sendBtn"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
-                </div>
+            <div class="input-area">
+                <div class="typing-indicator-text" id="typingIndicator">печатает...</div>
+                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+                <button class="send-btn" id="sendBtn"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
             </div>
         </main>
     </div>
 
     <script>
+        // Генерация красивого звука уведомления (Web Audio API, файлы не нужны)
+        function playNotifySound() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Ре
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // Ля
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+        }
+
         const socket = io();
-        let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
+        let myName = "";
         let activeChatName = null;
         let globalUsers = [];
-        let localFriends = new Set();
         let selectedAvatarSymbol = "🤖";
         let typingTimeout = null;
 
-        // Аудио для уведомлений
-        const msgSound = new Audio('mixkit.co');
-
+        // Элементы
         const errorToast = document.getElementById('errorToast');
         const successToast = document.getElementById('successToast');
         const usernameInput = document.getElementById('usernameInput');
         const passwordInput = document.getElementById('passwordInput');
 
-        // Кнопка Вход
-        document.getElementById('loginBtn').onclick = () => {
+        function showToast(err, text) {
             errorToast.style.display = 'none';
             successToast.style.display = 'none';
-            socket.emit('login_account', { username: usernameInput.value, password: passwordInput.value });
-        };
+            if (err) {
+                errorToast.textContent = text;
+                errorToast.style.display = 'block';
+            } else {
+                successToast.textContent = text;
+                successToast.style.display = 'block';
+            }
+        }
 
-        // Кнопка Регистрация
-        document.getElementById('registerBtn').onclick = () => {
-            errorToast.style.display = 'none';
-            successToast.style.display = 'none';
+        // Кнопки Авторизации (Исправленная логика)
+        document.getElementById('regBtn').onclick = () => {
             socket.emit('register_account', { username: usernameInput.value, password: passwordInput.value });
         };
 
-        socket.on('auth_error', (msg) => {
-            errorToast.textContent = msg;
-            errorToast.style.display = 'block';
-        });
+        document.getElementById('loginBtn').onclick = () => {
+            socket.emit('login_account', { username: usernameInput.value, password: passwordInput.value });
+        };
 
-        socket.on('auth_success', (msg) => {
-            successToast.textContent = msg;
-            successToast.style.display = 'block';
-            usernameInput.value = '';
-            passwordInput.value = '';
-        });
+        socket.on('auth_error', (text) => showToast(true, text));
+        socket.on('auth_success', (text) => showToast(false, text));
 
         socket.on('init_self', (data) => {
-            myInfo = data;
+            myName = data.name;
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('greetingName').textContent = data.name;
             document.getElementById('profileTrigger').textContent = data.avatar;
             document.getElementById('statusInput').value = data.status;
         });
 
+        // Модалка
+        const profileModal = document.getElementById('profileModal');
+        document.getElementById('profileTrigger').onclick = () => profileModal.classList.remove('hidden');
+        document.getElementById('closeProfileBtn').onclick = () => profileModal.classList.add('hidden');
+        
+        window.selectAvatar = function(element, emo) {
+            document.querySelectorAll('.avatar-opt').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedAvatarSymbol = emo;
+        };
+
+        document.getElementById('saveProfileBtn').onclick = () => {
+            socket.emit('update_profile', { status: document.getElementById('statusInput').value, avatar: selectedAvatarSymbol });
+            profileModal.classList.add('hidden');
+        };
+
+        // Обновление списка людей
         socket.on('update_users_list', (users) => {
-            globalUsers = users.filter(u => u.name !== myInfo.name);
+            globalUsers = users.filter(u => u.name !== myName);
             renderLists(document.getElementById('searchInput').value);
         });
 
         function renderLists(filter = "") {
-            const friendsList = document.getElementById('friendsList');
-            const globalList = document.getElementById('globalList');
-            const globalTitle = document.getElementById('globalTitle');
-
-            friendsList.innerHTML = "";
-            globalList.innerHTML = "";
-            let hasGlobal = false;
+            const list = document.getElementById('friendsList');
+            list.innerHTML = "";
 
             globalUsers.forEach(user => {
-                const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
-                if (!isMatch) return;
+                if (filter && !user.name.toLowerCase().includes(filter.toLowerCase())) return;
 
-                const dot = user.isOnline ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>';
-
-                if (localFriends.has(user.name)) {
-                    const item = document.createElement('div');
-                    item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                    item.onclick = () => openChat(user.name);
-                    item.innerHTML = `
-                        <div class="avatar">${user.avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${user.name} ${dot}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                    `;
-                    friendsList.appendChild(item);
-                } else {
-                    hasGlobal = true;
-                    const item = document.createElement('div');
-                    item.className = "chat-item";
-                    item.style.cursor = "default";
-                    item.innerHTML = `
-                        <div class="avatar">${user.avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-name">${user.name} ${dot}</div>
-                            <div class="chat-status-text">${user.status}</div>
-                        </div>
-                        <div class="search-actions">
-                            <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
-                            <button class="action-btn" onclick="writeToUser('${user.name}')">Чат</button>
-                        </div>
-                    `;
-                    globalList.appendChild(item);
-                }
+                const item = document.createElement('div');
+                item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
+                item.onclick = () => openChat(user.name);
+                item.innerHTML = `
+                    <div class="avatar">${user.avatar}</div>
+                    ${user.isOnline ? '<div class="online-dot"></div>' : ''}
+                    <div class="chat-info">
+                        <div class="chat-name">${user.name}</div>
+                        <div class="chat-status-text">${user.status}</div>
+                    </div>
+                `;
+                list.appendChild(item);
             });
-
-            if (filter.trim() !== "" && hasGlobal) globalTitle.classList.remove('hidden');
-            else globalTitle.classList.add('hidden');
         }
 
-        window.addFriend = function(name) { localFriends.add(name); renderLists
+        function openChat(name) {
+            activeChatName = name;
+            document.getElementById('homeScreen').classList.add('hidden');
+            document.getElementById('chatWindow').classList.remove
