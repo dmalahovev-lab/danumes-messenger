@@ -34,29 +34,29 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; display: flex; overflow: hidden; }
         
-        /* Авторизация */
+        /* Экран авторизации (Вкладки) */
         .auth-screen { position: fixed; inset: 0; background: var(--bg-main); display: flex; align-items: center; justify-content: center; z-index: 999; }
-        .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 40px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
-        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin: 8px 0; outline: none; font-size: 16px; text-align: center;}
+        .auth-card { background: var(--bg-glass); border: 1px solid var(--border-color); padding: 35px; border-radius: 24px; text-align: center; width: 100%; max-width: 400px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
         
-        /* Раздельные кнопки */
-        .auth-buttons-row { display: flex; gap: 12px; margin-top: 14px; }
-        .auth-btn { flex: 1; padding: 14px; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; }
-        .auth-btn.login { background: #6366f1; }
-        .auth-btn.register { background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); }
-        .auth-btn.login:hover { background: #4f46e5; }
-        .auth-btn.register:hover { background: var(--bg-active); }
+        .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .auth-tab { flex: 1; padding: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; font-weight: 600; }
+        .auth-tab.active { color: #6366f1; border-bottom: 2px solid #6366f1; }
 
-        /* Трендовая красная плашка ошибок */
-        .error-toast { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 500; margin-bottom: 16px; display: none; text-align: center; backdrop-filter: blur(10px); }
-        .success-toast { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 500; margin-bottom: 16px; display: none; text-align: center; }
+        /* Плашка красивой ошибки */
+        .alert-box { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 15px; text-align: center; font-weight: 500; display: none; }
+        .alert-box.success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; }
 
-        /* Интерфейс */
+        .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; color: white; margin-bottom: 12px; outline: none; font-size: 15px; }
+        .auth-btn { width: 100%; padding: 14px; background: #6366f1; border: none; color: white; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .auth-btn:hover { background: #4f46e5; }
+
+        /* Стили главного интерфейса */
         .app-container { width: 100vw; height: 100vh; background: var(--bg-glass); backdrop-filter: blur(20px); display: flex; overflow: hidden; }
         .nav-rail { width: 72px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 20px; }
         .nav-btn { width: 48px; height: 48px; border-radius: 14px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .nav-btn:hover, .nav-btn.active { background: var(--bg-active); color: var(--text-main); }
         .nav-btn.active { color: #6366f1; border: 1px solid var(--border-color); }
+        
         .nav-profile-trigger { margin-top: auto; font-size: 24px; cursor: pointer; background: var(--bg-active); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); }
 
         .sidebar { width: 360px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
@@ -70,15 +70,14 @@
         
         .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; cursor: pointer; margin-bottom: 4px; position: relative; }
         .chat-item:hover, .chat-item.active { background: var(--bg-active); }
+        
         .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 20px;}
         .chat-info { flex: 1; overflow: hidden; }
-        .chat-name { font-weight: 600; font-size: 15px; }
+        .chat-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; }
         .chat-status-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        /* Индикатор Онлайн/Оффлайн на базе Socket.io */
-        .online-badge { width: 10px; height: 10px; border-radius: 50%; position: absolute; bottom: 12px; left: 44px; border: 2px solid var(--bg-sidebar); }
-        .online-badge.online { background: #10b981; }
-        .online-badge.offline { background: #9ca3af; }
+
+        /* Кружок Онлайна */
+        .online-badge { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: auto; }
 
         .search-actions { display: flex; gap: 4px; }
         .action-btn { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
@@ -102,11 +101,14 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: var(--bg-sidebar); }
+        /* Поле ввода и статус Печатает */
+        .chat-footer { background: var(--bg-sidebar); border-top: 1px solid var(--border-color); padding: 10px 24px 20px 24px; display: flex; flex-direction: column; gap: 4px; }
+        .typing-indicator-text { font-size: 12px; color: #6366f1; height: 16px; font-weight: 500; }
+        .input-area { display: flex; align-items: center; gap: 12px; }
         .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 14px 20px; border-radius: 12px; color: var(--text-main); outline: none; }
         .send-btn { background: #6366f1; border: none; color: white; padding: 13px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; }
 
-        /* Bento Окно настроек */
+        /* Модалка Профиля */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .profile-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 360px; box-shadow: var(--shadow); position: relative;}
         .profile-avatar-select { display: flex; justify-content: center; gap: 12px; margin: 16px 0; font-size: 28px; }
@@ -119,32 +121,36 @@
 </head>
 <body>
 
-    <!-- Экраны авторизации -->
+    <!-- Звуковые уведомления (Трендовый чистый звук) -->
+    <audio id="msgSound" src="mixkit.co" preload="auto"></audio>
+
+    <!-- Экран входа / Регистрации -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
-            <h2 class="logo" style="font-size:32px; margin-bottom:10px;">DanuMes</h2>
+            <h2 class="logo" style="font-size:32px; margin-bottom:20px;">DanuMes</h2>
             
-            <!-- Информационные плашки результатов работы кликов -->
-            <div class="error-toast" id="errorToast"></div>
-            <div class="success-toast" id="successToast"></div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Вход</button>
+                <button class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">Регистрация</button>
+            </div>
 
-            <input type="text" class="auth-input" id="usernameInput" placeholder="Логин аккаунта..." autofocus>
+            <!-- Красивая плашка системных сообщений / ошибок -->
+            <div class="alert-box" id="alertBox">Недействительный Логин/Пароль</div>
+
+            <input type="text" class="auth-input" id="usernameInput" placeholder="Имя пользователя (Логин)..." autofocus>
             <input type="password" class="auth-input" id="passwordInput" placeholder="Пароль...">
             
-            <div class="auth-buttons-row">
-                <button class="auth-btn login" id="loginBtn">Войти</button>
-                <button class="auth-btn register" id="registerBtn">Регистрация</button>
-            </div>
+            <button class="auth-btn" id="mainAuthActionBtn">Войти</button>
         </div>
     </div>
 
-    <!-- Модалка Настроек Профиля -->
+    <!-- Модальное окно Профиля -->
     <div class="modal-overlay hidden" id="profileModal">
         <div class="profile-card">
             <button class="close-modal-btn" id="closeProfileBtn"><i data-lucide="x"></i></button>
-            <h3 style="margin-bottom:14px; font-size:18px;">Профиль DanuMes</h3>
+            <h3 style="margin-bottom:14px; font-size:18px;">Настройки профиля</h3>
             
-            <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку</label>
+            <label style="font-size:13px; color:var(--text-muted)">Выберите аватарку (Emoji)</label>
             <div class="profile-avatar-select">
                 <span class="avatar-opt selected" onclick="selectAvatar(this, '🤖')">🤖</span>
                 <span class="avatar-opt" onclick="selectAvatar(this, '🥷')">🥷</span>
@@ -152,10 +158,10 @@
                 <span class="avatar-opt" onclick="selectAvatar(this, '🔥')">🔥</span>
             </div>
 
-            <label style="font-size:13px; color:var(--text-muted)">Статус</label>
-            <input type="text" class="profile-input" id="statusInput">
+            <label style="font-size:13px; color:var(--text-muted)">Ваш статус</label>
+            <input type="text" class="profile-input" id="statusInput" placeholder="Что у вас нового?">
 
-            <button class="profile-save-btn" id="saveProfileBtn">Сохранить</button>
+            <button class="profile-save-btn" id="saveProfileBtn">Сохранить изменения</button>
         </div>
     </div>
 
@@ -163,7 +169,7 @@
         <nav class="nav-rail">
             <button class="nav-btn active" id="navHome"><i data-lucide="home"></i></button>
             <button class="nav-btn" id="themeToggle"><i data-lucide="sun" id="themeIcon"></i></button>
-            <div class="nav-profile-trigger" id="profileTrigger">🤖</div>
+            <div class="nav-profile-trigger" id="profileTrigger" title="Мой профиль">🤖</div>
         </nav>
 
         <aside class="sidebar">
@@ -175,17 +181,17 @@
                 </div>
             </div>
             <div class="chats-list">
-                <div class="list-section-title" id="friendsTitle">Все пользователи</div>
+                <div class="list-section-title" id="friendsTitle">Мои друзья</div>
                 <div id="friendsList"></div>
-                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
+                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск (Все аккаунты)</div>
                 <div id="globalList"></div>
             </div>
         </aside>
 
         <div class="home-screen" id="homeScreen">
             <i data-lucide="message-square" style="width: 64px; height: 64px; color: #6366f1;"></i>
-            <h2>Добро пожаловать в DanuMes</h2>
-            <p>Выберите пользователя слева для начала защищенного интернет-диалога.</p>
+            <h2>Добро пожаловать, <span id="greetingName">Пользователь</span></h2>
+            <p>Вы подключены к глобальной сети. Найдите людей через глобальный поиск, чтобы начать чат.</p>
         </div>
 
         <main class="chat-window hidden" id="chatWindow">
@@ -196,10 +202,16 @@
                     <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
                 </div>
             </div>
+            
             <div class="messages-area" id="messagesArea"></div>
-            <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
-                <button class="send-btn" id="sendBtn"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
+            
+            <div class="chat-footer">
+                <!-- Текст статуса печатает -->
+                <div class="typing-indicator-text" id="typingIndicator"></div>
+                <div class="input-area">
+                    <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
+                    <button class="send-btn" id="sendBtn"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
+                </div>
             </div>
         </main>
     </div>
@@ -210,106 +222,62 @@
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
+        let currentAuthMode = 'login'; // 'login' или 'register'
         let selectedAvatarSymbol = "🤖";
-
-        // Трендовые звуки уведомлений (Web Audio API без внешних файлов файлов)
-        function playNotifySound(type) {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            if (type === 'sent') {
-                osc.frequency.setValueAtTime(600, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.12);
-                osc.start(); osc.stop(ctx.currentTime + 0.12);
-            } else if (type === 'received') {
-                osc.frequency.setValueAtTime(450, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(550, ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
-                osc.start(); osc.stop(ctx.currentTime + 0.15);
-            }
-        }
+        let isTypingNow = false;
+        let typingTimeout = null;
 
         const authScreen = document.getElementById('authScreen');
         const usernameInput = document.getElementById('usernameInput');
         const passwordInput = document.getElementById('passwordInput');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const errorToast = document.getElementById('errorToast');
-        const successToast = document.getElementById('successToast');
+        const mainAuthActionBtn = document.getElementById('mainAuthActionBtn');
+        const alertBox = document.getElementById('alertBox');
 
-        function showToast(errText, isSuccess = false) {
-            if (isSuccess) {
-                successToast.textContent = errText;
-                successToast.style.display = 'block';
-                errorToast.style.display = 'none';
-            } else {
-                errorToast.textContent = errText;
-                errorToast.style.display = 'block';
-                successToast.style.display = 'none';
+        const profileModal = document.getElementById('profileModal');
+        const profileTrigger = document.getElementById('profileTrigger');
+        const statusInput = document.getElementById('statusInput');
+
+        // Переключение вкладок Вход / Регистрация
+        window.switchAuthTab = function(mode) {
+            currentAuthMode = mode;
+            alertBox.style.display = 'none';
+            document.getElementById('tabLoginBtn').classList.toggle('active', mode === 'login');
+            document.getElementById('tabRegisterBtn').classList.toggle('active', mode === 'register');
+            mainAuthActionBtn.textContent = mode === 'login' ? 'Войти' : 'Создать аккаунт';
+        };
+
+        // Обработка кнопки Входа / Регистрации
+        mainAuthActionBtn.onclick = () => {
+            const user = usernameInput.value.trim();
+            const pass = passwordInput.value.trim();
+            
+            if(!user || !pass) {
+                showAlert('Заполните все поля!', false);
+                return;
             }
+
+            if(currentAuthMode === 'login') {
+                socket.emit('login_account', { username: user, password: pass });
+            } else {
+                socket.emit('register_account', { username: user, password: pass });
+            }
+        };
+
+        function showAlert(text, isSuccess) {
+            alertBox.textContent = text;
+            alertBox.style.display = 'block';
+            alertBox.classList.toggle('success', isSuccess);
         }
 
-        // Клики отправки на сервер
-        registerBtn.onclick = () => {
-            socket.emit('register_account', { username: usernameInput.value, password: passwordInput.value });
-        };
-
-        loginBtn.onclick = () => {
-            socket.emit('login_account', { username: usernameInput.value, password: passwordInput.value });
-        };
-
-        socket.on('auth_error', (text) => showToast(text, false));
-        socket.on('auth_success', (text) => showToast(text, true));
+        // Ответы от сервера по авторизации
+        socket.on('auth_error', (text) => showAlert(text, false));
+        socket.on('auth_success', (text) => {
+            showAlert(text, true);
+            switchAuthTab('login'); // переключаем на вход после успешной регистрации
+        });
 
         socket.on('init_self', (data) => {
             myInfo = data;
+            authScreen.classList.add('hidden'); // скрываем экран авторизации при успехе
             document.getElementById('greetingName').textContent = data.name;
-            document.getElementById('profileTrigger').textContent = data.avatar;
-            document.getElementById('statusInput').value = data.status;
-            authScreen.classList.add('hidden');
-        });
-
-        // Модалка
-        const profileModal = document.getElementById('profileModal');
-        document.getElementById('profileTrigger').onclick = () => profileModal.classList.remove('hidden');
-        document.getElementById('closeProfileBtn').onclick = () => profileModal.classList.add('hidden');
-        
-        window.selectAvatar = function(element, emo) {
-            document.querySelectorAll('.avatar-opt').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-            selectedAvatarSymbol = emo;
-        };
-
-        document.getElementById('saveProfileBtn').onclick = () => {
-            socket.emit('update_profile', { status: document.getElementById('statusInput').value.trim() || "Доступен", avatar: selectedAvatarSymbol });
-            profileModal.classList.add('hidden');
-        };
-
-        socket.on('update_users_list', (users) => {
-            globalUsers = users.filter(u => u.name !== myInfo.name);
-            renderLists(document.getElementById('searchInput').value);
-        });
-
-        function renderLists(filter = "") {
-            const friendsList = document.getElementById('friendsList');
-            friendsList.innerHTML = "";
-
-            globalUsers.forEach(user => {
-                if (filter && !user.name.toLowerCase().includes(filter.toLowerCase())) return;
-
-                const item = document.createElement('div');
-                item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
-                item.onclick = () => openChat(user.name);
-                item.innerHTML = `
-                    <div class="avatar">${user.avatar}</div>
-                    <div class="online-badge ${user.isOnline ? 'online' : 'offline'}"></div>
-                    <div class="chat-info">
-                        <div class="chat-name">${user.name}</div>
-                        <div class="chat-status-text" id="status-aside-${user.name}">${user.status}</div>
-                    </div>
+            profileTrigger.textContent = data.
