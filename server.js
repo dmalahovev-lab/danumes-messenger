@@ -8,13 +8,21 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-const DB_FILE = path.join(__dirname, 'database.json');
+app.use(express.static(path.join(__dirname)));
 
-// Безопасная инициализация базы данных
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Автоматическое создание локальной базы данных
+const DB_FILE = path.join(__dirname, 'database.json');
 let db = { users: {}, messages: {} };
+
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        if (!db.users) db.users = {};
+        if (!db.messages) db.messages = {};
     } catch (e) {
         console.error("Ошибка чтения БД, сброс к пустой:", e);
     }
@@ -29,12 +37,6 @@ function saveDB() {
         console.error("Ошибка сохранения БД:", e);
     }
 }
-
-app.use(express.static(path.join(__dirname)));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
 
 let activeConnections = {}; // socket.id -> username
 
@@ -60,7 +62,7 @@ io.on('connection', (socket) => {
         socket.emit('auth_success', 'Регистрация успешна! Теперь вы можете войти.');
     });
 
-    // 2. Вход в существующий аккаунт
+    // 2. Вход в систему
     socket.on('login_account', (data) => {
         const username = (data.username || '').trim();
         const password = (data.password || '').trim();
@@ -110,7 +112,7 @@ io.on('connection', (socket) => {
         socket.emit('chat_history_response', { targetUser, history });
     });
 
-    // 5. Статус "Печатает..."
+    // 5. Статус ввода текста ("Печатает...")
     socket.on('typing_status', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -130,7 +132,6 @@ io.on('connection', (socket) => {
         if (!db.messages[roomKey]) db.messages[roomKey] = [];
 
         const messagePayload = {
-            id: Date.now() + Math.random().toString(36).substr(2, 5),
             sender: username,
             text: data.text,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -146,7 +147,7 @@ io.on('connection', (socket) => {
         socket.emit('message_sent_confirm', messagePayload);
     });
 
-    // 7. Удаление сообщений
+    // 7. Удаление сообщения
     socket.on('delete_message', (data) => {
         const username = activeConnections[socket.id];
         if (!username) return;
@@ -157,6 +158,7 @@ io.on('connection', (socket) => {
             saveDB();
 
             socket.emit('message_deleted_sync', { targetUser: data.toUser, history: db.messages[roomKey] });
+
             const targetSocketId = Object.keys(activeConnections).find(key => activeConnections[key] === data.toUser);
             if (targetSocketId) {
                 io.to(targetSocketId).emit('message_deleted_sync', { targetUser: username, history: db.messages[roomKey] });
@@ -168,22 +170,17 @@ io.on('connection', (socket) => {
         delete activeConnections[socket.id];
         sendUsersList();
     });
-});
 
-function sendUsersList() {
-    const onlineList = Object.values(activeConnections);
-    const usersPayload = [];
-
-    Object.keys(db.users).forEach(name => {
-        usersPayload.push({
+    function sendUsersList() {
+        const list = Object.keys(db.users).map(name => ({
             name: name,
             avatar: db.users[name].avatar,
             status: db.users[name].status,
-            isOnline: onlineList.includes(name)
-        });
-    });
-    io.emit('update_users_list', usersPayload);
-}
+            isOnline: Object.values(activeConnections).includes(name)
+        }));
+        io.emit('update_users_list', list);
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
