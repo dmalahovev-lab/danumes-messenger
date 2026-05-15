@@ -7,7 +7,7 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Прямое подключение к базе данных Supabase через порт 5432
+// Прямое подключение к базе данных Supabase
 const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
 
 const pool = new Pool({
@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ ---
+// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ С ИСПРАВЛЕННЫМ ИНДЕКСОМ) ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -91,7 +91,6 @@ app.post('/api/register', async (req, res) => {
         
         const securePassword = hashPassword(password);
         await pool.query('INSERT INTO users (username, password, last_seen) VALUES ($1, $2, $3)', [username, securePassword, Date.now()]);
-        
         await pool.query('UPDATE groups SET members = array_append(members, $1) WHERE name = $2 AND NOT ($1 = ANY(members))', [username, NEWS_GROUP_NAME]);
         
         res.json({ success: true });
@@ -105,11 +104,11 @@ app.post('/api/login', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         
-        // Исправлено чтение первого найденного пользователя из массива rows
         if (result.rows.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
+        // ИСПРАВЛЕНО: Добавлен индекс [0], чтобы читать данные конкретной строки базы
         const user = result.rows[0]; 
         const inputHash = hashPassword(password);
         
