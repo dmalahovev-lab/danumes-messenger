@@ -450,9 +450,40 @@
             gap: 12px;
             cursor: pointer;
         }
+
+        /* КРАСИВЫЕ ВСПЛЫВАЮЩИЕ ОШИБКИ НА САЙТЕ */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-alert {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+    <div class="toast-container" id="toast-box"></div>
 
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
@@ -531,17 +562,27 @@
             showMessenger();
         }
 
+        // Функция показа ошибок НА САЙТЕ вместо alert
+        function showError(message, isSuccess = false) {
+            const box = document.getElementById('toast-box');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'toast-alert';
+            if(isSuccess) alertDiv.style.background = 'rgba(16, 185, 129, 0.9)'; // зелёный для успеха
+            alertDiv.innerText = message;
+            box.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 4000);
+        }
+
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Вход и регистрация строго по вашему оригиналу с GitHub (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
-            if(!u || !p) return alert('Заполните поля');
+            if(!u || !p) return showError('Заполните все поля!');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
                     method: 'POST',
@@ -555,13 +596,13 @@
                         localStorage.setItem('danumes_user', u);
                         showMessenger();
                     } else { 
-                        alert('Регистрация успешна'); 
+                        showError('Регистрация успешна! Теперь войдите.', true); 
                     }
                 } else { 
-                    alert(d.error || 'Ошибка'); 
+                    showError(d.error || 'Ошибка доступа'); 
                 }
             } catch(e) { 
-                alert('Ошибка сети'); 
+                showError('Ошибка сети. Возможно, сервер Render просыпается.'); 
             }
         }
 
@@ -673,7 +714,7 @@
             try {
                 await fetch(`${SERVER_URL}/api/messages/send`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
                 });
                 input.value = '';
@@ -681,7 +722,6 @@
             } catch(e){}
         }
 
-        // Логика нажатия клавиши Enter
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
                 sendMessage();
@@ -689,7 +729,7 @@
         }
 
         function openCreateGroupModal() {
-            const name = prompt('Введите название новой группы:');
+            const name = prompt('Введите имя новой группы:');
             if(!name || !name.trim()) return;
             createGroup(name.trim());
         }
