@@ -82,7 +82,6 @@
             display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle;
         }
 
-        /* Стиль кнопки прикрепления картинки */
         .btn-attach {
             width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;
         }
@@ -111,7 +110,7 @@
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1><p>Глобальная сеть безопасного общения</p>
-            <div class="input-wrap"><label>Имя пользователя</label><input type="text" id="auth-user" placeholder="Ваш уникальный ник"></div>
+            <div class="input-wrap"><label>Имя пользователя</label><input type="text" id="auth-user" placeholder="Ваш unique ник"></div>
             <div class="input-wrap"><label>Пароль</label><input type="password" id="auth-pass" placeholder="••••••••"></div>
             <div class="auth-buttons">
                 <button class="btn btn-primary" onclick="authAction('login')">Войти</button>
@@ -137,7 +136,6 @@
                     <div class="chat-header"><div class="avatar-fallback" id="chat-avatar">?</div><div><h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3><div id="chat-header-badge" style="display:inline-block;"></div><p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p></div></div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar">
-                        <!-- Добавлена кнопка и скрытый выбор изображений -->
                         <button class="btn-attach" onclick="triggerFileInput()">📷</button>
                         <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
                         <input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
@@ -254,9 +252,8 @@
                 const div = document.createElement('div'), isOut = m.from === currentUser;
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
                 
-                // Проверяем, является ли сообщение картинкой (начинается с data:image)
                 let textContentHTML = m.text.startsWith('data:image/') 
-                    ? `<img src="${m.text}" style="max-width:100%; border-radius:10px; display:block; margin-top:5px; pointer-events:auto; user-select:auto;">`
+                    ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px; pointer-events:auto;">`
                     : `<div>${m.text}</div>`;
 
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
@@ -273,7 +270,6 @@
             input.value = '';
         }
 
-        // Вынесенная функция для отправки любого типа контента (текст или base64 картинки)
         async function sendDirectMessage(content) {
             try {
                 await fetch(`${SERVER_URL}/api/messages/send`, {
@@ -286,26 +282,28 @@
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-        // --- НОВАЯ ЛОГИКА ОТПРАВКИ ИЗОБРАЖЕНИЙ ---
         function triggerFileInput() {
             document.getElementById('image-file-input').click();
         }
 
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ КАРТИНКИ
         function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            
+            const file = files[0]; // Исправлено: берем первый файл из массива файлов
             if (!file.type.startsWith('image/')) return showNotification('Можно отправлять только картинки!');
             
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Image = e.target.result;
                 if(activeChat) {
-                    sendDirectMessage(base64Image); // Шлем картинку в чат
+                    sendDirectMessage(base64Image);
                     showNotification('Изображение отправлено!', true);
                 }
             };
             reader.readAsDataURL(file);
-            event.target.value = ''; // Сброс инпута
+            event.target.value = '';
         }
 
         function openCreateGroupModal() {
