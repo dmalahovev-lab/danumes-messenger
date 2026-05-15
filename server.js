@@ -91,7 +91,7 @@ function initAdminAndNews() {
     // Вечный админ
     if (!globalState.users[ADMIN_USERNAME]) {
         globalState.users[ADMIN_USERNAME] = {
-            password: '321', // Твой рабочий пароль, который ты использовал
+            password: 'danyajukovka', // Твой рабочий пароль, который ты использовал
             lastSeen: Date.now(),
             avatar: null
         };
