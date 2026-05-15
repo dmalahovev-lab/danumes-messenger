@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-const ADMIN_USERNAME = 'admin'; 
+const ADMIN_USERNAME = 'Danumala'; 
 const NEWS_GROUP_NAME = 'DanuMes news';
 
 // Уникальный ключ для твоего личного облачного хранилища (создается автоматически)
