@@ -26,7 +26,7 @@
             --bg-chat-friend: rgba(0, 0, 0, 0.04);
             --text-main: #1f2937;
             --text-muted: #6b7280;
-            --border-color: rgba(0, 0, 0, 0.088);
+            --border-color: rgba(0, 0, 0, 0.08);
             --shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; transition: background 0.2s, color 0.2s; }
@@ -81,16 +81,7 @@
         .chat-window { flex: 1; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         .chat-header { padding: 18px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; background: var(--bg-sidebar); }
-        
-        .messages-area { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 24px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-            height: calc(100vh - 170px); 
-        }
+        .messages-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; height: calc(100vh - 170px); }
         
         .message-wrapper { display: flex; width: 100%; margin-bottom: 4px; }
         .message-wrapper.sent { justify-content: flex-end; }
@@ -104,9 +95,9 @@
         .received .delete-msg-btn { right: -75px; }
         .message-wrapper:hover .delete-msg-btn { opacity: 1; }
 
-        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; background: var(--bg-sidebar); height: 80px; }
-        .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 12px 18px; border-radius: 12px; color: var(--text-main); outline: none; font-size: 15px; }
-        .send-btn { background: #6366f1; border: none; color: white; width: 44px; height: 44px; border-radius: 12px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .input-area { padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; background: var(--bg-sidebar); height: 80px; align-items: center; }
+        .message-input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 12px; color: var(--text-main); outline: none; }
+        .send-btn { background: #6366f1; border: none; color: white; width: 44px; height: 44px; border-radius: 12px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 
         .group-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .group-card { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; width: 100%; max-width: 380px; box-shadow: var(--shadow); position: relative; text-align: center;}
@@ -122,8 +113,8 @@
 
         @media (max-width: 768px) {
             .sidebar { width: 100%; }
+            .chat-window { width: 100%; position: fixed; inset: 0; z-index: 50; }
             .mobile-hidden { display: none !important; }
-            .nav-rail { width: 60px; padding: 16px 0; }
         }
     </style>
 </head>
@@ -218,6 +209,7 @@
         </main>
     </div>
 
+    <!-- ВСЕ СКРИПТЫ СТРОГО ВНИЗУ ПОСЛЕ HTML-РАЗМЕТКИ -->
     <script>
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
@@ -256,13 +248,17 @@
             const pass = document.getElementById('passwordInput').value.trim();
             if(!user || !pass) return showAuthNotification("Заполните все поля", false);
 
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            });
-            const data = await response.json();
-            showAuthNotification(data.msg, data.success);
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await response.json();
+                showAuthNotification(data.msg, data.success);
+            } catch(e) {
+                showAuthNotification("Ошибка соединения с сервером", false);
+            }
         }
 
         async function handleLoginClick() {
@@ -273,26 +269,30 @@
         }
 
         async function performLogin(user, pass, isAuto = false) {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, pass })
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                myInfo = data.user;
-                localStorage.setItem('danumes_user', user);
-                localStorage.setItem('danumes_pass', pass);
-
-                document.getElementById('greetingName').textContent = myInfo.name;
-                document.getElementById('profileTrigger').textContent = myInfo.avatar;
-                document.getElementById('authScreen').style.display = 'none';
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await response.json();
                 
-                await loadUsersList();
-                setInterval(refreshChatData, 3000);
-            } else {
-                if(!isAuto) showAuthNotification(data.msg, false);
+                if (data.success) {
+                    myInfo = data.user;
+                    localStorage.setItem('danumes_user', user);
+                    localStorage.setItem('danumes_pass', pass);
+
+                    document.getElementById('greetingName').textContent = myInfo.name;
+                    document.getElementById('profileTrigger').textContent = myInfo.avatar;
+                    document.getElementById('authScreen').style.display = 'none';
+                    
+                    await loadUsersList();
+                    setInterval(refreshChatData, 3000);
+                } else {
+                    if(!isAuto) showAuthNotification(data.msg, false);
+                }
+            } catch(e) {
+                if(!isAuto) showAuthNotification("Сервер Render просыпается, подождите...", false);
             }
         }
 
@@ -303,15 +303,19 @@
         }
 
         async function loadUsersList() {
-            const response = await fetch('/api/users');
-            const users = await response.json();
-            globalUsers = users.filter(u => u.name !== myInfo.name);
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                globalUsers = users.filter(u => u.name !== myInfo.name);
 
-            const resGroups = await fetch('/api/groups');
-            const groupsArray = await resGroups.json();
-            createdGroups = new Set(groupsArray);
+                const resGroups = await fetch('/api/groups');
+                const groups = await resGroups.json();
+                createdGroups = new Set(groups);
 
-            renderLists(document.getElementById('searchInput').value);
+                renderLists(document.getElementById('searchInput').value);
+            } catch(e) {
+                console.error(e);
+            }
         }
 
         async function refreshChatData() {
@@ -410,9 +414,12 @@
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('navHome').classList.remove('active');
             document.getElementById('activeChatName').textContent = name;
-
-            if (window.innerWidth <= 768) {
-                document.getElementById('appSidebar').classList.add('mobile-hidden');
+            
+            const sidebar = document.getElementById('appSidebar');
+            const chatWin = document.getElementById('chatWindow');
+            if(window.innerWidth <= 768) {
+                if(sidebar) sidebar.classList.add('mobile-hidden');
+                if(chatWin) chatWin.classList.remove('mobile-hidden');
             }
             
             if (isGroup) {
@@ -420,4 +427,106 @@
                 document.getElementById('activeChatStatus').textContent = "Группа участников";
             } else {
                 localFriends.add(name);
-                const userData = globalUsers.find(u
+                const userData = globalUsers.find(u => u.name === name);
+                document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
+                document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+            }
+            
+            await loadChatHistory();
+            renderLists(document.getElementById('searchInput').value);
+        }
+
+        async function loadChatHistory() {
+            try {
+                const response = await fetch('/api/messages');
+                const history = await response.json();
+                
+                const messagesArea = document.getElementById('messagesArea');
+                if(!messagesArea) return;
+                messagesArea.innerHTML = "";
+
+                const isGroup = createdGroups.has(activeChatName);
+                let currentChatHistory = [];
+
+                if (isGroup) {
+                    currentChatHistory = history.filter(msg => msg.to === activeChatName);
+                } else {
+                    currentChatHistory = history.filter(msg => 
+                        (msg.from === myInfo.name && msg.to === activeChatName) || 
+                        (msg.from === activeChatName && msg.to === myInfo.name)
+                    );
+                }
+
+                currentChatHistory.forEach((msg) => {
+                    const wrapper = document.createElement('div');
+                    const isMe = msg.from === myInfo.name;
+                    wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                    
+                    const nameTag = (isGroup && !isMe) ? `<small style="display:block;color:var(--text-muted);font-size:11px;margin-bottom:2px;">${msg.from}</small>` : '';
+                    
+                    wrapper.innerHTML = `
+                        <div class="message-bubble">
+                            ${nameTag}
+                            <span>${msg.text}</span>
+                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
+                        </div>
+                    `;
+                    messagesArea.appendChild(wrapper);
+                });
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !activeChatName) return;
+
+            try {
+                await fetch('/api/messages/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: myInfo.name, to: activeChatName, text: text })
+                });
+                input.value = "";
+                await loadChatHistory();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        window.deleteMessage = async function(msgId) {
+            try {
+                await fetch('/api/messages/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ msgId })
+                });
+                await loadChatHistory();
+            } catch(e) {
+                console.error(e);
+            }
+        };
+
+        function openGroupModal() {
+            const selector = document.getElementById('groupUsersSelector');
+            if(selector) {
+                selector.innerHTML = "";
+                if(globalUsers.length === 0) {
+                    selector.innerHTML = "<div style='color:var(--text-muted);font-size:13px;'>Нет доступных пользователей</div>";
+                } else {
+                    globalUsers.forEach(user => {
+                        const label = document.createElement('label');
+                        label.className = "selector-item";
+                        label.innerHTML = `
+                            <input type="checkbox" value="${user.name}">
+                            <span>${user.avatar} ${user.name}</span>
+                        `;
+                        selector.appendChild(label);
+                    });
+                }
+            }
+            document.getElementById('groupModal').style.display = 'flex';
+        
