@@ -54,7 +54,14 @@
         .friend-item:hover { background: var(--bg-glass-hover); }
         .friend-item.active { background: var(--bg-glass); border-color: var(--border-glass); }
         .avatar-fallback { width: 40px; height: 40px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); font-weight: 700; display: flex; justify-content: center; align-items: center; margin-right: 12px; font-size: 14px; }
-        .main-content { background: var(--bg-main); display: flex; flex-direction: column; height: 100%; position: relative; }
+                .main-content {
+            background: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Строго высота всего экрана */
+            position: relative;
+            overflow: hidden;
+        }
         .welcome-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--bg-main); z-index: 5; }
         .chat-view { display: none; flex-direction: column; height: 100%; }
         .chat-header { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; }
