@@ -601,7 +601,8 @@
     </div>
 
     <script>
-        const SERVER_URL = 'https://onrender.com';
+        // АВТОМАТИЧЕСКИЙ УМНЫЙ АДРЕС СЕРВЕРА (УБИРАЕТ ОШИБКУ CORS НАВСЕГДА)
+        const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
         let isGroupChat = false;
@@ -629,12 +630,13 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ИСПРАВЛЕНЫ ТОЛЬКО ПУТИ /auth/ ДЛЯ РАБОТЫ ТВОЕГО BACKEND НА RENDER ---
+        // ТВОЙ ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА ИЗ РЕПОЗИТОРИЯ TEST (ПОЛЯ user И pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
+                // Изменен только путь к роуту твоего бэкенда на Render
                 const r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
