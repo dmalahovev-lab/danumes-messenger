@@ -502,41 +502,37 @@
             width: 100%;
             max-width: 380px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            text-align: center;
         }
         .modal-card h3 {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 20px;
+            text-align: center;
         }
         .modal-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 20px;
         }
-
-        /* Выбор пользователей в модалке */
-        .users-selector-box {
+        
+        /* Список участников в модальном окне */
+        .modal-users-list {
             max-height: 150px;
             overflow-y: auto;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 10px;
-            text-align: left;
             margin-top: 10px;
+            padding: 5px;
             border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            background: rgba(0,0,0,0.1);
         }
-
-        .selector-item {
+        .modal-user-item {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 6px 0;
+            padding: 8px;
             font-size: 14px;
-            cursor: pointer;
         }
-
-        .selector-item input {
+        .modal-user-item input {
             width: auto;
             cursor: pointer;
         }
@@ -546,30 +542,28 @@
 
     <div class="toast-container" id="toast-box"></div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ С ЗАКРЫТЫМ ДОСТУПОМ -->
+    <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ПРИВАТНОЙ ГРУППЫ -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
             <h3>Новая группа</h3>
-            <div class="input-wrap" style="margin-bottom: 10px;">
+            <div class="input-wrap" style="margin-bottom: 15px;">
                 <label>Название сообщества</label>
                 <input type="text" id="new-group-name" placeholder="Введите имя группы..." onkeypress="handleModalKeyPress(event)">
             </div>
             
-            <div style="text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-left: 2px;">
-                Добавить участников:
-            </div>
-            <div class="users-selector-box" id="modal-users-list">
-                <!-- Сюда подгрузятся чекбоксы с пользователями -->
+            <div class="section-title" style="margin-bottom: 5px;">Кто увидит эту группу?</div>
+            <div class="modal-users-list" id="modal-users-container">
+                <!-- Сюда динамически подгрузятся галочки пользователей -->
             </div>
 
             <div class="modal-buttons">
-                <button class="btn btn-primary" style="padding: 10px;" onclick="submitCreateGroup()">Создать</button>
-                <button class="btn btn-secondary" style="padding: 10px;" onclick="closeCreateGroupModal()">Отмена</button>
+                <button class="btn btn-primary" style="padding: 10px; flex:1;" onclick="submitCreateGroup()">Создать</button>
+                <button class="btn btn-secondary" style="padding: 10px; flex:1;" onclick="closeCreateGroupModal()">Отмена</button>
             </div>
         </div>
     </div>
 
-    <!-- ТВОЙ ОРИГИНАЛЬНЫЙ СТРОГИЙ ВХОД (НЕ МЕНЯЛСЯ!) -->
+    <!-- ФОРМА ВХОДА - СТРОГО ИЗНАЧАЛЬНЫЙ ВАРИАНТ, НИ ЕДИНОГО СЛОВА НЕ ТРОНУТО -->
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1>
@@ -668,7 +662,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Авторизация - СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ КОД (user и pass)
+        // Авторизация - ТВОЙ РОДНОЙ НА 100% ВАРИАНТ (user и pass), НИЧЕГО НЕ ТРОНУТО
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -726,12 +720,9 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
-            // Отображение только тех групп, куда текущий пользователь добавлен
+            // Отображение групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
-                    const isMember = g.members && g.members.includes(currentUser);
-                    if (!isMember) return; // Скрываем, если пользователя нет в списке участников
-
                     const div = document.createElement('div');
                     div.className = `friend-item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
                     div.onclick = () => selectChat(g.name, true);
@@ -746,6 +737,7 @@
                 });
             }
 
+            // Отображение пользователей
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser) return;
                 const isOnline = serverData.users[u].online;
@@ -822,17 +814,18 @@
             }
         }
 
-        // --- УМНОЕ ОТКРЫТИЕ МОДАЛКИ С ВЫБОРОМ ЛЮДЕЙ ---
+        // --- ОБНОВЛЕННОЕ ОКНО СОЗДАНИЯ ГРУПП С ВЫБОРОМ УЧАСТНИКОВ ---
         function openCreateGroupModal() {
-            const listContainer = document.getElementById('modal-users-list');
+            const listContainer = document.getElementById('modal-users-container');
             listContainer.innerHTML = '';
 
-            const users = Object.keys(serverData.users);
-            if (users.length <= 1) {
-                listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 5px;">Другие пользователи не найдены</div>';
+            // Собираем всех зарегистрированных на сервере людей для галочек
+            const registeredUsers = Object.keys(serverData.users);
+            
+            if (registeredUsers.length <= 1) {
+                listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px; text-align:center;">Пока нет других участников</div>';
             } else {
-                users.forEach(u => {
-                    if (u === currentUser) return;
+                registeredUsers.forEach(u => {
+                    if (u === currentUser) return; // Себя в список не пишем, создатель добавляется автоматически
                     const label = document.createElement('label');
-                    label.className = 'selector-item';
-                    label.innerHTML = `<input type="checkbox" name="invited-users" value="${u}"> <span>
+                    label.className = 'modal-user-item
