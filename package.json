@@ -1,7 +1,7 @@
 {
   "name": "danumes-messenger",
   "version": "1.0.0",
-  "description": "DanuMes Global Web Messenger",
+  "description": "DanuMes Messenger",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,6 +9,6 @@
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "simple-git": "^3.16.0"
+    "pg": "^8.11.3"
   }
 }
