@@ -105,6 +105,7 @@
         .selector-item input { cursor: pointer; width: 16px; height: 16px; }
 
         .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .group-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
     </style>
     
@@ -320,7 +321,7 @@
             if(!messagesArea) return;
             messagesArea.innerHTML = "";
 
-            // Универсальная фильтрация для ЛС и созданных Групп
+            // Фильтрация истории с учетом групповых чатов
             const isGroupChat = createdGroups.has(activeChatName);
             const currentChatHistory = history.filter(msg => {
                 if (isGroupChat) {
@@ -336,7 +337,7 @@
                 const isMe = msg.from === myInfo.name;
                 wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
                 
-                // Подпись автора в группах
+                // Добавляем тег автора в групповых переписках
                 const authorTag = (isGroupChat && !isMe) ? `<small style="display:block; font-size:11px; opacity:0.6; margin-bottom:2px;">${msg.from}</small>` : '';
 
                 wrapper.innerHTML = `
@@ -423,6 +424,16 @@
             const current = html.getAttribute('data-theme');
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
+
+        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ПРОБЕЛА: Разрешаем его во всех инпутах и текстовых полях
+        window.addEventListener('keydown', function(e) {
+            if (e.key === ' ' || e.code === 'Space') {
+                const target = e.target;
+                if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                    e.stopPropagation(); // Не даем сторонним скриптам перехватить нажатие
+                }
+            }
+        }, true);
     </script>
 </head>
 <body>
