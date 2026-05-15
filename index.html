@@ -380,6 +380,7 @@
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
 
+        /* Сообщения стали компактными */
         .message-bubble {
             max-width: 45%;
             padding: 10px 14px;
@@ -451,6 +452,7 @@
             cursor: pointer;
         }
 
+        /* Красивые уведомления прямо на сайте */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -467,7 +469,6 @@
             padding: 12px 20px;
             border-radius: 14px;
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             font-weight: 600;
             font-size: 14px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
@@ -480,13 +481,13 @@
             to { transform: translateY(0) scale(1); opacity: 1; }
         }
 
+        /* Модалка создания группы прямо на сайте */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             justify-content: center;
             align-items: center;
             z-index: 999;
@@ -569,7 +570,8 @@
                     <button class="btn-circle" onclick="openCreateGroupModal()">+</button>
                 </div>
                 <div class="search-box">
-                    <input type="text" placeholder="Поиск людей...">
+                    <!-- Поиск людей теперь работает -->
+                    <input type="text" id="chat-search" placeholder="Поиск людей..." oninput="renderSidebar()">
                 </div>
                 <div class="section-title">Мои диалоги</div>
                 <div class="friends-list" id="friends-list"></div>
@@ -613,7 +615,6 @@
 
         function showNotification(msg, isSuccess = false) {
             const box = document.getElementById('toast-box');
-            if(!box) return;
             const toast = document.createElement('div');
             toast.className = 'toast-alert';
             if (isSuccess) {
@@ -630,29 +631,17 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Умный роутер: пробует сначала короткий путь, если сервер старый - пробует /auth/
+        // --- ТВОЙ ПОЛНОСТЬЮ ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА (ПОЛЯ user И pass) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
-            
             try {
-                // Пробуем первый вариант пути
-                let r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
+                const r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
-                
-                // Если сервер выдал 404, пробуем альтернативный путь бэкенда
-                if (r.status === 404) {
-                    r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ user: u, pass: p })
-                    });
-                }
-                
                 const d = await r.json();
                 if(d.success) {
                     if(endpoint === 'login') {
@@ -698,11 +687,13 @@
 
         function renderSidebar() {
             const container = document.getElementById('friends-list');
-            if(!container) return;
+            const query = document.getElementById('chat-search').value.trim().toLowerCase();
             container.innerHTML = '';
 
+            // Поиск по группам
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
+                    if (query && !g.name.toLowerCase().includes(query)) return;
                     const div = document.createElement('div');
                     div.className = `friend-item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
                     div.onclick = () => selectChat(g.name, true);
@@ -717,23 +708,23 @@
                 });
             }
 
-            if(serverData.users) {
-                Object.keys(serverData.users).forEach(u => {
-                    if(u === currentUser) return;
-                    const isOnline = serverData.users[u].online;
-                    const div = document.createElement('div');
-                    div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
-                    div.onclick = () => selectChat(u, false);
-                    div.innerHTML = `
-                        <div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600; font-size:14px;">${u}</div>
-                            <div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-            }
+            // Поиск по пользователям
+            Object.keys(serverData.users).forEach(u => {
+                if(u === currentUser) return;
+                if (query && !u.toLowerCase().includes(query)) return;
+                const isOnline = serverData.users[u].online;
+                const div = document.createElement('div');
+                div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
+                div.onclick = () => selectChat(u, false);
+                div.innerHTML = `
+                    <div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:14px;">${u}</div>
+                        <div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         }
 
         function selectChat(name, isGroup) {
@@ -749,36 +740,33 @@
 
         function renderMessages() {
             const container = document.getElementById('messages-container');
-            if(!container || !activeChat) return;
+            if(!activeChat) return;
             const currentScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
             container.innerHTML = '';
 
-            if(serverData.messages) {
-                const filtered = serverData.messages.filter(m => {
-                    if(isGroupChat) return m.isGroup && m.to === activeChat;
-                    return !m.isGroup && ((m.from === currentUser && m.to === activeChat) || (m.from === activeChat && m.to === currentUser));
-                });
+            const filtered = serverData.messages.filter(m => {
+                if(isGroupChat) return m.isGroup && m.to === activeChat;
+                return !m.isGroup && ((m.from === currentUser && m.to === activeChat) || (m.from === activeChat && m.to === currentUser));
+            });
 
-                filtered.forEach(m => {
-                    const div = document.createElement('div');
-                    const isOut = m.from === currentUser;
-                    div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
-                    div.innerHTML = `
-                        <div class="message-bubble">
-                            ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px;">@${m.from}</div>` : ''}
-                            <div>${m.text}</div>
-                            <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-                if(currentScroll) container.scrollTop = container.scrollHeight;
-            }
+            filtered.forEach(m => {
+                const div = document.createElement('div');
+                const isOut = m.from === currentUser;
+                div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
+                div.innerHTML = `
+                    <div class="message-bubble">
+                        ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px;">@${m.from}</div>` : ''}
+                        <div>${m.text}</div>
+                        <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
-            if(!input) return;
             const text = input.value.trim();
             if(!text || !activeChat) return;
             try {
