@@ -9,7 +9,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Исходная база данных в памяти
 let globalState = {
     users: {},
     messages: [],
@@ -20,7 +19,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ, НЕ МЕНЯЛСЯ) ---
+// --- СТРОГО ТВОИ НАЗВАНИЯ РОУТОВ И ПОЛЕЙ (ИЗ REPO TEST) ---
 app.post('/api/register', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -47,11 +46,9 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true });
 });
 
-// --- БЕЗОПАСНАЯ СИНХРОНИЗАЦИЯ (ИСПРАВЛЕНЫ СТРОКИ 66 И 88) ---
 app.post('/api/sync', (req, res) => {
     const username = (req.body.user || '').trim();
     
-    // ЗАЩИТА: проверяем, что все объекты в памяти существуют
     if (!globalState) globalState = { users: {}, messages: [], groups: [] };
     if (!globalState.users) globalState.users = {};
     if (!globalState.messages) globalState.messages = [];
@@ -64,7 +61,6 @@ app.post('/api/sync', (req, res) => {
     const activeUsers = {};
     const now = Date.now();
     
-    // ЗАЩИТА: безопасный обход пользователей, чтобы убрать ошибку dadada
     Object.keys(globalState.users).forEach(u => {
         if (globalState.users[u]) {
             activeUsers[u] = {
