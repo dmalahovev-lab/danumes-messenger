@@ -6,193 +6,263 @@
     <title>DanuMes — Глобальный мессенджер</title>
     <style>
         :root {
-            --bg-color: #0d1117;
-            --container-bg: #161b22;
-            --text-color: #c9d1d9;
-            --accent-color: #58a6ff;
-            --border-color: #30363d;
-            --input-bg: #21262d;
-            --msg-inbound: #21262d;
-            --msg-outbound: #238636;
+            --bg-color: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-color: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --input-bg: rgba(31, 41, 55, 0.5);
+            --msg-inbound: rgba(31, 41, 55, 0.8);
+            --msg-outbound: #2563eb;
+            --blur-effect: blur(12px);
         }
 
         [data-theme="light"] {
-            --bg-color: #f6f8fa;
-            --container-bg: #ffffff;
-            --text-color: #24292f;
-            --accent-color: #0969da;
-            --border-color: #d0d7de;
-            --input-bg: #f6f8fa;
-            --msg-inbound: #afb8c133;
-            --msg-outbound: #dafbe1;
+            --bg-color: #f3f4f6;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --accent-color: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.15);
+            --input-bg: rgba(243, 244, 246, 0.8);
+            --msg-inbound: rgba(229, 231, 235, 0.8);
+            --msg-outbound: #2563eb;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background-color 0.3s, border-color 0.3s, transform 0.2s;
         }
 
         body {
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            padding: 20px;
+            /* Красивый фоновый градиент как на модных лендингах */
+            background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(147, 51, 234, 0.05) 0%, transparent 40%);
         }
 
+        /* КРАСИВЫЕ КНОПКИ И ИНПУТЫ */
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            border-radius: 10px;
+            outline: none;
+            backdrop-filter: var(--blur-effect);
+        }
+        input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        button {
+            padding: 12px 20px;
+            background: var(--msg-outbound);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        button:hover {
+            transform: translateY(-1px);
+            opacity: 0.95;
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* СТИЛЬ БЕНТО ДЛЯ ОКНА ВХОДА */
         .auth-container {
-            background-color: var(--container-bg);
-            border: 1px solid var(--border-color);
-            padding: 30px;
-            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: var(--blur-effect);
+            padding: 40px 30px;
+            border-radius: 24px;
             width: 100%;
             max-width: 400px;
             text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
 
         .auth-container h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #3b82f6, #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 30px;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
             text-align: left;
         }
 
         .input-group label {
             display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 6px;
-            outline: none;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
         .btn-row {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 24px;
         }
 
-        button {
-            flex: 1;
-            padding: 12px;
-            background-color: var(--accent-color);
-            border: none;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        button:hover {
-            opacity: 0.9;
-        }
-
-        /* Интерфейс мессенджера (Bento Grid) */
+        /* ИНТЕРФЕЙС МЕССЕНДЖЕРА В СТИЛЕ BENTO GRID */
         .messenger-container {
             display: none;
             width: 100%;
-            height: 100vh;
-            grid-template-columns: 320px 1fr;
+            max-width: 1400px;
+            height: calc(100vh - 40px);
+            grid-template-columns: 340px 1fr;
+            gap: 16px; /* Зазор между карточками Bento */
         }
 
+        /* Левая карточка Bento */
         .sidebar {
-            background-color: var(--container-bg);
-            border-right: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: var(--blur-effect);
+            border-radius: 20px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
 
         .sidebar-header {
             padding: 20px;
-            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .sidebar-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .theme-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            font-size: 12px;
+            box-shadow: none;
+        }
+
         .sidebar-menu {
-            display: flex;
-            padding: 10px 20px;
-            gap: 10px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 0 20px 15px 20px;
+        }
+
+        .create-group-btn {
+            width: 100%;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 1px dashed var(--card-border);
+            box-shadow: none;
+        }
+        .create-group-btn:hover {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .search-box {
-            padding: 10px 20px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 8px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-color);
+            padding: 0 20px 15px 20px;
         }
 
         .list-section {
             flex: 1;
             overflow-y: auto;
-            padding: 10px 20px;
+            padding: 0 20px 20px 20px;
         }
 
         .list-section h3 {
-            font-size: 14px;
-            margin: 15px 0 5px 0;
-            color: var(--accent-color);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 20px 0 10px 0;
+            color: var(--text-muted);
         }
 
+        /* Элементы списка (друзья/группы) */
         .item {
-            padding: 10px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 5px;
+            gap: 12px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
         }
-
-        .item:hover, .item.active {
-            background-color: var(--input-bg);
+        .item:hover {
+            background: var(--input-bg);
+            border-color: var(--card-border);
+        }
+        .item.active {
+            background: var(--accent-glow);
+            border-color: rgba(59, 130, 246, 0.4);
         }
 
         .avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            background-color: var(--border-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px; /* Квадратные аватарки со скруглением в стиле Bento */
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
+            font-weight: 700;
+            color: var(--accent-color);
         }
 
+        /* Правая карточка Bento (Окно чата) */
         .chat-window {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: var(--blur-effect);
+            border-radius: 20px;
             display: flex;
             flex-direction: column;
-            background-color: var(--bg-color);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
 
         .chat-header {
             padding: 20px;
-            background-color: var(--container-bg);
-            border-bottom: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             gap: 15px;
@@ -200,146 +270,142 @@
 
         .messages-area {
             flex: 1;
-            padding: 20px;
+            padding: 24px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.05);
         }
 
+        /* Стильные сообщения-облачка */
         .message {
-            max-width: 60%;
-            padding: 10px 14px;
-            border-radius: 12px;
-            line-height: 1.4;
-            position: relative;
-            word-break: break-word;
+            max-width: 55%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-
         .message.inbound {
-            background-color: var(--msg-inbound);
+            background: var(--msg-inbound);
             align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--card-border);
         }
-
         .message.outbound {
-            background-color: var(--msg-outbound);
-            align-self: flex-end;
+            background: var(--msg-outbound);
             color: white;
-        }
-
-        [data-theme="light"] .message.outbound {
-            color: #24292f;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
         }
 
         .message .meta {
             font-size: 10px;
             opacity: 0.6;
-            margin-top: 5px;
+            margin-top: 6px;
             text-align: right;
         }
 
         .chat-input-area {
             padding: 20px;
-            background-color: var(--container-bg);
-            border-top: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
+            border-top: 1px solid var(--card-border);
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .chat-input-area input {
-            flex: 1;
-            padding: 12px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-color);
-            outline: none;
-        }
-
+        /* МОДАЛЬНОЕ ОКНО */
         .modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
             justify-content: center;
             align-items: center;
             z-index: 100;
         }
-
         .modal-content {
-            background: var(--container-bg);
-            border: 1px solid var(--border-color);
-            padding: 25px;
-            border-radius: 8px;
-            width: 320px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: var(--blur-effect);
+            padding: 30px;
+            border-radius: 20px;
+            width: 340px;
             position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-
         .close-modal {
             position: absolute;
-            top: 10px; right: 10px;
+            top: 15px; right: 15px;
             cursor: pointer;
-            font-size: 20px;
+            font-size: 22px;
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
 
-    <!-- ОКНО АВТОРИЗАЦИИ -->
+    <!-- ОКНО АВТОРИЗАЦИИ (BENTO-STYLE) -->
     <div class="auth-container" id="authBlock">
         <h2>DanuMes</h2>
+        <div class="auth-subtitle">Вход в глобальную сеть общения</div>
         <div class="input-group">
             <label>Имя пользователя</label>
-            <input type="text" id="usernameInput" placeholder="Введите никнейм...">
+            <input type="text" id="usernameInput" placeholder="Ваш уникальный никнейм">
         </div>
         <div class="input-group">
             <label>Пароль</label>
-            <input type="password" id="passwordInput" placeholder="Введите пароль...">
+            <input type="password" id="passwordInput" placeholder="Ваш секретный пароль">
         </div>
         <div class="btn-row">
-            <button onclick="login()">Войти</button>
-            <button onclick="register()">Регистрация</button>
+            <button onclick="login()" style="flex: 1.3;">Войти в чат</button>
+            <button onclick="register()" style="flex: 1; background: var(--input-bg); color: var(--text-main);">Регистрация</button>
         </div>
     </div>
 
     <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
     <div class="messenger-container" id="messengerBlock">
-        <!-- Боковая панель -->
+        <!-- Левый блок Bento (Боковая панель) -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h2 style="font-size: 18px;">🤖 DanuMes</h2>
-                <button onclick="toggleTheme()" style="padding: 5px 10px; flex: none;">ТЕМA</button>
+                <h2>DanuMes</h2>
+                <button class="theme-btn" onclick="toggleTheme()">Сменить тему</button>
             </div>
             <div class="sidebar-menu">
-                <button onclick="openModal()" style="padding: 8px;">+</button>
-                <div style="flex: 1;"></div>
+                <button class="create-group-btn" onclick="openModal()">+ Создать группу</button>
             </div>
             <div class="search-box">
-                <input type="text" placeholder="Поиск...">
+                <input type="text" placeholder="Быстрый поиск чата...">
             </div>
             <div class="list-section">
                 <h3>Мои группы</h3>
                 <div id="groupsList"></div>
-                <h3>Мои друзья</h3>
+                <h3>Пользователи онлайн</h3>
                 <div id="friendsList"></div>
             </div>
         </div>
 
-        <!-- Окно чата -->
+        <!-- Правый блок Bento (Окно чата) -->
         <div class="chat-window">
             <div class="chat-header">
                 <div class="avatar" id="activeChatAvatar">?</div>
                 <div>
-                    <h3 id="activeChatName">Выберите чат</h3>
-                    <span id="activeChatStatus" style="font-size: 12px; opacity: 0.6;"></span>
+                    <h3 id="activeChatName" style="font-size: 16px; font-weight: 700;">Выберите, кому хотите написать</h3>
+                    <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);"></span>
                 </div>
+                <!-- Кнопка Выйти для сброса зависшей сессии -->
+                <button onclick="logout()" style="margin-left: auto; padding: 6px 12px; font-size: 12px; background: var(--input-bg); color: var(--text-main); box-shadow: none;">Выйти</button>
             </div>
             <div class="messages-area" id="messagesArea">
-                <!-- Здесь будут сообщения -->
+                <div style="text-align: center; color: var(--text-muted); margin-top: auto; margin-bottom: auto; font-size: 14px;">
+                    Выберите чат в левой панели Bento, чтобы начать диалог.
+                </div>
             </div>
             <div class="chat-input-area">
-                <input type="text" id="messageInput" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()" style="flex: none; width: 100px;">Отправить</button>
+                <input type="text" id="messageInput" placeholder="Введите ваше сообщение..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Отправить</button>
             </div>
         </div>
     </div>
@@ -348,26 +414,24 @@
     <div class="modal" id="groupModal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal()">&times;</span>
-            <h3 style="margin-bottom: 15px;">Создать новую группу</h3>
+            <h3 style="margin-bottom: 20px; font-weight: 700;">Создать новую группу</h3>
             <div class="input-group">
                 <label>Название группы</label>
-                <input type="text" id="newGroupNameInput" placeholder="Имя группы...">
+                <input type="text" id="newGroupNameInput" placeholder="Например: Разработчики">
             </div>
-            <button onclick="createGroup()" style="width: 100%;">Создать группу</button>
+            <button onclick="createGroup()" style="width: 100%;">Подтвердить создание</button>
         </div>
     </div>
 
     <script>
-        // АВТОМАТИЧЕСКИ ОПРЕДЕЛЯЕМ АДРЕС СЕРВЕРА
-        const API_URL = window.location.origin.includes('localhost') 
-            ? 'http://localhost:3000' 
-            : 'https://danumes.onrender.com';
+        const API_URL = 'https://onrender.com';
 
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
         let isGroupChat = false;
         let serverData = { users: {}, messages: [], groups: [] };
 
+        // Если сессия есть — проверяем, а не запускаем слепо
         if (currentUser) {
             showMessenger();
         }
@@ -376,6 +440,11 @@
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', newTheme);
+        }
+
+        function logout() {
+            localStorage.removeItem('danumes_user');
+            location.reload();
         }
 
         async function login() {
@@ -398,7 +467,7 @@
                     alert(data.error || 'Ошибка входа');
                 }
             } catch (err) {
-                alert('Не удалось подключиться к серверу. Подождите пару минут, сервер на Render «просыпается».');
+                alert('Не удалось подключиться. Возможно, сервер на Render запускается. Подождите минуту и повторите.');
             }
         }
 
@@ -415,7 +484,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('Регистрация успешна! Теперь нажмите "Войти".');
+                    alert('Регистрация успешна! Теперь вы можете войти под своим аккаунтом.');
                 } else {
                     alert(data.error || 'Ошибка регистрации');
                 }
@@ -443,6 +512,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: currentUser })
                 });
+                // Защита: если сервер принудительно обнулился, выкидываем на логин
+                if (res.status === 404 || res.status === 500) return;
+                
                 serverData = await res.json();
                 renderSidebar();
                 renderMessages();
@@ -458,7 +530,7 @@
             fList.innerHTML = '';
             gList.innerHTML = '';
 
-            // Рендер пользователей
+            // Отображение пользователей в стиле Bento-карточек
             Object.keys(serverData.users).forEach(u => {
                 if (u === currentUser) return;
                 const isOnline = serverData.users[u].online;
@@ -466,36 +538,38 @@
                 div.className = `item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
                 div.innerHTML = `
-                    <div class="avatar">${u[0].toUpperCase()}</div>
+                    <div class="avatar">${u.substr(0,2).toUpperCase()}</div>
                     <div style="flex:1;">
-                        <div>${u}</div>
-                        <div style="font-size:11px; color:${isOnline ? '#238636' : '#8b949e'}">
-                            ${isOnline ? 'В сети' : 'Офлайн'}
+                        <div style="font-weight:600; font-size:14px;">${u}</div>
+                        <div style="font-size:11px; margin-top:2px; color:${isOnline ? '#10b981' : '#6b7280'}">
+                            • ${isOnline ? 'Онлайн' : 'Был недавно'}
                         </div>
                     </div>
                 `;
                 fList.appendChild(div);
             });
 
-            // Рендер групп
-            serverData.groups.forEach(g => {
-                const div = document.createElement('div');
-                div.className = `item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
-                div.onclick = () => selectChat(g.name, true);
-                div.innerHTML = `
-                    <div class="avatar" style="background-color: var(--accent-color)">#</div>
-                    <div>${g.name}</div>
-                `;
-                gList.appendChild(div);
-            });
+            // Отображение групп
+            if (serverData.groups) {
+                serverData.groups.forEach(g => {
+                    const div = document.createElement('div');
+                    div.className = `item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
+                    div.onclick = () => selectChat(g.name, true);
+                    div.innerHTML = `
+                        <div class="avatar" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">#</div>
+                        <div style="font-weight:600; font-size:14px;">${g.name}</div>
+                    `;
+                    gList.appendChild(div);
+                });
+            }
         }
 
         function selectChat(name, isGroup) {
             activeChat = name;
             isGroupChat = isGroup;
             document.getElementById('activeChatName').innerText = name;
-            document.getElementById('activeChatAvatar').innerText = isGroup ? '#' : name[0].toUpperCase();
-            document.getElementById('activeChatStatus').innerText = isGroup ? 'Групповой чат' : '';
+            document.getElementById('activeChatAvatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
+            document.getElementById('activeChatStatus').innerText = isGroup ? 'Публичное bento-сообщество' : 'Личный безопасный диалог';
             renderMessages();
         }
 
@@ -503,9 +577,7 @@
             const area = document.getElementById('messagesArea');
             if (!activeChat) return;
 
-            // Сохраняем позицию скролла
-            const shouldScroll = area.scrollTop + area.clientHeight >= area.scrollHeight - 50;
-
+            const shouldScroll = area.scrollTop + area.clientHeight >= area.scrollHeight - 60;
             area.innerHTML = '';
 
             const filtered = serverData.messages.filter(m => {
@@ -516,12 +588,17 @@
                 }
             });
 
+            if (filtered.length === 0) {
+                area.innerHTML = `<div style="text-align: center; color: var(--text-muted); margin-top: auto; margin-bottom: auto; font-size: 13px;">Здесь пока пусто. Начните историю общения!</div>`;
+                return;
+            }
+
             filtered.forEach(m => {
                 const div = document.createElement('div');
                 const isOut = m.from === currentUser;
                 div.className = `message ${isOut ? 'outbound' : 'inbound'}`;
                 
-                let authorHTML = !isOut && isGroupChat ? `<strong style="font-size:12px;color:var(--accent-color);display:block;margin-bottom:2px;">${m.from}</strong>` : '';
+                let authorHTML = !isOut && isGroupChat ? `<strong style="font-size:11px;color:#3b82f6;display:block;margin-bottom:4px;">@${m.from}</strong>` : '';
                 
                 div.innerHTML = `
                     ${authorHTML}
@@ -555,7 +632,7 @@
                 input.value = '';
                 syncData();
             } catch (e) {
-                alert('Не удалось отправить сообщение');
+                alert('Ошибка сети при отправке сообщения');
             }
         }
 
@@ -585,7 +662,7 @@
                     alert(data.error);
                 }
             } catch (e) {
-                alert('Ошибка при создании группы');
+                alert('Не удалось создать группу');
             }
         }
     </script>
