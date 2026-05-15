@@ -55,7 +55,6 @@
                               radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
         }
 
-        /* ЭКРАН АВТОРИЗАЦИИ */
         .screen {
             display: none;
             width: 100%;
@@ -167,7 +166,6 @@
             background: var(--bg-glass-hover);
         }
 
-        /* ГЛАВНЫЙ ИНТЕРФЕЙС */
         .app-layout {
             width: 100%;
             height: 100%;
@@ -175,7 +173,6 @@
             grid-template-columns: 80px 320px 1fr;
         }
 
-        /* Узкая рельса навигации */
         .nav-rail {
             background: var(--bg-sidebar);
             border-right: 1px solid var(--border-glass);
@@ -208,7 +205,6 @@
             box-shadow: 0 0 12px var(--glow);
         }
 
-        /* Панель списка чатов */
         .sidebar-chats {
             background: var(--bg-sidebar);
             border-right: 1px solid var(--border-glass);
@@ -322,7 +318,6 @@
             font-size: 14px;
         }
 
-        /* Зона основного контента */
         .main-content {
             background: var(--bg-main);
             display: flex;
@@ -331,7 +326,6 @@
             position: relative;
         }
 
-        /* Приветственный экран */
         .welcome-view {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -356,7 +350,6 @@
             font-size: 14px;
         }
 
-        /* Окно активного чата */
         .chat-view {
             display: none;
             flex-direction: column;
@@ -417,7 +410,6 @@
             text-align: right;
         }
 
-        /* Панель ввода сообщения */
         .input-bar {
             padding: 20px 24px;
             border-top: 1px solid var(--border-glass);
@@ -458,28 +450,22 @@
             gap: 12px;
             cursor: pointer;
         }
-
-        .profile-footer:hover opacity: 0.8;
     </style>
 </head>
 <body>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ (ОРИГИНАЛЬНЫЙ ДИЗАЙН) -->
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1>
             <p>Глобальная сеть безопасного общения</p>
-            
             <div class="input-wrap">
                 <label>Имя пользователя</label>
                 <input type="text" id="auth-user" placeholder="Ваш уникальный ник">
             </div>
-
             <div class="input-wrap">
                 <label>Пароль</label>
                 <input type="password" id="auth-pass" placeholder="••••••••">
             </div>
-
             <div class="auth-buttons">
                 <button class="btn btn-primary" onclick="authAction('login')">Войти</button>
                 <button class="btn btn-secondary" onclick="authAction('register')">Создать аккаунт</button>
@@ -487,11 +473,8 @@
         </div>
     </div>
 
-    <!-- ГЛАВНЫЙ ЭКРАН МЕССЕНДЖЕРА -->
     <div class="screen" id="app-screen">
         <div class="app-layout">
-            
-            <!-- Левая узкая панель -->
             <div class="nav-rail">
                 <div class="nav-item active">ЧАТЫ</div>
                 <div class="nav-item" onclick="toggleTheme()">ТЕМА</div>
@@ -500,7 +483,6 @@
                 </div>
             </div>
 
-            <!-- Список чатов и групп -->
             <div class="sidebar-chats">
                 <div class="sidebar-header">
                     <h2>DanuMes</h2>
@@ -510,22 +492,16 @@
                     <input type="text" placeholder="Поиск людей...">
                 </div>
                 <div class="section-title">Мои диалоги</div>
-                <div class="friends-list" id="friends-list">
-                    <!-- Сюда подгружаются друзья и группы -->
-                </div>
+                <div class="friends-list" id="friends-list"></div>
             </div>
 
-            <!-- Зона чата -->
             <div class="main-content">
-                
-                <!-- Приветствие (пока ничего не выбрано) -->
                 <div class="welcome-view" id="welcome-view">
                     <span style="font-size: 48px;">💬</span>
                     <h2 id="welcome-title">Добро пожаловать в DanuMes</h2>
                     <p>Вы успешно зашли в сеть. Откройте чат слева, чтобы продолжить.</p>
                 </div>
 
-                <!-- Рабочая область переписки -->
                 <div class="chat-view" id="chat-view">
                     <div class="chat-header">
                         <div class="avatar-fallback" id="chat-avatar">?</div>
@@ -534,19 +510,13 @@
                             <p id="chat-status" style="font-size: 12px; color: var(--text-muted);">Статус</p>
                         </div>
                     </div>
-
-                    <div class="messages-container" id="messages-container">
-                        <!-- Сюда рендерятся сообщения -->
-                    </div>
-
+                    <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar">
-                        <input type="text" id="message-input" placeholder="Напишите сообщение...">
+                        <input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
                         <button onclick="sendMessage()">Отправить</button>
                     </div>
                 </div>
-
             </div>
-
         </div>
     </div>
 
@@ -567,32 +537,31 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Вход и регистрация - оставлены без единого изменения в полях и логике
+        // Вход и регистрация строго по вашему оригиналу с GitHub (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
-            if (!u || !p) return alert('Заполните поля');
-
+            if(!u || !p) return alert('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
                 const d = await r.json();
-                if (d.success) {
-                    if (endpoint === 'login') {
+                if(d.success) {
+                    if(endpoint === 'login') {
                         currentUser = u;
                         localStorage.setItem('danumes_user', u);
                         showMessenger();
-                    } else {
-                        alert('Регистрация успешна! Теперь вы можете войти.');
+                    } else { 
+                        alert('Регистрация успешна'); 
                     }
-                } else {
-                    alert(d.error || 'Ошибка доступа');
+                } else { 
+                    alert(d.error || 'Ошибка'); 
                 }
-            } catch (e) {
-                alert('Не удалось связаться с сервером. Повторите попытку.');
+            } catch(e) { 
+                alert('Ошибка сети'); 
             }
         }
 
@@ -609,26 +578,23 @@
         }
 
         async function syncData() {
-            if (!currentUser) return;
+            if(!currentUser) return;
             try {
                 const r = await fetch(`${SERVER_URL}/api/sync`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: currentUser })
                 });
                 serverData = await r.json();
                 renderSidebar();
                 renderMessages();
-            } catch (e) {
-                console.error("Сбой синхронизации");
-            }
+            } catch(e){}
         }
 
         function renderSidebar() {
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
-            // 1. Отображение глобальных групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
                     const div = document.createElement('div');
@@ -645,9 +611,8 @@
                 });
             }
 
-            // 2. Отображение пользователей
             Object.keys(serverData.users).forEach(u => {
-                if (u === currentUser) return;
+                if(u === currentUser) return;
                 const isOnline = serverData.users[u].online;
                 const div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
@@ -656,9 +621,7 @@
                     <div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div>
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:14px;">${u}</div>
-                        <div style="font-size:11px; color:${isOnline ? '#10b981' : '#64748b'}">
-                            ${isOnline ? 'В сети' : 'Офлайн'}
-                        </div>
+                        <div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div>
                     </div>
                 `;
                 container.appendChild(div);
@@ -678,13 +641,12 @@
 
         function renderMessages() {
             const container = document.getElementById('messages-container');
-            if (!activeChat) return;
-
-            const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 60;
+            if(!activeChat) return;
+            const currentScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
             container.innerHTML = '';
 
             const filtered = serverData.messages.filter(m => {
-                if (isGroupChat) return m.isGroup && m.to === activeChat;
+                if(isGroupChat) return m.isGroup && m.to === activeChat;
                 return !m.isGroup && ((m.from === currentUser && m.to === activeChat) || (m.from === activeChat && m.to === currentUser));
             });
 
@@ -696,74 +658,56 @@
                     <div class="message-bubble">
                         ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px;">@${m.from}</div>` : ''}
                         <div>${m.text}</div>
-                        <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
+                        <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                     </div>
                 `;
                 container.appendChild(div);
             });
-
-            if (isAtBottom) container.scrollTop = container.scrollHeight;
+            if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            if (!text || !activeChat) return;
-
+            if(!text || !activeChat) return;
             try {
                 await fetch(`${SERVER_URL}/api/messages/send`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
                 });
                 input.value = '';
                 syncData();
-            } catch (e) {
-                console.error("Ошибка при отправке");
-            }
+            } catch(e){}
         }
 
-        // --- УМНАЯ ОТПРАВКА СООБЩЕНИЙ ПО НАЖАТИЮ ENTER ---
+        // Логика нажатия клавиши Enter
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const input = document.getElementById('message-input');
-            if (input) {
-                input.addEventListener('keypress', handleKeyPress);
-            }
-        });
-
         function openCreateGroupModal() {
-            const name = prompt('Введите имя новой публичной группы:');
-            if (!name || !name.trim()) return;
+            const name = prompt('Введите название новой группы:');
+            if(!name || !name.trim()) return;
             createGroup(name.trim());
         }
 
         async function createGroup(name) {
             try {
-                const r = await fetch(`${SERVER_URL}/api/groups/create`, {
+                await fetch(`${SERVER_URL}/api/groups/create`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ name, creator: currentUser })
                 });
-                const d = await r.json();
-                if (d.success) {
-                    syncData();
-                } else {
-                    alert(d.error);
-                }
-            } catch (e) {
-                alert('Не удалось создать группу.');
-            }
+                syncData();
+            } catch(e){}
         }
 
-        function logout() {
-            localStorage.removeItem('danumes_user');
-            location.reload();
+        function logout() { 
+            localStorage.removeItem('danumes_user'); 
+            location.reload(); 
         }
     </script>
 </body>
