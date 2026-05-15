@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // ИМЯ ТВОЕГО АДМИН-АККАУНТА И НАЗВАНИЕ КАНАЛА НОВОСТЕЙ
-const ADMIN_USERNAME = 'admin'; 
+const ADMIN_USERNAME = 'Danumala'; 
 const NEWS_GROUP_NAME = 'DanuMes news';
 
 // Функция для БЕЗОПАСНОЙ загрузки данных из файла
@@ -51,7 +51,7 @@ function initAdminAndNews() {
     // 1. Создаем вечного админа (если его нет в файле). Пароль поставь свой!
     if (!globalState.users[ADMIN_USERNAME]) {
         globalState.users[ADMIN_USERNAME] = {
-            password: 'твой_секретный_пароль_здесь', // Укажи тут свой пароль для входа!
+            password: 'danyajukovka', // Укажи тут свой пароль для входа!
             lastSeen: Date.now(),
             avatar: null
         };
