@@ -450,40 +450,9 @@
             gap: 12px;
             cursor: pointer;
         }
-
-        /* КРАСИВЫЕ ВСПЛЫВАЮЩИЕ ОШИБКИ НА САЙТЕ */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .toast-alert {
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 14px 24px;
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-            font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            animation: slideIn 0.3s ease forwards;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
     </style>
 </head>
 <body>
-
-    <div class="toast-container" id="toast-box"></div>
 
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
@@ -552,7 +521,8 @@
     </div>
 
     <script>
-        const SERVER_URL = 'https://onrender.com';
+        // АВТОМАТИЧЕСКИЙ АДРЕС СЕРВЕРА ДЛЯ СТАБИЛЬНОСТИ НА RENDER
+        const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
         let isGroupChat = false;
@@ -562,27 +532,17 @@
             showMessenger();
         }
 
-        // Функция показа ошибок НА САЙТЕ вместо alert
-        function showError(message, isSuccess = false) {
-            const box = document.getElementById('toast-box');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'toast-alert';
-            if(isSuccess) alertDiv.style.background = 'rgba(16, 185, 129, 0.9)'; // зелёный для успеха
-            alertDiv.innerText = message;
-            box.appendChild(alertDiv);
-            setTimeout(() => alertDiv.remove(), 4000);
-        }
-
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
+        // Твоя оригинальная авторизация (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
-            if(!u || !p) return showError('Заполните все поля!');
+            if(!u || !p) return alert('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
                     method: 'POST',
@@ -596,13 +556,13 @@
                         localStorage.setItem('danumes_user', u);
                         showMessenger();
                     } else { 
-                        showError('Регистрация успешна! Теперь войдите.', true); 
+                        alert('Регистрация успешна'); 
                     }
                 } else { 
-                    showError(d.error || 'Ошибка доступа'); 
+                    alert(d.error || 'Ошибка'); 
                 }
             } catch(e) { 
-                showError('Ошибка сети. Возможно, сервер Render просыпается.'); 
+                alert('Ошибка сети'); 
             }
         }
 
@@ -636,6 +596,7 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
+            // Отображение групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
                     const div = document.createElement('div');
@@ -652,6 +613,7 @@
                 });
             }
 
+            // Отображение пользователей
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser) return;
                 const isOnline = serverData.users[u].online;
@@ -722,6 +684,7 @@
             } catch(e){}
         }
 
+        // Твоя функция обработки нажатия Enter
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
                 sendMessage();
