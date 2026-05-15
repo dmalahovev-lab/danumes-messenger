@@ -110,7 +110,7 @@
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1><p>Глобальная сеть безопасного общения</p>
-            <div class="input-wrap"><label>Имя пользователя</label><input type="text" id="auth-user" placeholder="Ваш unique ник"></div>
+            <div class="input-wrap"><label>Имя пользователя</label><input type="text" id="auth-user" placeholder="Ваш уникальный ник"></div>
             <div class="input-wrap"><label>Пароль</label><input type="password" id="auth-pass" placeholder="••••••••"></div>
             <div class="auth-buttons">
                 <button class="btn btn-primary" onclick="authAction('login')">Войти</button>
@@ -286,21 +286,43 @@
             document.getElementById('image-file-input').click();
         }
 
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ КАРТИНКИ
+        // --- ФУНКЦИЯ С АВТОМАТИЧЕСКИМ СЖАТИЕМ КАРТИНКИ ПЕРЕД ОТПРАВКОЙ ---
         function handleImageUpload(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
             
-            const file = files[0]; // Исправлено: берем первый файл из массива файлов
+            const file = files[0];
             if (!file.type.startsWith('image/')) return showNotification('Можно отправлять только картинки!');
             
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64Image = e.target.result;
-                if(activeChat) {
-                    sendDirectMessage(base64Image);
-                    showNotification('Изображение отправлено!', true);
-                }
+                const img = new Image();
+                img.onload = function() {
+                    // Используем Canvas для уменьшения разрешения до 600px по ширине
+                    const canvas = document.createElement('canvas');
+                    const max_width = 600;
+                    const scale = max_width / img.width;
+                    
+                    if (img.width > max_width) {
+                        canvas.width = max_width;
+                        canvas.height = img.height * scale;
+                    } else {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Сжимаем качество картинки до 60%, уменьшая размер строки Base64 в 10 раз!
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    if(activeChat) {
+                        sendDirectMessage(compressedBase64);
+                        showNotification('Изображение отправлено!', true);
+                    }
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
             event.target.value = '';
