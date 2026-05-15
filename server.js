@@ -1,14 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const crypto = require('crypto'); // Встроенный модуль для безопасного шифрования
-const { Pool } = require('pg'); // Подключаем вечную PostgreSQL базу Supabase
+const crypto = require('crypto');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// === ТВОЯ КОРРЕКТНАЯ СТРОКА ПОДКЛЮЧЕНИЯ К СУПЕР-БАЗЕ ===
-// Подставил твой пароль danyajukovka прямо внутрь ссылки
+// Твоя проверенная строка подключения к базе Supabase
 const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
 
 const pool = new Pool({
@@ -23,15 +22,12 @@ app.use(express.static(path.join(__dirname)));
 const ADMIN_USERNAME = 'Danumala'; 
 const NEWS_GROUP_NAME = 'DanuMes news';
 
-// Функция безопасного зашифрования паролей (хэширование SHA-256)
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Автоматическое создание таблиц в Supabase при старте
 async function initDB() {
     try {
-        // Создаем таблицу пользователей
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 username TEXT PRIMARY KEY,
@@ -40,7 +36,6 @@ async function initDB() {
                 avatar TEXT
             );
         `);
-        // Создаем таблицу сообщений
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id TEXT PRIMARY KEY,
@@ -51,7 +46,6 @@ async function initDB() {
                 timestamp BIGINT NOT NULL
             );
         `);
-        // Создаем таблицу групп
         await pool.query(`
             CREATE TABLE IF NOT EXISTS groups (
                 name TEXT PRIMARY KEY,
@@ -60,7 +54,6 @@ async function initDB() {
             );
         `);
 
-        // Создаем твоего вечного админа Danumala с зашифрованным паролем danyajukovka
         const adminHash = hashPassword('danyajukovka');
         await pool.query(`
             INSERT INTO users (username, password, last_seen) 
@@ -68,7 +61,6 @@ async function initDB() {
             ON CONFLICT (username) DO NOTHING
         `, [ADMIN_USERNAME, adminHash, Date.now()]);
 
-        // Создаем вечный новостной канал
         await pool.query(`
             INSERT INTO groups (name, creator, members) 
             VALUES ($1, $2, $3) 
@@ -87,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ЛОГИКА user/pass С ЗАЩИТОЙ ПОД ТВОЙ ИНДЕКС) ---
+// --- ВХОД И РЕГИСТРАЦИЯ (ЛОГИКА ОСТАЛАСЬ ОРИГИНАЛЬНОЙ) ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -112,13 +104,15 @@ app.post('/api/login', async (req, res) => {
     
     try {
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = result.rows[0];
         
-        if (!user) {
+        // ИСПРАВЛЕНО: Правильно проверяем, найден ли пользователь в базе данных
+        if (result.rows.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
+        const user = result.rows[0]; // Берем первого найденного юзера из массива rows
         const inputHash = hashPassword(password);
+        
         if (user.password !== inputHash) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
@@ -133,7 +127,6 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ С ОБЛАКОМ ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
     
