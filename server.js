@@ -7,8 +7,7 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Твоя проверенная строка подключения к базе Supabase
-// Изменен порт с 6543 на 5432 и убран pgbouncer для стабильного создания таблиц
+// Прямое подключение к базе данных Supabase через порт 5432
 const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
 
 const pool = new Pool({
@@ -80,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ЛОГИКА ОСТАЛАСЬ ОРИГИНАЛЬНОЙ) ---
+// --- ВХОД И РЕГИСТРАЦИЯ ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -106,12 +105,12 @@ app.post('/api/login', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         
-        // ИСПРАВЛЕНО: Правильно проверяем, найден ли пользователь в базе данных
+        // Исправлено чтение первого найденного пользователя из массива rows
         if (result.rows.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        const user = result.rows[0]; // Берем первого найденного юзера из массива rows
+        const user = result.rows[0]; 
         const inputHash = hashPassword(password);
         
         if (user.password !== inputHash) {
