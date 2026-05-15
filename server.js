@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
@@ -8,42 +7,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-const DB_PATH = '/tmp/database.json';
-
-let memoryDB = {
-    users: {
-        "admin": { password: "123", avatar: "🤖", status: "Создатель" }
-    },
-    messages: [],
-    groups: {}
+// Буфер обмена данными между активными вкладками
+let globalState = {
+    users: [],
+    messages: []
 };
-
-function loadDatabase() {
-    try {
-        if (fs.existsSync(DB_PATH)) {
-            const data = fs.readFileSync(DB_PATH, 'utf8');
-            memoryDB = JSON.parse(data);
-            console.log("💾 База данных DanuMes успешно загружена");
-        } else {
-            saveDatabase();
-        }
-    } catch (err) {
-        console.error("Ошибка при чтении базы данных:", err);
-    }
-}
-
-function saveDatabase() {
-    try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(memoryDB, null, 2), 'utf8');
-    } catch (err) {
-        console.error("Ошибка записи в базу данных:", err);
-    }
-}
-
-loadDatabase();
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Синхронизация локальной базы с сервером
+app.post('/api/sync', (req, res) => {
+    if (req.body.users) {
+        req.body.users.forEach(u => {
+            if (!globalState.users.some(existing => existing.name === u.name)) {
+                globalState.users.push(u);
+            }
+        });
+    }
+    if (req.body.messages) {
+        globalState.messages = req.body.messages;
+    }
+    res.json(globalState);
 });
 
 app.post('/api/register', (req, res) => {
@@ -54,30 +40,27 @@ app.post('/api/register', (req, res) => {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    if (memoryDB.users[username]) {
+    if (globalState.users.some(u => u.name === username)) {
         return res.json({ success: false, msg: 'Пользователь уже существует' });
     }
 
-    memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-    saveDatabase();
-    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
+    const newUser = { name: username, password: password, avatar: "🤖", status: "Доступен" };
+    globalState.users.push(newUser);
+
+    return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"', newUser });
 });
 
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
 
-    if (!username || !password) {
-        return res.json({ success: false, msg: 'Заполните все поля' });
+    // Авто-восстановление аккаунта в памяти сервера, если он есть у клиента локально
+    let user = globalState.users.find(u => u.name === username);
+    if (!user) {
+        user = { name: username, password: password, avatar: "🤖", status: "Доступен" };
+        globalState.users.push(user);
     }
 
-    if (!memoryDB.users[username]) {
-        memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
-        saveDatabase();
-    }
-
-    const user = memoryDB.users[username];
-    
     if (user.password !== password) {
         return res.json({ success: false, msg: 'Недействительный Логин/Пароль' });
     }
@@ -89,30 +72,11 @@ app.post('/api/login', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
-    const list = Object.keys(memoryDB.users).map(username => ({
-        name: username,
-        avatar: memoryDB.users[username].avatar,
-        status: memoryDB.users[username].status
-    }));
-    res.json(list);
-});
-
-app.get('/api/groups', (req, res) => {
-    res.json(Object.keys(memoryDB.groups || {}));
-});
-
-app.post('/api/groups/create', (req, res) => {
-    const gName = (req.body.groupName || '').trim();
-    if (!gName) return res.json({ success: false, msg: 'Укажите название группы' });
-    
-    if (!memoryDB.groups) memoryDB.groups = {};
-    memoryDB.groups[gName] = req.body.members || [];
-    saveDatabase();
-    res.json({ success: true });
+    res.json(globalState.users);
 });
 
 app.get('/api/messages', (req, res) => {
-    res.json(memoryDB.messages);
+    res.json(globalState.messages);
 });
 
 app.post('/api/messages/send', (req, res) => {
@@ -122,18 +86,16 @@ app.post('/api/messages/send', (req, res) => {
         to: req.body.to,
         text: req.body.text
     };
-    memoryDB.messages.push(newMsg);
-    saveDatabase();
-    res.json({ success: true, messages: memoryDB.messages });
+    globalState.messages.push(newMsg);
+    res.json({ success: true, messages: globalState.messages });
 });
 
 app.post('/api/messages/delete', (req, res) => {
-    memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== req.body.msgId);
-    saveDatabase();
-    res.json({ success: true, messages: memoryDB.messages });
+    globalState.messages = globalState.messages.filter(msg => msg.id !== req.body.msgId);
+    res.json({ success: true, messages: globalState.messages });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
 });
