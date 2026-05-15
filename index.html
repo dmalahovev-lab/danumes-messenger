@@ -78,21 +78,15 @@
         .modal-card { background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 30px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
         
-        /* СТИЛЬ ДЛЯ ТВОЕЙ АДМИНСКОЙ ГАЛОЧКИ */
         .admin-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 15px; height: 15px;
-            background: #a855f7;
-            color: white;
-            font-size: 9px;
-            font-weight: bold;
-            border-radius: 50%;
-            margin-left: 5px;
-            box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
-            vertical-align: middle;
+            display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle;
         }
+
+        /* Стиль кнопки прикрепления картинки */
+        .btn-attach {
+            width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-attach:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
     </style>
 </head>
 <body>
@@ -142,7 +136,13 @@
                 <div class="chat-view" id="chat-view">
                     <div class="chat-header"><div class="avatar-fallback" id="chat-avatar">?</div><div><h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3><div id="chat-header-badge" style="display:inline-block;"></div><p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p></div></div>
                     <div class="messages-container" id="messages-container"></div>
-                    <div class="input-bar"><input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)"><button onclick="sendMessage()">Отправить</button></div>
+                    <div class="input-bar">
+                        <!-- Добавлена кнопка и скрытый выбор изображений -->
+                        <button class="btn-attach" onclick="triggerFileInput()">📷</button>
+                        <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+                        <input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()">Отправить</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -227,10 +227,7 @@
                 const div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
-                
-                // Проверка на админа для отрисовки галочки в списке друзей слева
                 const badgeHTML = (u === 'Danumala') ? '<span class="admin-badge">✓</span>' : '';
-                
                 div.innerHTML = `<div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600; font-size:14px; display:flex; align-items:center;">${u}${badgeHTML}</div><div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div></div>`;
                 container.appendChild(div);
             });
@@ -243,11 +240,8 @@
             document.getElementById('chat-title').innerText = name;
             document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
-            
-            // Отрисовка галочки сверху в шапке открытого чата
             const headerBadge = document.getElementById('chat-header-badge');
             headerBadge.innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
-            
             renderMessages();
         }
 
@@ -260,10 +254,13 @@
                 const div = document.createElement('div'), isOut = m.from === currentUser;
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
                 
-                // Проверка на админа для отрисовки галочки над сообщениями в группах
+                // Проверяем, является ли сообщение картинкой (начинается с data:image)
+                let textContentHTML = m.text.startsWith('data:image/') 
+                    ? `<img src="${m.text}" style="max-width:100%; border-radius:10px; display:block; margin-top:5px; pointer-events:auto; user-select:auto;">`
+                    : `<div>${m.text}</div>`;
+
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
-                
-                div.innerHTML = `<div class="message-bubble">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}<div>${m.text}</div><div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
+                div.innerHTML = `<div class="message-bubble">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
                 container.appendChild(div);
             });
             if(currentScroll) container.scrollTop = container.scrollHeight;
@@ -272,16 +269,44 @@
         async function sendMessage() {
             const input = document.getElementById('message-input'), text = input.value.trim();
             if(!text || !activeChat) return;
+            sendDirectMessage(text);
+            input.value = '';
+        }
+
+        // Вынесенная функция для отправки любого типа контента (текст или base64 картинки)
+        async function sendDirectMessage(content) {
             try {
                 await fetch(`${SERVER_URL}/api/messages/send`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
+                    body: JSON.stringify({ from: currentUser, to: activeChat, text: content, isGroup: isGroupChat })
                 });
-                input.value = ''; syncData();
+                syncData();
             } catch(e){}
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+        // --- НОВАЯ ЛОГИКА ОТПРАВКИ ИЗОБРАЖЕНИЙ ---
+        function triggerFileInput() {
+            document.getElementById('image-file-input').click();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) return showNotification('Можно отправлять только картинки!');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Image = e.target.result;
+                if(activeChat) {
+                    sendDirectMessage(base64Image); // Шлем картинку в чат
+                    showNotification('Изображение отправлено!', true);
+                }
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // Сброс инпута
+        }
 
         function openCreateGroupModal() {
             document.getElementById('group-modal').classList.add('active');
