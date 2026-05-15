@@ -197,13 +197,6 @@
             font-size: 12px;
             font-weight: bold;
             transition: all 0.2s;
-            overflow: hidden;
-        }
-
-        .nav-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .nav-item:hover, .nav-item.active {
@@ -323,13 +316,6 @@
             align-items: center;
             margin-right: 12px;
             font-size: 14px;
-            overflow: hidden;
-        }
-
-        .avatar-fallback img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .main-content {
@@ -402,7 +388,6 @@
             line-height: 1.4;
             position: relative;
             word-break: break-word;
-            cursor: pointer;
         }
 
         .inbound .message-bubble {
@@ -418,22 +403,11 @@
             border-bottom-right-radius: 4px;
         }
 
-        .message-footer-info {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 4px;
-            margin-top: 4px;
-        }
-
         .message-time {
             font-size: 10px;
             opacity: 0.6;
-        }
-
-        .message-status {
-            font-size: 10px;
-            opacity: 0.8;
+            margin-top: 4px;
+            text-align: right;
         }
 
         .input-bar {
@@ -582,7 +556,7 @@
     <div class="screen" id="app-screen">
         <div class="app-layout">
             <div class="nav-rail">
-                <div class="nav-item active" id="user-avatar-btn" onclick="changeOwnAvatar()">ЧАТЫ</div>
+                <div class="nav-item active">ЧАТЫ</div>
                 <div class="nav-item" onclick="toggleTheme()">ТЕМА</div>
                 <div class="profile-footer" onclick="logout()">
                     <div class="avatar-fallback" style="margin-right:0; background:rgba(239,68,68,0.1); color:#ef4444;">↩</div>
@@ -595,7 +569,7 @@
                     <button class="btn-circle" onclick="openCreateGroupModal()">+</button>
                 </div>
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Поиск людей..." oninput="filterSidebar()">
+                    <input type="text" placeholder="Поиск людей...">
                 </div>
                 <div class="section-title">Мои диалоги</div>
                 <div class="friends-list" id="friends-list"></div>
@@ -632,25 +606,6 @@
         let activeChat = null;
         let isGroupChat = false;
         let serverData = { users: {}, messages: [], groups: [] };
-        let lastMessageCount = 0;
-
-        // Создаем стильный встроенный аудио-звук уведомлений программно
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playNotificationSound() {
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Ре
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // Ля
-                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
-            } catch(e){}
-        }
 
         if (currentUser) {
             showMessenger();
@@ -674,7 +629,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЙ ПОЛНОСТЬЮ ОРИГИНАЛЬНЫЙ КOД АВТОРИЗАЦИИ (user и pass) ---
+        // --- ТВОЙ 100% ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА ИЗ ТВОЕГО РЕПОЗИТОРИЯ TEST ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -711,7 +666,7 @@
 
         function startSync() {
             syncData();
-            setInterval(syncData, 2500); // Чуть быстрее для мгновенного звука
+            setInterval(syncData, 3000);
         }
 
         async function syncData() {
@@ -723,46 +678,17 @@
                     body: JSON.stringify({ user: currentUser })
                 });
                 serverData = await r.json();
-                
-                // Обновляем аватарку в левой рельсе навигации
-                const ownData = serverData.users[currentUser];
-                const railBtn = document.getElementById('user-avatar-btn');
-                if(ownData && ownData.avatar) {
-                    railBtn.innerHTML = `<img src="${ownData.avatar}">`;
-                } else {
-                    railBtn.innerText = 'ЧАТЫ';
-                }
-
-                // Логика звукового сигнала
-                if (serverData.messages && serverData.messages.length > lastMessageCount) {
-                    if (lastMessageCount > 0) {
-                        const lastMsg = serverData.messages[serverData.messages.length - 1];
-                        if (lastMsg.from !== currentUser) {
-                            playNotificationSound();
-                        }
-                    }
-                    lastMessageCount = serverData.messages.length;
-                }
-
                 renderSidebar();
                 renderMessages();
             } catch(e){}
         }
 
-        // Фильтрация списков (Поиск)
-        function filterSidebar() {
-            renderSidebar();
-        }
-
         function renderSidebar() {
             const container = document.getElementById('friends-list');
-            const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
             container.innerHTML = '';
 
-            // Рендер групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
-                    if (searchVal && !g.name.toLowerCase().includes(searchVal)) return;
                     const div = document.createElement('div');
                     div.className = `friend-item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
                     div.onclick = () => selectChat(g.name, true);
@@ -777,23 +703,14 @@
                 });
             }
 
-            // Рендер людей
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser) return;
-                if (searchVal && !u.toLowerCase().includes(searchVal)) return;
-                
                 const isOnline = serverData.users[u].online;
-                const avatarUrl = serverData.users[u].avatar;
                 const div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
-                
-                let avatarHTML = avatarUrl 
-                    ? `<img src="${avatarUrl}">` 
-                    : u.substr(0,2).toUpperCase();
-
                 div.innerHTML = `
-                    <div class="avatar-fallback">${avatarHTML}</div>
+                    <div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div>
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:14px;">${u}</div>
                         <div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div>
@@ -809,15 +726,7 @@
             document.getElementById('welcome-view').style.display = 'none';
             document.getElementById('chat-view').style.display = 'flex';
             document.getElementById('chat-title').innerText = name;
-            
-            const uData = serverData.users[name];
-            const chatAvatarBox = document.getElementById('chat-avatar');
-            if(!isGroup && uData && uData.avatar) {
-                chatAvatarBox.innerHTML = `<img src="${uData.avatar}">`;
-            } else {
-                chatAvatarBox.innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
-            }
-
+            document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповое сообщество' : 'Приватный диалог';
             renderMessages();
         }
@@ -837,13 +746,77 @@
                 const div = document.createElement('div');
                 const isOut = m.from === currentUser;
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
-                
-                // Двойной клик для удаления сообщений
-                div.ondblclick = () => deleteMessagePrompt(m.id, m.from);
-
-                // Галочка статуса
-                const statusIcon = isOut ? '✓✓' : '';
-
                 div.innerHTML = `
-                    <div class="message-bubble" title="Двойной клик, чтобы удалить">
-                        ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px
+                    <div class="message-bubble">
+                        ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px;">@${m.from}</div>` : ''}
+                        <div>${m.text}</div>
+                        <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            if(currentScroll) container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if(!text || !activeChat) return;
+            try {
+                await fetch(`${SERVER_URL}/api/messages/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
+                });
+                input.value = '';
+                syncData();
+            } catch(e){}
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function openCreateGroupModal() {
+            document.getElementById('group-modal').classList.add('active');
+            document.getElementById('new-group-name').focus();
+        }
+
+        function closeCreateGroupModal() {
+            document.getElementById('group-modal').classList.remove('active');
+            document.getElementById('new-group-name').value = '';
+        }
+
+        function handleModalKeyPress(e) {
+            if (e.key === 'Enter') {
+                submitCreateGroup();
+            }
+        }
+
+        async function submitCreateGroup() {
+            const name = document.getElementById('new-group-name').value.trim();
+            if (!name) return showNotification('Введите название группы');
+            
+            try {
+                await fetch(`${SERVER_URL}/api/groups/create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, creator: currentUser })
+                });
+                closeCreateGroupModal();
+                syncData();
+                showNotification('Группа успешно создана!', true);
+            } catch(e) {
+                showNotification('Не удалось создать группу');
+            }
+        }
+
+        function logout() { 
+            localStorage.removeItem('danumes_user'); 
+            location.reload(); 
+        }
+    </script>
+</body>
+</html>
