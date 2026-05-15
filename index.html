@@ -601,7 +601,8 @@
     </div>
 
     <script>
-        const SERVER_URL = window.location.origin;
+        // СТРОГО УКАЗЫВАЕМ ПРЯМОЙ СЕТЕВОЙ АДРЕС ТВОЕГО СЕРВЕРА НА RENDER
+        const SERVER_URL = 'https://onrender.com';
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
         let isGroupChat = false;
@@ -629,7 +630,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЙ 100% ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА ИЗ ТВОЕГО РЕПОЗИТОРИЯ TEST ---
+        // --- ТВОЙ ПОЛНОСТЬЮ ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА (ИЗ REPO TEST) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
