@@ -500,41 +500,19 @@
             padding: 30px;
             border-radius: 20px;
             width: 100%;
-            max-width: 380px;
+            max-width: 350px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: center;
         }
         .modal-card h3 {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 20px;
-            text-align: center;
         }
         .modal-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
-        }
-        
-        /* Список участников в модальном окне */
-        .modal-users-list {
-            max-height: 150px;
-            overflow-y: auto;
-            margin-top: 10px;
-            padding: 5px;
-            border: 1px solid var(--border-glass);
-            border-radius: 12px;
-            background: rgba(0,0,0,0.1);
-        }
-        .modal-user-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            font-size: 14px;
-        }
-        .modal-user-item input {
-            width: auto;
-            cursor: pointer;
+            margin-top: 15px;
         }
     </style>
 </head>
@@ -542,7 +520,6 @@
 
     <div class="toast-container" id="toast-box"></div>
 
-    <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ПРИВАТНОЙ ГРУППЫ -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
             <h3>Новая группа</h3>
@@ -550,20 +527,13 @@
                 <label>Название сообщества</label>
                 <input type="text" id="new-group-name" placeholder="Введите имя группы..." onkeypress="handleModalKeyPress(event)">
             </div>
-            
-            <div class="section-title" style="margin-bottom: 5px;">Кто увидит эту группу?</div>
-            <div class="modal-users-list" id="modal-users-container">
-                <!-- Сюда динамически подгрузятся галочки пользователей -->
-            </div>
-
             <div class="modal-buttons">
-                <button class="btn btn-primary" style="padding: 10px; flex:1;" onclick="submitCreateGroup()">Создать</button>
-                <button class="btn btn-secondary" style="padding: 10px; flex:1;" onclick="closeCreateGroupModal()">Отмена</button>
+                <button class="btn btn-primary" style="padding: 10px;" onclick="submitCreateGroup()">Создать</button>
+                <button class="btn btn-secondary" style="padding: 10px;" onclick="closeCreateGroupModal()">Отмена</button>
             </div>
         </div>
     </div>
 
-    <!-- ФОРМА ВХОДА - СТРОГО ИЗНАЧАЛЬНЫЙ ВАРИАНТ, НИ ЕДИНОГО СЛОВА НЕ ТРОНУТО -->
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1>
@@ -631,6 +601,7 @@
     </div>
 
     <script>
+        // СТРОГО ТВOЙ СЕРВЕРНЫЙ АДРЕС
         const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
@@ -647,13 +618,10 @@
             toast.className = 'toast-alert';
             if (isSuccess) {
                 toast.style.background = 'rgba(16, 185, 129, 0.85)';
-                toast.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.2)';
             }
             toast.innerText = msg;
             box.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 4000);
+            setTimeout(() => { toast.remove(); }, 4000);
         }
 
         function toggleTheme() {
@@ -662,7 +630,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Авторизация - ТВОЙ РОДНОЙ НА 100% ВАРИАНТ (user и pass), НИЧЕГО НЕ ТРОНУТО
+        // --- ТВОЙ ПОЛНОСТЬЮ ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА (ИЗ REPO TEST) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -680,13 +648,13 @@
                         localStorage.setItem('danumes_user', u);
                         showMessenger();
                     } else { 
-                        showNotification('Регистрация успешна! Войдите.', true); 
+                        showNotification('Регистрация успешна', true); 
                     }
                 } else { 
                     showNotification(d.error || 'Ошибка'); 
                 }
             } catch(e) { 
-                showNotification('Ошибка сети. Подождите, сервер просыпается.'); 
+                showNotification('Ошибка сети'); 
             }
         }
 
@@ -720,7 +688,6 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
-            // Отображение групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
                     const div = document.createElement('div');
@@ -730,14 +697,13 @@
                         <div class="avatar-fallback" style="background: rgba(168,85,247,0.15); color: var(--accent-purple);">#</div>
                         <div style="flex:1;">
                             <div style="font-weight:600; font-size:14px;">${g.name}</div>
-                            <div style="font-size:11px; color: var(--accent-purple);">Приватная группа</div>
+                            <div style="font-size:11px; color: var(--accent-purple);">Публичная группа</div>
                         </div>
                     `;
                     container.appendChild(div);
                 });
             }
 
-            // Отображение пользователей
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser) return;
                 const isOnline = serverData.users[u].online;
@@ -814,18 +780,44 @@
             }
         }
 
-        // --- ОБНОВЛЕННОЕ ОКНО СОЗДАНИЯ ГРУПП С ВЫБОРОМ УЧАСТНИКОВ ---
         function openCreateGroupModal() {
-            const listContainer = document.getElementById('modal-users-container');
-            listContainer.innerHTML = '';
+            document.getElementById('group-modal').classList.add('active');
+            document.getElementById('new-group-name').focus();
+        }
 
-            // Собираем всех зарегистрированных на сервере людей для галочек
-            const registeredUsers = Object.keys(serverData.users);
+        function closeCreateGroupModal() {
+            document.getElementById('group-modal').classList.remove('active');
+            document.getElementById('new-group-name').value = '';
+        }
+
+        function handleModalKeyPress(e) {
+            if (e.key === 'Enter') {
+                submitCreateGroup();
+            }
+        }
+
+        async function submitCreateGroup() {
+            const name = document.getElementById('new-group-name').value.trim();
+            if (!name) return showNotification('Введите название группы');
             
-            if (registeredUsers.length <= 1) {
-                listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px; text-align:center;">Пока нет других участников</div>';
-            } else {
-                registeredUsers.forEach(u => {
-                    if (u === currentUser) return; // Себя в список не пишем, создатель добавляется автоматически
-                    const label = document.createElement('label');
-                    label.className = 'modal-user-item
+            try {
+                await fetch(`${SERVER_URL}/api/groups/create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, creator: currentUser })
+                });
+                closeCreateGroupModal();
+                syncData();
+                showNotification('Группа успешно создана!', true);
+            } catch(e) {
+                showNotification('Не удалось создать группу');
+            }
+        }
+
+        function logout() { 
+            localStorage.removeItem('danumes_user'); 
+            location.reload(); 
+        }
+    </script>
+</body>
+</html>
