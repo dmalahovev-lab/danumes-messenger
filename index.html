@@ -380,7 +380,6 @@
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
 
-        /* ИСПРАВЛЕНО: Теперь облачка сообщений компактные (max-width: 45%) */
         .message-bubble {
             max-width: 45%;
             padding: 10px 14px;
@@ -452,7 +451,6 @@
             cursor: pointer;
         }
 
-        /* КРАСИВЫЙ БЕНТО-КОНТЕЙНЕР ДЛЯ ВСПЛЫВАЮЩИХ УВЕДОМЛЕНИЙ */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -481,12 +479,62 @@
             from { transform: translateY(-20px) scale(0.9); opacity: 0; }
             to { transform: translateY(0) scale(1); opacity: 1; }
         }
+
+        /* КРАСИВОЕ МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ГРУППЫ НА САЙТЕ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 350px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        .modal-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Контейнер для вывода красивых уведомлений -->
     <div class="toast-container" id="toast-box"></div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ГРУППЫ (GLASSMORPHISM) -->
+    <div class="modal-overlay" id="group-modal">
+        <div class="modal-card">
+            <h3>Новая группа</h3>
+            <div class="input-wrap" style="margin-bottom: 15px;">
+                <label>Название сообщества</label>
+                <input type="text" id="new-group-name" placeholder="Введите имя группы..." onkeypress="handleModalKeyPress(event)">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" style="padding: 10px;" onclick="submitCreateGroup()">Создать</button>
+                <button class="btn btn-secondary" style="padding: 10px;" onclick="closeCreateGroupModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
 
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
@@ -565,19 +613,17 @@
             showMessenger();
         }
 
-        // Функция показа уведомлений прямо на сайте вместо алертов браузера
         function showNotification(msg, isSuccess = false) {
             const box = document.getElementById('toast-box');
             const toast = document.createElement('div');
             toast.className = 'toast-alert';
             if (isSuccess) {
-                toast.style.background = 'rgba(16, 185, 129, 0.85)'; // Красивый зелёный для успеха
+                toast.style.background = 'rgba(16, 185, 129, 0.85)';
                 toast.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.2)';
             }
             toast.innerText = msg;
             box.appendChild(toast);
             setTimeout(() => {
-                toast.style.animation = 'none';
                 toast.remove();
             }, 4000);
         }
@@ -588,7 +634,6 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Авторизация - СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ КОД (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -738,21 +783,39 @@
             }
         }
 
+        // --- НОВАЯ ЛОГИКА МОДАЛЬНОГО ОКНА ДЛЯ ГРУПП ---
         function openCreateGroupModal() {
-            const name = prompt('Введите название новой группы:');
-            if(!name || !name.trim()) return;
-            createGroup(name.trim());
+            document.getElementById('group-modal').classList.add('active');
+            document.getElementById('new-group-name').focus();
         }
 
-        async function createGroup(name) {
+        function closeCreateGroupModal() {
+            document.getElementById('group-modal').classList.remove('active');
+            document.getElementById('new-group-name').value = '';
+        }
+
+        function handleModalKeyPress(e) {
+            if (e.key === 'Enter') {
+                submitCreateGroup();
+            }
+        }
+
+        async function submitCreateGroup() {
+            const name = document.getElementById('new-group-name').value.trim();
+            if (!name) return showNotification('Введите название группы');
+            
             try {
-                await fetch(`${SERVER_URL}/api/groups/create`, {
+                const r = await fetch(`${SERVER_URL}/api/groups/create`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ name, creator: currentUser })
                 });
+                closeCreateGroupModal();
                 syncData();
-            } catch(e){}
+                showNotification('Группа успешно создана!', true);
+            } catch(e) {
+                showNotification('Не удалось создать группу');
+            }
         }
 
         function logout() { 
