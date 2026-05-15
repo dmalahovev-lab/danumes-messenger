@@ -108,7 +108,6 @@
         .group-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
     </style>
     
-    <!-- Перенос всех функций на самый верх для мгновенного выполнения по клику -->
     <script>
         let myInfo = { name: "", status: "Доступен", avatar: "🤖" };
         let activeChatName = null;
@@ -321,18 +320,29 @@
             if(!messagesArea) return;
             messagesArea.innerHTML = "";
 
-            const currentChatHistory = history.filter(msg => 
-                (msg.from === myInfo.name && msg.to === activeChatName) || 
-                (msg.from === activeChatName && msg.to === myInfo.name)
-            );
+            // Универсальная фильтрация для ЛС и созданных Групп
+            const isGroupChat = createdGroups.has(activeChatName);
+            const currentChatHistory = history.filter(msg => {
+                if (isGroupChat) {
+                    return msg.to === activeChatName;
+                } else {
+                    return (msg.from === myInfo.name && msg.to === activeChatName) || 
+                           (msg.from === activeChatName && msg.to === myInfo.name);
+                }
+            });
 
             currentChatHistory.forEach((msg) => {
                 const wrapper = document.createElement('div');
                 const isMe = msg.from === myInfo.name;
                 wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
+                
+                // Подпись автора в группах
+                const authorTag = (isGroupChat && !isMe) ? `<small style="display:block; font-size:11px; opacity:0.6; margin-bottom:2px;">${msg.from}</small>` : '';
+
                 wrapper.innerHTML = `
                     <div class="message-bubble">
-                        ${msg.text}
+                        ${authorTag}
+                        <span>${msg.text}</span>
                         <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">Удалить</button>
                     </div>
                 `;
@@ -499,9 +509,9 @@
             
             <div class="messages-area" id="messagesArea"></div>
 
-            <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Напишите сообщение...">
-                <button class="send-btn" onclick="sendMessage()">▶</button>
+            <div class="input-area" style="padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; background: var(--bg-sidebar); height: 80px;">
+                <input type="text" class="message-input" id="messageInput" style="flex: 1; padding: 12px 16px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; color: white; outline: none;" placeholder="Напишите сообщение...">
+                <button class="send-btn" onclick="sendMessage()" style="width: 44px; height: 44px; background: #6366f1; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">▶</button>
             </div>
         </main>
     </div>
