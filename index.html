@@ -105,7 +105,6 @@
         .selector-item input { cursor: pointer; width: 16px; height: 16px; }
 
         .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .group-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
     </style>
     
@@ -115,6 +114,16 @@
         let globalUsers = [];
         let localFriends = new Set();
         let createdGroups = new Set();
+
+        // Безопасная изоляция пробела для всех полей ввода
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space' || event.key === ' ') {
+                const target = event.target;
+                if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                    event.stopPropagation(); // Исключаем перехват клавиши сторонними скриптами/браузером
+                }
+            }
+        }, true);
 
         // Автоматический вход из локальной памяти ПК
         async function checkAutoLogin() {
@@ -321,7 +330,6 @@
             if(!messagesArea) return;
             messagesArea.innerHTML = "";
 
-            // Фильтрация истории с учетом групповых чатов
             const isGroupChat = createdGroups.has(activeChatName);
             const currentChatHistory = history.filter(msg => {
                 if (isGroupChat) {
@@ -337,7 +345,6 @@
                 const isMe = msg.from === myInfo.name;
                 wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
                 
-                // Добавляем тег автора в групповых переписках
                 const authorTag = (isGroupChat && !isMe) ? `<small style="display:block; font-size:11px; opacity:0.6; margin-bottom:2px;">${msg.from}</small>` : '';
 
                 wrapper.innerHTML = `
@@ -424,16 +431,6 @@
             const current = html.getAttribute('data-theme');
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
-
-        // ЖЕСТКОЕ ИСПРАВЛЕНИЕ ПРОБЕЛА: Разрешаем его во всех инпутах и текстовых полях
-        window.addEventListener('keydown', function(e) {
-            if (e.key === ' ' || e.code === 'Space') {
-                const target = e.target;
-                if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-                    e.stopPropagation(); // Не даем сторонним скриптам перехватить нажатие
-                }
-            }
-        }, true);
     </script>
 </head>
 <body>
