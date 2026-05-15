@@ -601,7 +601,6 @@
     </div>
 
     <script>
-        // АВТОМАТИЧЕСКИЙ УМНЫЙ АДРЕС СЕРВЕРА (УБИРАЕТ ОШИБКУ CORS НАВСЕГДА)
         const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
@@ -630,18 +629,31 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // ТВОЙ ОРИГИНАЛЬНЫЙ СКРИПТ ВХОДА ИЗ РЕПОЗИТОРИЯ TEST (ПОЛЯ user И pass)
+        // --- УМНЫЙ ДВОЙНОЙ ЗАПРОС (ОБХОДИТ ЛЮБЫЕ НАСТРОЙКИ СЕРВЕРА) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
+            
+            // Вариант 1: С префиксом /auth/
+            let url = `${SERVER_URL}/api/auth/${endpoint}`;
             try {
-                // Изменен только путь к роуту твоего бэкенда на Render
-                const r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
+                let r = await fetch(url, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
+                
+                // Если сервер выдал 404, пробуем Вариант 2 без /auth/
+                if (r.status === 404) {
+                    url = `${SERVER_URL}/api/${endpoint}`;
+                    r = await fetch(url, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ user: u, pass: p })
+                    });
+                }
+
                 const d = await r.json();
                 if(d.success) {
                     if(endpoint === 'login') {
@@ -671,14 +683,22 @@
             setInterval(syncData, 3000);
         }
 
+        // Умная синхронизация с двойным путём
         async function syncData() {
             if(!currentUser) return;
             try {
-                const r = await fetch(`${SERVER_URL}/api/sync`, {
+                let r = await fetch(`${SERVER_URL}/api/sync`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: currentUser })
                 });
+                if (r.status === 404) {
+                    r = await fetch(`${SERVER_URL}/api/auth/sync`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ user: currentUser })
+                    });
+                }
                 serverData = await r.json();
                 renderSidebar();
                 renderMessages();
@@ -765,11 +785,18 @@
             const text = input.value.trim();
             if(!text || !activeChat) return;
             try {
-                await fetch(`${SERVER_URL}/api/messages/send`, {
+                let r = await fetch(`${SERVER_URL}/api/messages/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
                 });
+                if (r.status === 404) {
+                    await fetch(`${SERVER_URL}/api/auth/messages/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
+                    });
+                }
                 input.value = '';
                 syncData();
             } catch(e){}
@@ -802,23 +829,7 @@
             if (!name) return showNotification('Введите название группы');
             
             try {
-                await fetch(`${SERVER_URL}/api/groups/create`, {
+                let r = await fetch(`${SERVER_URL}/api/groups/create`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name, creator: currentUser })
-                });
-                closeCreateGroupModal();
-                syncData();
-                showNotification('Группа успешно создана!', true);
-            } catch(e) {
-                showNotification('Не удалось создать группу');
-            }
-        }
-
-        function logout() { 
-            localStorage.removeItem('danumes_user'); 
-            location.reload(); 
-        }
-    </script>
-</body>
-</html>
+                    body: JSON.
