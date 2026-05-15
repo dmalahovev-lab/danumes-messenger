@@ -380,9 +380,10 @@
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
 
+        /* ИСПРАВЛЕНО: Теперь облачка сообщений компактные (max-width: 45%) */
         .message-bubble {
-            max-width: 60%;
-            padding: 12px 16px;
+            max-width: 45%;
+            padding: 10px 14px;
             border-radius: 16px;
             font-size: 15px;
             line-height: 1.4;
@@ -450,9 +451,42 @@
             gap: 12px;
             cursor: pointer;
         }
+
+        /* КРАСИВЫЙ БЕНТО-КОНТЕЙНЕР ДЛЯ ВСПЛЫВАЮЩИХ УВЕДОМЛЕНИЙ */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-alert {
+            background: rgba(239, 68, 68, 0.85);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 14px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255,255,255,0.08);
+            animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes toastIn {
+            from { transform: translateY(-20px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Контейнер для вывода красивых уведомлений -->
+    <div class="toast-container" id="toast-box"></div>
 
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
@@ -521,7 +555,6 @@
     </div>
 
     <script>
-        // АВТОМАТИЧЕСКИЙ АДРЕС СЕРВЕРА ДЛЯ СТАБИЛЬНОСТИ НА RENDER
         const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null;
@@ -532,17 +565,34 @@
             showMessenger();
         }
 
+        // Функция показа уведомлений прямо на сайте вместо алертов браузера
+        function showNotification(msg, isSuccess = false) {
+            const box = document.getElementById('toast-box');
+            const toast = document.createElement('div');
+            toast.className = 'toast-alert';
+            if (isSuccess) {
+                toast.style.background = 'rgba(16, 185, 129, 0.85)'; // Красивый зелёный для успеха
+                toast.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.2)';
+            }
+            toast.innerText = msg;
+            box.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'none';
+                toast.remove();
+            }, 4000);
+        }
+
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // Твоя оригинальная авторизация (user и pass)
+        // Авторизация - СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ КОД (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
-            if(!u || !p) return alert('Заполните поля');
+            if(!u || !p) return showNotification('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
                     method: 'POST',
@@ -556,13 +606,13 @@
                         localStorage.setItem('danumes_user', u);
                         showMessenger();
                     } else { 
-                        alert('Регистрация успешна'); 
+                        showNotification('Регистрация успешна! Войдите.', true); 
                     }
                 } else { 
-                    alert(d.error || 'Ошибка'); 
+                    showNotification(d.error || 'Ошибка'); 
                 }
             } catch(e) { 
-                alert('Ошибка сети'); 
+                showNotification('Ошибка сети. Подождите, сервер просыпается.'); 
             }
         }
 
@@ -596,7 +646,6 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
-            // Отображение групп
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
                     const div = document.createElement('div');
@@ -613,7 +662,6 @@
                 });
             }
 
-            // Отображение пользователей
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser) return;
                 const isOnline = serverData.users[u].online;
@@ -684,7 +732,6 @@
             } catch(e){}
         }
 
-        // Твоя функция обработки нажатия Enter
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
                 sendMessage();
@@ -692,7 +739,7 @@
         }
 
         function openCreateGroupModal() {
-            const name = prompt('Введите имя новой группы:');
+            const name = prompt('Введите название новой группы:');
             if(!name || !name.trim()) return;
             createGroup(name.trim());
         }
