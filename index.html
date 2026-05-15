@@ -500,7 +500,7 @@
             padding: 30px;
             border-radius: 20px;
             width: 100%;
-            max-width: 350px;
+            max-width: 380px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             text-align: center;
         }
@@ -514,19 +514,54 @@
             gap: 10px;
             margin-top: 15px;
         }
+
+        /* Выбор пользователей в модалке */
+        .users-selector-box {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: left;
+            margin-top: 10px;
+            border: 1px solid var(--border-glass);
+        }
+
+        .selector-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .selector-item input {
+            width: auto;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div class="toast-container" id="toast-box"></div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ С ЗАКРЫТЫМ ДОСТУПОМ -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
             <h3>Новая группа</h3>
-            <div class="input-wrap" style="margin-bottom: 15px;">
+            <div class="input-wrap" style="margin-bottom: 10px;">
                 <label>Название сообщества</label>
                 <input type="text" id="new-group-name" placeholder="Введите имя группы..." onkeypress="handleModalKeyPress(event)">
             </div>
+            
+            <div style="text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-left: 2px;">
+                Добавить участников:
+            </div>
+            <div class="users-selector-box" id="modal-users-list">
+                <!-- Сюда подгрузятся чекбоксы с пользователями -->
+            </div>
+
             <div class="modal-buttons">
                 <button class="btn btn-primary" style="padding: 10px;" onclick="submitCreateGroup()">Создать</button>
                 <button class="btn btn-secondary" style="padding: 10px;" onclick="closeCreateGroupModal()">Отмена</button>
@@ -534,7 +569,7 @@
         </div>
     </div>
 
-    <!-- ТВОЙ ОРИГИНАЛЬНЫЙ СТРОГИЙ БЛОК ВХОДА (ПЕРЕМЕННЫЕ auth-user И auth-pass) -->
+    <!-- ТВОЙ ОРИГИНАЛЬНЫЙ СТРОГИЙ ВХОД (НЕ МЕНЯЛСЯ!) -->
     <div class="screen active" id="auth-screen">
         <div class="auth-card">
             <h1>DanuMes</h1>
@@ -618,10 +653,13 @@
             toast.className = 'toast-alert';
             if (isSuccess) {
                 toast.style.background = 'rgba(16, 185, 129, 0.85)';
+                toast.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.2)';
             }
             toast.innerText = msg;
             box.appendChild(toast);
-            setTimeout(() => { toast.remove(); }, 4000);
+            setTimeout(() => {
+                toast.remove();
+            }, 4000);
         }
 
         function toggleTheme() {
@@ -630,7 +668,7 @@
             html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЯ ОРИГИНАЛЬНАЯ АВТОРИЗАЦИЯ ОДИН В ОДИН (user И pass) ---
+        // Авторизация - СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ КОД (user и pass)
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -654,7 +692,7 @@
                     showNotification(d.error || 'Ошибка'); 
                 }
             } catch(e) { 
-                showNotification('Ошибка сети'); 
+                showNotification('Ошибка сети. Подождите, сервер просыпается.'); 
             }
         }
 
@@ -688,8 +726,12 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
 
+            // Отображение только тех групп, куда текущий пользователь добавлен
             if (serverData.groups) {
                 serverData.groups.forEach(g => {
+                    const isMember = g.members && g.members.includes(currentUser);
+                    if (!isMember) return; // Скрываем, если пользователя нет в списке участников
+
                     const div = document.createElement('div');
                     div.className = `friend-item ${activeChat === g.name && isGroupChat ? 'active' : ''}`;
                     div.onclick = () => selectChat(g.name, true);
@@ -697,7 +739,7 @@
                         <div class="avatar-fallback" style="background: rgba(168,85,247,0.15); color: var(--accent-purple);">#</div>
                         <div style="flex:1;">
                             <div style="font-weight:600; font-size:14px;">${g.name}</div>
-                            <div style="font-size:11px; color: var(--accent-purple);">Публичная группа</div>
+                            <div style="font-size:11px; color: var(--accent-purple);">Приватная группа</div>
                         </div>
                     `;
                     container.appendChild(div);
@@ -780,44 +822,17 @@
             }
         }
 
+        // --- УМНОЕ ОТКРЫТИЕ МОДАЛКИ С ВЫБОРОМ ЛЮДЕЙ ---
         function openCreateGroupModal() {
-            document.getElementById('group-modal').classList.add('active');
-            document.getElementById('new-group-name').focus();
-        }
+            const listContainer = document.getElementById('modal-users-list');
+            listContainer.innerHTML = '';
 
-        function closeCreateGroupModal() {
-            document.getElementById('group-modal').classList.remove('active');
-            document.getElementById('new-group-name').value = '';
-        }
-
-        function handleModalKeyPress(e) {
-            if (e.key === 'Enter') {
-                submitCreateGroup();
-            }
-        }
-
-        async function submitCreateGroup() {
-            const name = document.getElementById('new-group-name').value.trim();
-            if (!name) return showNotification('Введите название группы');
-            
-            try {
-                await fetch(`${SERVER_URL}/api/groups/create`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name, creator: currentUser })
-                });
-                closeCreateGroupModal();
-                syncData();
-                showNotification('Группа успешно создана!', true);
-            } catch(e) {
-                showNotification('Не удалось создать группу');
-            }
-        }
-
-        function logout() { 
-            localStorage.removeItem('danumes_user'); 
-            location.reload(); 
-        }
-    </script>
-</body>
-</html>
+            const users = Object.keys(serverData.users);
+            if (users.length <= 1) {
+                listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 5px;">Другие пользователи не найдены</div>';
+            } else {
+                users.forEach(u => {
+                    if (u === currentUser) return;
+                    const label = document.createElement('label');
+                    label.className = 'selector-item';
+                    label.innerHTML = `<input type="checkbox" name="invited-users" value="${u}"> <span>
