@@ -1,28 +1,32 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs'); // Подключаем модуль для работы с файлами
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'database.json'); // Путь к файлу-базе данных
+const DB_FILE = path.join(__dirname, 'database.json');
 
-// Настройки сервера (остались прежними)
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Функция для ЗАГРУЗКИ данных из файла при старте сервера
+// Функция для безопасной загрузки данных
 function loadData() {
     try {
+        // Проверяем, существует ли файл базы данных
         if (fs.existsSync(DB_FILE)) {
             const fileData = fs.readFileSync(DB_FILE, 'utf8');
-            return JSON.parse(fileData);
+            // Проверяем, что файл не пустой
+            if (fileData.trim().length > 0) {
+                return JSON.parse(fileData);
+            }
         }
     } catch (error) {
-        console.error("Ошибка при чтении базы данных, создаем пустую:", error);
+        console.error("Ошибка при чтении базы данных, создаем чистую структуру:", error);
     }
-    // Если файла нет или он сломался, возвращаем чистую структуру (как у вас и было)
+    
+    // Если файла нет или он пустой, возвращаем чистую стандартную структуру
     return {
         users: {},
         messages: [],
@@ -30,7 +34,7 @@ function loadData() {
     };
 }
 
-// Функция для СОХРАНЕНИЯ данных в файл при любых изменениях
+// Функция для сохранения данных
 function saveData() {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(globalState, null, 2), 'utf8');
@@ -39,7 +43,7 @@ function saveData() {
     }
 }
 
-// Загружаем сохраненные данные в память сервера прямо при запуске
+// Загружаем данные при старте
 let globalState = loadData();
 
 // Роут для главной страницы
@@ -47,51 +51,66 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (КОД НЕ МЕНЯЛСЯ, только добавлено автосохранение) ---
+// --- ВХОД И РЕГИСТРАЦИЯ (ВЕРНУЛИ К ПОЛНОМУ ОРИГИНАЛУ С УЛУЧШЕННОЙ ПРОВЕРКОЙ) ---
 
 app.post('/api/auth/register', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ success: false, error: 'Заполните все поля' });
     }
+    
+    // Защита: если вдруг users не создался, создаем его принудительно
+    if (!globalState.users) {
+        globalState.users = {};
+    }
+    
     if (globalState.users[username]) {
         return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
     }
+    
     globalState.users[username] = {
         password,
         lastSeen: Date.now(),
         avatar: null
     };
     
-    saveData(); // <--- СОХРАНЯЕМ нового пользователя в файл!
-    
+    saveData(); // Сохраняем в файл
     res.json({ success: true });
 });
 
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
+    
+    if (!globalState.users) {
+        globalState.users = {};
+    }
+    
     const user = globalState.users[username];
     if (!user || user.password !== password) {
         return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
     }
+    
     user.lastSeen = Date.now();
-    
-    saveData(); // <--- Обновляем время захода в файле
-    
+    saveData(); // Обновляем время входа
     res.json({ success: true });
 });
 
-// --- СИНХРОНИЗАЦИЯ И СТАТУСЫ ---
+// --- СИНХРОНИЗАЦИЯ И ОБНОВЛЕНИЕ ДАННЫХ ---
 
 app.post('/api/sync', (req, res) => {
     const { username } = req.body;
+    
+    if (!globalState.users) globalState.users = {};
+    if (!globalState.messages) globalState.messages = [];
+    if (!globalState.groups) globalState.groups = [];
+
     if (username && globalState.users[username]) {
         globalState.users[username].lastSeen = Date.now();
     }
     
-    // Считаем, кто в сети (не более 10 секунд назад проявлял активность)
     const activeUsers = {};
     const now = Date.now();
+    
     Object.keys(globalState.users).forEach(u => {
         activeUsers[u] = {
             online: (now - globalState.users[u].lastSeen) < 10000,
@@ -114,6 +133,10 @@ app.post('/api/messages/send', (req, res) => {
         return res.status(400).json({ success: false, error: 'Неполные данные' });
     }
     
+    if (!globalState.messages) {
+        globalState.messages = [];
+    }
+    
     const newMessage = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         from,
@@ -124,16 +147,16 @@ app.post('/api/messages/send', (req, res) => {
     };
     
     globalState.messages.push(newMessage);
-    
-    saveData(); // <--- СОХРАНЯЕМ новое сообщение в файл!
-    
+    saveData(); // Сохраняем новое сообщение
     res.json({ success: true, message: newMessage });
 });
 
 app.post('/api/messages/delete', (req, res) => {
     const { messageId, username } = req.body;
-    const index = globalState.messages.findIndex(m => m.id === messageId);
     
+    if (!globalState.messages) return res.status(404).json({ success: false, error: 'Сообщений нет' });
+    
+    const index = globalState.messages.findIndex(m => m.id === messageId);
     if (index === -1) {
         return res.status(404).json({ success: false, error: 'Сообщение не найдено' });
     }
@@ -142,9 +165,7 @@ app.post('/api/messages/delete', (req, res) => {
     }
     
     globalState.messages.splice(index, 1);
-    
-    saveData(); // <--- СОХРАНЯЕМ изменения после удаления сообщения!
-    
+    saveData(); // Сохраняем после удаления
     res.json({ success: true });
 });
 
@@ -156,16 +177,17 @@ app.post('/api/groups/create', (req, res) => {
         return res.status(400).json({ success: false, error: 'Неполные данные' });
     }
     
-    // Проверяем, нет ли уже группы с таким именем
+    if (!globalState.groups) {
+        globalState.groups = [];
+    }
+    
     if (globalState.groups.some(g => g.name === name)) {
         return res.status(400).json({ success: false, error: 'Группа с таким названием уже есть' });
     }
     
     const newGroup = { name, creator };
     globalState.groups.push(newGroup);
-    
-    saveData(); // <--- СОХРАНЯЕМ новую группу в файл!
-    
+    saveData(); // Сохраняем новую группу
     res.json({ success: true, group: newGroup });
 });
 
