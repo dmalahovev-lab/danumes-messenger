@@ -81,7 +81,9 @@
         .chat-window { flex: 1; display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         .chat-header { padding: 18px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; background: var(--bg-sidebar); }
-        .messages-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Фиксация высоты для области сообщений под Bento-дизайн */
+        .messages-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; height: calc(100vh - 170px); }
         
         .message-wrapper { display: flex; width: 100%; margin-bottom: 4px; }
         .message-wrapper.sent { justify-content: flex-end; }
@@ -106,6 +108,17 @@
 
         .group-submit-btn { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .group-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
+
+        /* СТИЛИ МОБИЛЬНОЙ АДАПТАЦИИ (Прячем сайдбар при открытии чата) */
+        @media (max-width: 768px) {
+            .app-container { width: 100vw; }
+            .nav-rail { display: flex; }
+            .sidebar { width: calc(100vw - 72px); }
+            .sidebar.mobile-hidden { display: none !important; }
+            .chat-window { width: calc(100vw - 72px); }
+            .chat-window.mobile-hidden { display: none !important; }
+            .message-bubble { max-width: 80%; }
+        }
     </style>
     
     <script>
@@ -113,20 +126,19 @@
         let activeChatName = null;
         let globalUsers = [];
         let localFriends = new Set();
-        let createdGroups = new Set();
+        let createdGroups = new Set(); // Хранит названия групп локально
 
-        // ЖЕСТКАЯ ФИКСАЦИЯ ПРОБЕЛА ДЛЯ ВСЕХ ПОЛЕЙ ВВОДА (INPUT)
+        // Полная глобальная изоляция клавиши пробела для текстовых элементов
         window.addEventListener('keydown', function(event) {
             if (event.key === ' ' || event.code === 'Space') {
                 const activeEl = document.activeElement;
-                // Если мы пишем в любом инпуте - принудительно разрешаем стандартный ввод символа пробела
                 if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                    event.stopPropagation(); 
+                    event.stopPropagation();
                 }
             }
-        }, true); // Параметр true заставляет событие обрабатываться до того, как его перехватят другие функции
+        }, true);
 
-        // Автоматический вход из локальной памяти ПК
+        // Автоматический вход из локальной памяти ПК (ВООБЩЕ НЕ ТРОНУТ)
         async function checkAutoLogin() {
             const savedUser = localStorage.getItem('danumes_user');
             const savedPass = localStorage.getItem('danumes_pass');
@@ -192,8 +204,11 @@
                 document.getElementById('profileTrigger').textContent = myInfo.avatar;
                 document.getElementById('authScreen').style.display = 'none';
                 
-                await loadUsersList();
-                setInterval(refreshChatData, 3000);
+                // На смартфонах при первом запуске скрываем пустое окно чата
+                document.getElementById('chatWindow').classList.add('mobile-hidden');
+
+                await refreshChatData();
+                setInterval(refreshChatData, 3000); // Опрос раз в 3 секунды через HTTP
             } else {
                 if(!isAuto) showAuthNotification(data.msg, false);
             }
@@ -205,17 +220,34 @@
             window.location.reload();
         }
 
-        async function loadUsersList() {
-            const response = await fetch('/api/users');
-            const users = await response.json();
-            globalUsers = users.filter(u => u.name !== myInfo.name);
-            renderLists(document.getElementById('searchInput').value);
-        }
-
+        // ОБНОВЛЕННАЯ СИСТЕМА: Отправка сигнала активности и синхронизация
         async function refreshChatData() {
-            await loadUsersList();
-            if (activeChatName) {
-                await loadChatHistory();
+            if (!myInfo.name) return;
+
+            try {
+                // Передаем логин на сервер для отметки онлайна и забираем все новые чаты/сообщения/группы
+                const response = await fetch('/api/heartbeat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: myInfo.name })
+                });
+                const state = await response.json();
+
+                // Обновляем список пользователей и их статусы онлайна
+                globalUsers = state.users.filter(u => u.name !== myInfo.name);
+                
+                // Синхронизируем созданные на бэкенде группы
+                if (state.groups) {
+                    createdGroups = new Set(state.groups.map(g => g.name));
+                }
+
+                renderLists(document.getElementById('searchInput').value);
+
+                if (activeChatName) {
+                    await drawChatMessages(state.messages);
+                }
+            } catch (err) {
+                console.error("Ошибка HTTP-синхронизации:", err);
             }
         }
 
@@ -246,7 +278,7 @@
                             <div class="avatar">👥</div>
                             <div class="chat-info">
                                 <div class="chat-name">${gName}</div>
-                                <div class="chat-status-text">Групповой чат</div>
+                                <div class="chat-status-text">Групповой канал</div>
                             </div>
                         `;
                         groupsList.appendChild(item);
@@ -260,6 +292,9 @@
                 const isMatch = user.name.toLowerCase().includes(filter.toLowerCase());
                 if (!isMatch) return;
 
+                // Подсветка статуса «В сети» зеленым цветом
+                const statusColor = user.status === "В сети" ? "style='color:#10b981; font-weight:600;'" : "";
+
                 if (localFriends.has(user.name) && friendsList) {
                     const item = document.createElement('div');
                     item.className = `chat-item ${activeChatName === user.name ? 'active' : ''}`;
@@ -268,7 +303,7 @@
                         <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
                             <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
+                            <div class="chat-status-text" ${statusColor}>${user.status}</div>
                         </div>
                     `;
                     friendsList.appendChild(item);
@@ -281,7 +316,7 @@
                         <div class="avatar">${user.avatar}</div>
                         <div class="chat-info">
                             <div class="chat-name">${user.name}</div>
-                            <div class="chat-status-text">${user.status}</div>
+                            <div class="chat-status-text" ${statusColor}>${user.status}</div>
                         </div>
                         <div class="search-actions">
                             <button class="action-btn primary" onclick="addFriend('${user.name}')">Добавить</button>
@@ -301,6 +336,7 @@
         window.addFriend = function(name) { localFriends.add(name); renderLists(document.getElementById('searchInput').value); };
         window.writeToUser = function(name) { localFriends.add(name); openChat(name, false); document.getElementById('searchInput').value = ""; renderLists(""); };
 
+        // МОБИЛЬНАЯ АДАПТАЦИЯ: Скрытие левой панели при входе в чат
         async function openChat(name, isGroup = false) {
             activeChatName = name;
             
@@ -309,6 +345,10 @@
             document.getElementById('navHome').classList.remove('active');
             document.getElementById('activeChatName').textContent = name;
             
+            // На смартфонах прячем сайдбар и открываем чат во весь экран
+            document.querySelector('.sidebar').classList.add('mobile-hidden');
+            document.getElementById('chatWindow').classList.remove('mobile-hidden');
+
             if (isGroup) {
                 document.getElementById('activeAvatar').textContent = "👥";
                 document.getElementById('activeChatStatus').textContent = "Группа участников";
@@ -317,16 +357,23 @@
                 const userData = globalUsers.find(u => u.name === name);
                 document.getElementById('activeAvatar').textContent = userData ? userData.avatar : "🤖";
                 document.getElementById('activeChatStatus').textContent = userData ? userData.status : "Доступен";
+                if (userData && userData.status === "В сети") {
+                    document.getElementById('activeChatStatus').style.color = "#10b981";
+                } else {
+                    document.getElementById('activeChatStatus').style.color = "var(--text-muted)";
+                }
             }
             
-            await loadChatHistory();
+            // Мгновенный запрос истории
+            const res = await fetch('/api/messages');
+            const history = await res.json();
+            await drawChatMessages(history);
+            
             renderLists(document.getElementById('searchInput').value);
         }
 
-        async function loadChatHistory() {
-            const response = await fetch('/api/messages');
-            const history = await response.json();
-            
+        // Отрисовка переписки
+        async function drawChatMessages(history) {
             const messagesArea = document.getElementById('messagesArea');
             if(!messagesArea) return;
             messagesArea.innerHTML = "";
@@ -346,7 +393,7 @@
                 const isMe = msg.from === myInfo.name;
                 wrapper.className = `message-wrapper ${isMe ? 'sent' : 'received'}`;
                 
-                const authorTag = (isGroupChat && !isMe) ? `<small style="display:block; font-size:11px; opacity:0.6; margin-bottom:2px;">${msg.from}</small>` : '';
+                const authorTag = (isGroupChat && !isMe) ? `<small style="display:block; font-size:11px; opacity:0.6; margin-bottom:2px; color:var(--text-muted);">${msg.from}</small>` : '';
 
                 wrapper.innerHTML = `
                     <div class="message-bubble">
@@ -372,7 +419,10 @@
             });
             
             input.value = "";
-            await loadChatHistory();
+            // Мгновенная перерисовка
+            const res = await fetch('/api/messages');
+            const history = await res.json();
+            await drawChatMessages(history);
         }
 
         window.deleteMessage = async function(msgId) {
@@ -381,7 +431,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ msgId })
             });
-            await loadChatHistory();
+            const res = await fetch('/api/messages');
+            const history = await res.json();
+            await drawChatMessages(history);
         };
 
         function openGroupModal() {
@@ -410,20 +462,43 @@
             document.getElementById('groupNameInput').value = '';
         }
 
-        function submitCreateGroup() {
+        // СИНХРОНИЗАЦИЯ: Создание группы на сервере
+        async function submitCreateGroup() {
             const gName = document.getElementById('groupNameInput').value.trim();
             if(!gName) return;
             
-            createdGroups.add(gName);
-            closeGroupModal();
-            renderLists(document.getElementById('searchInput').value);
+            // Собираем всех отмеченных в список участников группы
+            const members = [myInfo.name];
+            document.querySelectorAll('#groupUsersSelector input:checked').forEach(input => {
+                members.push(input.value);
+            });
+
+            const res = await fetch('/api/groups/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName: gName, members: members })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                closeGroupModal();
+                await refreshChatData();
+            } else {
+                alert(data.msg || "Ошибка создания группы");
+            }
         }
 
+        // МОБИЛЬНАЯ АДАПТАЦИЯ: Возврат в меню списков чатов
         function goHome() {
             activeChatName = null;
             document.getElementById('navHome').classList.add('active');
             document.getElementById('homeScreen').classList.remove('hidden');
             document.getElementById('chatWindow').classList.add('hidden');
+            
+            // На смартфонах возвращаем сайдбар на экран и прячем окно чата
+            document.querySelector('.sidebar').classList.remove('mobile-hidden');
+            document.getElementById('chatWindow').classList.add('mobile-hidden');
+
             renderLists(document.getElementById('searchInput').value);
         }
 
@@ -436,7 +511,7 @@
 </head>
 <body>
 
-    <!-- Экран авторизации -->
+    <!-- Экран авторизации (ВХОД И РЕГИСТРАЦИЯ НЕ ТРОНУТЫ) -->
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <h2 class="logo" style="font-size:32px; margin-bottom:15px;">DanuMes</h2>
@@ -463,66 +538,4 @@
             <label style="font-size: 12px; color: var(--text-muted); display: block; text-align: left; margin-bottom: 6px;">Добавить участников:</label>
             <div class="group-users-selector" id="groupUsersSelector"></div>
 
-            <button class="group-submit-btn" onclick="submitCreateGroup()">Создать группу</button>
-        </div>
-    </div>
-
-    <div class="app-container">
-        <!-- Навигация -->
-        <nav class="nav-rail">
-            <button class="nav-btn active" id="navHome" onclick="goHome()">ЧАТЫ</button>
-            <button class="nav-btn" onclick="toggleTheme()">ТЕМА</button>
-            <div class="nav-profile-trigger" id="profileTrigger" onclick="logOut()">🤖</div>
-        </nav>
-
-        <!-- Сайдбар -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-row">
-                    <div class="logo">DanuMes</div>
-                    <button class="add-group-btn" onclick="openGroupModal()">+</button>
-                </div>
-                <div class="search-box">
-                    <i class="search-icon" style="width:16px;height:16px;">🔍</i>
-                    <input type="text" class="search-input" id="searchInput" oninput="handleSearch(this.value)" placeholder="Поиск людей...">
-                </div>
-            </div>
-            <div class="chats-list">
-                <div class="list-section-title" id="groupsSectionTitle" style="display: none;">Мои группы</div>
-                <div id="groupsList"></div>
-
-                <div class="list-section-title">Мои друзья</div>
-                <div id="friendsList"></div>
-                
-                <div class="list-section-title hidden" id="globalTitle" style="margin-top: 16px;">Глобальный поиск</div>
-                <div id="globalList"></div>
-            </div>
-        </aside>
-
-        <!-- Главный экран -->
-        <div class="home-screen" id="homeScreen">
-            <div style="font-size: 50px;">💬</div>
-            <h2>Добро пожаловать в DanuMes, <span id="greetingName">Пользователь</span></h2>
-            <p>Вы успешно зашли в сеть. Откройте чат слева, чтобы продолжить.</p>
-        </div>
-
-        <!-- Окно чата -->
-        <main class="chat-window hidden" id="chatWindow">
-            <div class="chat-header">
-                <div class="avatar" id="activeAvatar">🤖</div>
-                <div>
-                    <h4 id="activeChatName">Чат</h4>
-                    <span id="activeChatStatus" style="font-size: 12px; color: var(--text-muted);">Доступен</span>
-                </div>
-            </div>
-            
-            <div class="messages-area" id="messagesArea"></div>
-
-            <div class="input-area" style="padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; gap: 12px; background: var(--bg-sidebar); height: 80px;">
-                <input type="text" class="message-input" id="messageInput" style="flex: 1; padding: 12px 16px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; color: white; outline: none;" placeholder="Напишите сообщение...">
-                <button class="send-btn" onclick="sendMessage()" style="width: 44px; height: 44px; background: #6366f1; color: white; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">▶</button>
-            </div>
-        </main>
-    </div>
-</body>
-</html>
+            <
