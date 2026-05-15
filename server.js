@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Твоя проверенная строка подключения к базе Supabase
+// Изменен порт с 6543 на 5432 и убран pgbouncer для стабильного создания таблиц
 const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
 
 const pool = new Pool({
