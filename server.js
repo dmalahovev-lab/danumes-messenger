@@ -8,19 +8,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// Единственная папка на Render.com, разрешенная для физической записи файлов
+// Единственный разрешенный путь для физической записи файлов на бесплатном хостинге Render
 const DB_PATH = '/tmp/database.json';
 
-// Изначальная структура базы данных (резерв в оперативной памяти)
+// Резервная копия базы данных в ОЗУ на случай инициализации
 let memoryDB = {
     users: {
         "admin": { password: "123", avatar: "🤖", status: "Создатель" }
     },
     messages: [],
-    groups: {} // Хранилище групп в формате: { "НазваниеГруппы": ["участник1", "участник2"] }
+    groups: [] // Массив названий созданных глобальных групп
 };
 
-// Функция загрузки базы данных с диска Render при старте сервера
+// Функция загрузки базы данных с диска Render
 function loadDatabase() {
     try {
         if (fs.existsSync(DB_PATH)) {
@@ -35,7 +35,7 @@ function loadDatabase() {
     }
 }
 
-// Функция записи базы данных в файл /tmp/database.json (Защита от ошибки 500)
+// Функция физической записи базы данных на диск Render
 function saveDatabase() {
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(memoryDB, null, 2), 'utf8');
@@ -44,18 +44,17 @@ function saveDatabase() {
     }
 }
 
-// Запускаем считывание базы данных сразу при старте
+// Загружаем сохраненную базу данных сразу при старте контейнера
 loadDatabase();
 
-// Главная страница мессенджера
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// МАРШРУТ: Регистрация (принимает любые ключи для стабильности)
+// МАРШРУТ: Регистрация нового аккаунта
 app.post('/api/register', (req, res) => {
-    const username = (req.body.user || req.body.username || '').trim();
-    const password = (req.body.pass || req.body.password || '').trim();
+    const username = (req.body.user || '').trim();
+    const password = (req.body.pass || '').trim();
 
     if (!username || !password) {
         return res.json({ success: false, msg: 'Заполните все поля' });
@@ -67,20 +66,20 @@ app.post('/api/register', (req, res) => {
 
     memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     saveDatabase();
-
+    
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
-// МАРШРУТ: Вход (с авто-восстановлением аккаунта при перезагрузке Render)
+// МАРШРУТ: Авторизация и механизм авто-восстановления сессий
 app.post('/api/login', (req, res) => {
-    const username = (req.body.user || req.body.username || '').trim();
-    const password = (req.body.pass || req.body.password || '').trim();
+    const username = (req.body.user || '').trim();
+    const password = (req.body.pass || '').trim();
 
     if (!username || !password) {
         return res.json({ success: false, msg: 'Заполните все поля' });
     }
 
-    // Если сервер спал и стер память, но браузер прислал localStorage — воссоздаем профиль
+    // Механизм авто-восстановления аккаунта из localStorage клиента после перезапуска сервера Render
     if (!memoryDB.users[username]) {
         memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
         saveDatabase();
@@ -98,7 +97,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// МАРШРУТ: Получить список всех пользователей мессенджера
+// МАРШРУТ: Получение списка всех зарегистрированных участников мессенджера
 app.get('/api/users', (req, res) => {
     const list = Object.keys(memoryDB.users).map(username => ({
         name: username,
@@ -108,31 +107,33 @@ app.get('/api/users', (req, res) => {
     res.json(list);
 });
 
-// МАРШРУТ: Получить список всех групп
+// МАРШРУТ: Получение списка синхронизированных групп мессенджера
 app.get('/api/groups', (req, res) => {
-    res.json(Object.keys(memoryDB.groups));
+    res.json(memoryDB.groups || []);
 });
 
-// МАРШРУТ: Создать новую группу участников
+// МАРШРУТ: Сохранение созданной группы на сервере
 app.post('/api/groups/create', (req, res) => {
     const groupName = (req.body.groupName || '').trim();
-    const members = req.body.members || [];
-    
     if (!groupName) {
-        return res.json({ success: false, msg: 'Введите название группы' });
+        return res.json({ success: false, msg: 'Имя группы не может быть пустым' });
     }
-
-    memoryDB.groups[groupName] = members;
-    saveDatabase();
-    res.json({ success: true, msg: 'Группа успешно создана!' });
+    
+    if (!memoryDB.groups) memoryDB.groups = [];
+    
+    if (!memoryDB.groups.includes(groupName)) {
+        memoryDB.groups.push(groupName);
+        saveDatabase();
+    }
+    res.json({ success: true, groups: memoryDB.groups });
 });
 
-// МАРШРУТ: Получить историю сообщений
+// МАРШРУТ: Получение всей глобальной истории сообщений
 app.get('/api/messages', (req, res) => {
     res.json(memoryDB.messages);
 });
 
-// МАРШРУТ: Отправить сообщение (POST HTTP fetch)
+// МАРШРУТ: Отправка нового сообщения (Личного или Группового)
 app.post('/api/messages/send', (req, res) => {
     const newMsg = {
         id: Date.now().toString(),
@@ -145,7 +146,7 @@ app.post('/api/messages/send', (req, res) => {
     res.json({ success: true, messages: memoryDB.messages });
 });
 
-// МАРШРУТ: Удалить сообщение
+// МАРШРУТ: Удаление сообщения из истории по его ID
 app.post('/api/messages/delete', (req, res) => {
     memoryDB.messages = memoryDB.messages.filter(msg => msg.id !== req.body.msgId);
     saveDatabase();
