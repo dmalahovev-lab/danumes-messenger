@@ -19,8 +19,8 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ, НЕ МЕНЯЛСЯ) ---
-app.post('/api/register', (req, res) => {
+// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ РЕГИСТРАЦИИ (ПОДХОДИТ ДЛЯ ВСЕХ ВЕРСИЙ)
+const handleRegister = (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) {
@@ -32,9 +32,10 @@ app.post('/api/register', (req, res) => {
     }
     globalState.users[username] = { password, lastSeen: Date.now(), avatar: null };
     res.json({ success: true });
-});
+};
 
-app.post('/api/login', (req, res) => {
+// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ ВХОДА
+const handleLogin = (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!globalState.users) globalState.users = {};
@@ -44,9 +45,16 @@ app.post('/api/login', (req, res) => {
     }
     user.lastSeen = Date.now();
     res.json({ success: true });
-});
+};
 
-// --- СИНХРОНИЗАЦИЯ (ФИЛЬТРУЕМ ГРУППЫ ПО УЧАСТНИКАМ) ---
+// СЛУШАЕМ ОБА ВАРИАНТА АДРЕСОВ (И С AUTH, И БЕЗ), ЧТОБЫ ИСКЛЮЧИТЬ ОШИБКУ 404
+app.post('/api/register', handleRegister);
+app.post('/api/auth/register', handleRegister);
+
+app.post('/api/login', handleLogin);
+app.post('/api/auth/login', handleLogin);
+
+// СИНХРОНИЗАЦИЯ ЧАТА
 app.post('/api/sync', (req, res) => {
     const username = (req.body.user || '').trim();
     
@@ -71,7 +79,7 @@ app.post('/api/sync', (req, res) => {
         }
     });
 
-    // ПОКАЗЫВАЕМ ПОЛЬЗОВАТЕЛЮ ТОЛЬКО ТЕ ГРУППЫ, ГДЕ ОН ЕСТЬ В СПИСКЕ
+    // Фильтруем группы по участникам
     const visibleGroups = globalState.groups.filter(g => {
         return g.members && g.members.includes(username);
     });
@@ -97,7 +105,6 @@ app.post('/api/messages/send', (req, res) => {
     res.json({ success: true, message: newMessage });
 });
 
-// --- СОЗДАНИЕ ПРИВАТНОЙ ГРУППЫ ---
 app.post('/api/groups/create', (req, res) => {
     const { name, creator, members } = req.body;
     if (!name || !creator) return res.status(400).json({ success: false, error: 'Неполные данные' });
@@ -107,7 +114,6 @@ app.post('/api/groups/create', (req, res) => {
         return res.status(400).json({ success: false, error: 'Группа с таким названием уже есть' });
     }
 
-    // Собираем массив участников: создатель + те, кого выбрали
     const allMembers = [creator];
     if (members && Array.isArray(members)) {
         members.forEach(m => {
@@ -121,5 +127,5 @@ app.post('/api/groups/create', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
+    console.log(`Сервер успешно запущен на порту ${PORT}`);
 });
