@@ -77,6 +77,22 @@
         .modal-overlay.active { display: flex; }
         .modal-card { background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 30px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+        
+        /* СТИЛЬ ДЛЯ ТВОЕЙ АДМИНСКОЙ ГАЛОЧКИ */
+        .admin-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px; height: 15px;
+            background: #a855f7;
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            border-radius: 50%;
+            margin-left: 5px;
+            box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -124,7 +140,7 @@
             <div class="main-content">
                 <div class="welcome-view" id="welcome-view"><span>💬</span><h2 id="welcome-title">Добро пожаловать в DanuMes</h2><p>Вы успешно зашли в сеть. Откройте чат слева.</p></div>
                 <div class="chat-view" id="chat-view">
-                    <div class="chat-header"><div class="avatar-fallback" id="chat-avatar">?</div><div><h3 id="chat-title" style="font-size:16px; font-weight:600;">Чат</h3><p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p></div></div>
+                    <div class="chat-header"><div class="avatar-fallback" id="chat-avatar">?</div><div><h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3><div id="chat-header-badge" style="display:inline-block;"></div><p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p></div></div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar"><input type="text" id="message-input" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)"><button onclick="sendMessage()">Отправить</button></div>
                 </div>
@@ -153,7 +169,7 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВOЙ ОРИГИНАЛЬНЫЙ ВХОД (НЕ МЕНЯЛСЯ НИ НА ОДНУ БУКВУ) ---
+        // --- ТВОЙ ОРИГИНАЛЬНЫЙ ВХОД (НЕ ИЗМЕНЯЛСЯ) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -211,7 +227,11 @@
                 const div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
-                div.innerHTML = `<div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600; font-size:14px;">${u}</div><div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div></div>`;
+                
+                // Проверка на админа для отрисовки галочки в списке друзей слева
+                const badgeHTML = (u === 'Danumala') ? '<span class="admin-badge">✓</span>' : '';
+                
+                div.innerHTML = `<div class="avatar-fallback">${u.substr(0,2).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600; font-size:14px; display:flex; align-items:center;">${u}${badgeHTML}</div><div style="font-size:11px; color:${isOnline?'#10b981':'#64748b'}">${isOnline?'В сети':'Офлайн'}</div></div>`;
                 container.appendChild(div);
             });
         }
@@ -223,6 +243,11 @@
             document.getElementById('chat-title').innerText = name;
             document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
+            
+            // Отрисовка галочки сверху в шапке открытого чата
+            const headerBadge = document.getElementById('chat-header-badge');
+            headerBadge.innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
+            
             renderMessages();
         }
 
@@ -234,7 +259,11 @@
             filtered.forEach(m => {
                 const div = document.createElement('div'), isOut = m.from === currentUser;
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
-                div.innerHTML = `<div class="message-bubble">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px;">@${m.from}</div>` : ''}<div>${m.text}</div><div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
+                
+                // Проверка на админа для отрисовки галочки над сообщениями в группах
+                const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
+                
+                div.innerHTML = `<div class="message-bubble">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}<div>${m.text}</div><div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
                 container.appendChild(div);
             });
             if(currentScroll) container.scrollTop = container.scrollHeight;
@@ -254,7 +283,6 @@
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-        // --- НОВАЯ ЛОГИКА ОКОН ДЛЯ ВЫБОРА ЛЮДЕЙ В ГРУППЫ ---
         function openCreateGroupModal() {
             document.getElementById('group-modal').classList.add('active');
             const listContainer = document.getElementById('modal-members-list'); listContainer.innerHTML = '';
