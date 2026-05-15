@@ -115,16 +115,16 @@
         let localFriends = new Set();
         let createdGroups = new Set();
 
-        // Полная глобальная изоляция клавиши пробела для текстовых элементов
+        // ЖЕСТКАЯ ФИКСАЦИЯ ПРОБЕЛА ДЛЯ ВСЕХ ПОЛЕЙ ВВОДА (INPUT)
         window.addEventListener('keydown', function(event) {
             if (event.key === ' ' || event.code === 'Space') {
                 const activeEl = document.activeElement;
+                // Если мы пишем в любом инпуте - принудительно разрешаем стандартный ввод символа пробела
                 if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                    // Разрешаем ввод пробела в инпут и останавливаем всплытие события, чтобы браузер не блокировал его
-                    event.stopPropagation();
+                    event.stopPropagation(); 
                 }
             }
-        }, true);
+        }, true); // Параметр true заставляет событие обрабатываться до того, как его перехватят другие функции
 
         // Автоматический вход из локальной памяти ПК
         async function checkAutoLogin() {
