@@ -23,7 +23,7 @@ function loadDatabase() {
         if (fs.existsSync(DB_PATH)) {
             const data = fs.readFileSync(DB_PATH, 'utf8');
             memoryDB = JSON.parse(data);
-            console.log("💾 База данных успешно загружена из /tmp/database.json");
+            console.log("💾 База данных DanuMes успешно загружена из /tmp/database.json");
         } else {
             saveDatabase();
         }
@@ -47,8 +47,8 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/register', (req, res) => {
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    const username = (req.body.user || req.body.username || '').trim();
+    const password = (req.body.pass || req.body.password || '').trim();
 
     if (!username || !password) {
         return res.json({ success: false, msg: 'Заполните все поля' });
@@ -60,12 +60,13 @@ app.post('/api/register', (req, res) => {
 
     memoryDB.users[username] = { password: password, avatar: "🤖", status: "Доступен" };
     saveDatabase();
+
     return res.json({ success: true, msg: 'Аккаунт успешно создан! Нажмите "Войти"' });
 });
 
 app.post('/api/login', (req, res) => {
-    const username = (req.body.user || '').trim();
-    const password = (req.body.pass || '').trim();
+    const username = (req.body.user || req.body.username || '').trim();
+    const password = (req.body.pass || req.body.password || '').trim();
 
     if (!username || !password) {
         return res.json({ success: false, msg: 'Заполните все поля' });
@@ -102,14 +103,13 @@ app.get('/api/groups', (req, res) => {
 });
 
 app.post('/api/groups/create', (req, res) => {
-    const groupName = (req.body.groupName || '').trim();
-    const members = req.body.members || [];
+    const { groupName, members } = req.body;
     if (!groupName) return res.json({ success: false, msg: 'Укажите имя группы' });
     
     if (!memoryDB.groups) memoryDB.groups = {};
-    memoryDB.groups[groupName] = members;
+    memoryDB.groups[groupName] = members || [];
     saveDatabase();
-    res.json({ success: true });
+    res.json({ success: true, msg: 'Группа успешно создана!' });
 });
 
 app.get('/api/messages', (req, res) => {
@@ -136,5 +136,5 @@ app.post('/api/messages/delete', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер DanuMes запущен на порту ${PORT}`);
+    console.log(`🚀 Сервер DanuMes успешно запущен на порту ${PORT}`);
 });
