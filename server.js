@@ -69,7 +69,7 @@ async function initDB() {
 
         console.log("🚀 Неубиваемая база данных Supabase успешно запущена и защищена!");
     } catch (e) {
-        console.error("Ошибка инициализации базы данных:", e);
+        console.error("Ошибка初始化 базы данных:", e);
     }
 }
 
