@@ -15,17 +15,15 @@ const io = new Server(server, {
     }
 });
 
-// 1. Инициализация Supabase
-// Переменные окружения SUPABASE_URL и SUPABASE_KEY нужно задать на Render
+// Инициализация клиента Supabase
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "your-anon-key";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 2. Обработка Socket.io соединений
 io.on('connection', async (socket) => {
     console.log(`Пользователь подключился: ${socket.id}`);
 
-    // Отдаем историю сообщений из Supabase при подключении
+    // Извлечение истории сообщений при подключении пользователя
     try {
         const { data: history, error } = await supabase
             .from('messages')
@@ -39,25 +37,24 @@ io.on('connection', async (socket) => {
             socket.emit('chat history', history);
         }
     } catch (err) {
-        console.error("Ошибка загрузки истории из Supabase:", err.message);
+        console.error("Ошибка загрузки истории:", err.message);
     }
 
-    // Принимаем новое сообщение от клиента
+    // Прием нового сообщения и сохранение в базу данных
     socket.on('chat message', async (data) => {
         console.log('Новое сообщение received:', data);
 
         try {
-            // Сохраняем в Supabase
             const { error } = await supabase
                 .from('messages')
                 .insert([{ username: data.username || 'Аноним', text: data.text }]);
 
             if (error) throw error;
 
-            // Пересылаем сообщение всем активным клиентам
+            // Мгновенная рассылка сообщения всем клиентам
             io.emit('chat message', data);
         } catch (err) {
-            console.error("Ошибка сохранения в Supabase:", err.message);
+            console.error("Ошибка сохранения:", err.message);
         }
     });
 
