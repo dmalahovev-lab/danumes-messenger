@@ -2,10 +2,17 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const path = require('path'); // Добавили стандартный модуль для путей
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
+
+// ЖЕЛЕЗНЫЙ МАРШРУТ ДЛЯ ОТДАЧИ СТРАНИЦЫ
+// Теперь при заходе на сайт сервер гарантированно отправит файл index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -54,7 +61,7 @@ io.on('connection', async (socket) => {
             // Мгновенная рассылка сообщения всем клиентам
             io.emit('chat message', data);
         } catch (err) {
-            console.error("Ошибка сохранения:", err.message);
+            console.error("Ошибка保存:", err.message);
         }
     });
 
