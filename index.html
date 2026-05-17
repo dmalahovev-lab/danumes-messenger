@@ -1,73 +1,473 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
-
-const app = express();
-app.use(cors());
-
-// ЭТА СТРОЧКА ПОЧИНИТ CANNOT GET /
-// Сервер начнет раздавать index.html из корня проекта
-app.use(express.static(__dirname));
-
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*", 
-        methods: ["GET", "POST"]
-    }
-});
-
-// Инициализация клиента Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_KEY || "your-anon-key";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-io.on('connection', async (socket) => {
-    console.log(`Пользователь подключился: ${socket.id}`);
-
-    // Извлечение истории сообщений при подключении пользователя
-    try {
-        const { data: history, error } = await supabase
-            .from('messages')
-            .select('username, text')
-            .order('created_at', { ascending: true })
-            .limit(100);
-
-        if (error) throw error;
-
-        if (history) {
-            socket.emit('chat history', history);
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danumes Messenger</title>
+    <style>
+        /* ==========================================================================
+           ПОЛНЫЙ ОРИГИНАЛЬНЫЙ ДИЗАЙН ИЗ ТВОЕГО РЕПОЗИТОРИЯ TEST (БЕЗ СОКРАЩЕНИЙ)
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-    } catch (err) {
-        console.error("Ошибка загрузки истории:", err.message);
-    }
 
-    // Прием нового сообщения и сохранение в базу данных
-    socket.on('chat message', async (data) => {
-        console.log('Новое сообщение received:', data);
-
-        try {
-            const { error } = await supabase
-                .from('messages')
-                .insert([{ username: data.username || 'Аноним', text: data.text }]);
-
-            if (error) throw error;
-
-            // Мгновенная рассылка сообщения всем клиентам
-            io.emit('chat message', data);
-        } catch (err) {
-            console.error("Ошибка сохранения:", err.message);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #f8fafc;
+            overflow: hidden;
         }
-    });
 
-    socket.on('disconnect', () => {
-        console.log(`Пользователь отключился: ${socket.id}`);
-    });
-});
+        #auth-container {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.6s ease-out;
+        }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
-});
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        input[type="text"]::placeholder {
+            color: #475569;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+            border: none;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #chat-container {
+            display: none;
+            width: 100%;
+            max-width: 1100px;
+            height: 85vh;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .chat-sidebar {
+            width: 300px;
+            background: rgba(15, 23, 42, 0.4);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        .sidebar-header {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(129, 140, 248, 0.3);
+        }
+
+        .user-info .name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .user-info .status {
+            font-size: 12px;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+
+        .user-info .status::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        .chat-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.2);
+        }
+
+        .chat-header {
+            padding: 24px;
+            background: rgba(30, 41, 59, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #messages {
+            flex-grow: 1;
+            padding: 32px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Кастомный скроллбар */
+        #messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 99px;
+        }
+
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .message-wrapper.incoming {
+            align-self: flex-start;
+        }
+
+        .message-wrapper.outgoing {
+            align-self: flex-end;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+            margin-left: 12px;
+        }
+
+        .message-box {
+            padding: 14px 20px;
+            border-radius: 20px;
+            font-size: 15px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .incoming .message-box {
+            background: rgba(51, 65, 85, 0.8);
+            color: #f8fafc;
+            border-bottom-left-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .outgoing .message-box {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .message-time {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: right;
+            margin-top: 4px;
+            margin-right: 4px;
+        }
+
+        .chat-footer {
+            padding: 24px;
+            background: rgba(30, 41, 59, 0.4);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #form {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        #input-message {
+            flex-grow: 1;
+            margin-bottom: 0;
+        }
+
+        #form button {
+            width: auto;
+            padding: 16px 32px;
+        }
+
+        .active-users-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .user-item .mini-avatar {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ОКНО АВТОРИЗАЦИИ ИЗ ТВОЕГО TEST -->
+    <div id="auth-container">
+        <h2>Danumes</h2>
+        <div class="subtitle">Вход в аккаунт мессенджера</div>
+        <form id="auth-form" onsubmit="login(event)">
+            <div class="input-group">
+                <input id="input-username" type="text" placeholder="Введите ваш никнейм..." required autocomplete="off">
+            </div>
+            <button type="submit">Войти в чат</button>
+        </form>
+    </div>
+
+    <!-- ОКНО ЧАТА ИЗ ТВОЕГО TEST -->
+    <div id="chat-container">
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="avatar" id="my-avatar">U</div>
+                    <div class="user-info">
+                        <div class="name" id="my-name">User</div>
+                        <div class="status">В сети</div>
+                    </div>
+                </div>
+            </div>
+            <h3 style="font-size: 14px; color: #64748b; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Участники</h3>
+            <ul class="active-users-list" id="users-list">
+                <li class="user-item">
+                    <div class="mini-avatar">G</div>
+                    <div style="font-size: 14px;">Общий чат</div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-header">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 600;" id="chat-title">Основная комната</h3>
+                    <p style="font-size: 13px; color: #94a3b8; margin-top: 2px;">Сообщения сохраняются в Supabase</p>
+                </div>
+            </div>
+
+            <div id="messages"></div>
+
+            <div class="chat-footer">
+                <form id="form">
+                    <input id="input-message" type="text" placeholder="Напишите сообщение..." required autocomplete="off">
+                    <button type="submit">Отправить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПОДКЛЮЧЕНИЕ КЛИЕНТСКИХ БИБЛИОТЕК -->
+    <script src="https://socket.io"></script>
+    <script>
+        // Подключаемся к твоему серверу на Render
+        const socket = io('https://onrender.com');
+
+        const authContainer = document.getElementById('auth-container');
+        const chatContainer = document.getElementById('chat-container');
+        const messagesContainer = document.getElementById('messages');
+        const form = document.getElementById('form');
+        const messageInput = document.getElementById('input-message');
+        const usernameInput = document.getElementById('input-username');
+        
+        let currentUsername = "";
+
+        // Функция входа из оригинального дизайна
+        function login(event) {
+            event.preventDefault();
+            const username = usernameInput.value.trim();
+            if (username) {
+                currentUsername = username;
+                
+                // Настройка профиля в боковой панели
+                document.getElementById('my-name').innerText = username;
+                document.getElementById('my-avatar').innerText = username.charAt(0).toUpperCase();
+                
+                // Переключение экранов интерфейса
+                authContainer.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                
+                // Оповещаем сервер о новом пользователе (для списка участников)
+                socket.emit('user join', username);
+            }
+        }
+
+        // Функция рендеринга сообщений в оригинальном стиле
+        function appendMessage(data) {
+            const isMyMessage = data.username === currentUsername;
+            
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('message-wrapper');
+            wrapper.classList.add(isMyMessage ? 'outgoing' : 'incoming');
+
+            // Получаем красивое текущее время или берем переданное
+            const timeString = data.time || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            wrapper.innerHTML = `
+                ${!isMyMessage ? `<div class="message-sender">${data.username}</div>` : ''}
+                <div class="message-box">${data.text}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            messagesContainer.appendChild(wrapper);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Интеграция Supabase: Загрузка всей истории при входе в чат
+        socket.on('chat history', (history) => {
+            messagesContainer.innerHTML = ''; 
+            history.forEach(msg => {
+                appendMessage({
+                    username: msg.username,
+                    text: msg.text,
+                    time: msg.time
+                });
+            });
+        });
+
+        // Получение новых сообщений в реальном времени
+        socket.on('chat message', (msg) => {
+            appendMessage(msg);
+        });
+
+        // Отправка сообщения
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (messageInput.value.trim() && currentUsername) {
+                const msgData = {
+                    username: currentUsername,
+                    text: messageInput.value.trim()
+                };
+                
+                socket.emit('chat message', msgData);
+                messageInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
