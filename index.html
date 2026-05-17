@@ -1,76 +1,73 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danumes Messenger</title>
-    <style>
-        /* Строгий дизайн из оригинального репозитория test */
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
-        #chat-container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; border-radius: 4px; background: #fafafa; }
-        .message { margin-bottom: 10px; padding: 8px; border-radius: 4px; background: #e4e6eb; }
-        .message .username { font-weight: bold; color: #1877f2; }
-        #form { display: flex; gap: 10px; }
-        #input-message { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        #input-username { width: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; background: #1877f2; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #166fe5; }
-    </style>
-</head>
-<body>
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
-<div id="chat-container">
-    <h2>Danumes Messenger</h2>
-    <div id="messages"></div>
-    <form id="form">
-        <input id="input-username" type="text" placeholder="Имя..." required autocomplete="off">
-        <input id="input-message" type="text" placeholder="Сообщение..." required autocomplete="off">
-        <button type="submit">Отправить</button>
-    </form>
-</div>
+const app = express();
+app.use(cors());
 
-<!-- Подключение оригинального Socket.io клиента -->
-<script src="https://socket.io"></script>
-<script>
-    // Подключение к бэкенду на Render
-    const socket = io('https://onrender.com');
+// ЭТА СТРОЧКА ПОЧИНИТ CANNOT GET /
+// Сервер начнет раздавать index.html из корня проекта
+app.use(express.static(__dirname));
 
-    const messagesContainer = document.getElementById('messages');
-    const form = document.getElementById('form');
-    const usernameInput = document.getElementById('input-username');
-    const messageInput = document.getElementById('input-message');
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", 
+        methods: ["GET", "POST"]
+    }
+});
 
-    function appendMessage(data) {
-        const item = document.createElement('div');
-        item.classList.add('message');
-        item.innerHTML = `<span class="username">${data.username}:</span> ${data.text}`;
-        messagesContainer.appendChild(item);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+// Инициализация клиента Supabase
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "your-anon-key";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+io.on('connection', async (socket) => {
+    console.log(`Пользователь подключился: ${socket.id}`);
+
+    // Извлечение истории сообщений при подключении пользователя
+    try {
+        const { data: history, error } = await supabase
+            .from('messages')
+            .select('username, text')
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+        if (error) throw error;
+
+        if (history) {
+            socket.emit('chat history', history);
+        }
+    } catch (err) {
+        console.error("Ошибка загрузки истории:", err.message);
     }
 
-    // Загрузка сохраненной истории из Supabase через веб-сокет
-    socket.on('chat history', (history) => {
-        messagesContainer.innerHTML = ''; 
-        history.forEach(msg => appendMessage(msg));
-    });
+    // Прием нового сообщения и сохранение в базу данных
+    socket.on('chat message', async (data) => {
+        console.log('Новое сообщение received:', data);
 
-    // Обработка новых сообщений в реальном времени
-    socket.on('chat message', (msg) => {
-        appendMessage(msg);
-    });
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .insert([{ username: data.username || 'Аноним', text: data.text }]);
 
-    // Отправка формы без перезагрузки
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (messageInput.value.trim() && usernameInput.value.trim()) {
-            socket.emit('chat message', {
-                username: usernameInput.value,
-                text: messageInput.value
-            });
-            messageInput.value = '';
+            if (error) throw error;
+
+            // Мгновенная рассылка сообщения всем клиентам
+            io.emit('chat message', data);
+        } catch (err) {
+            console.error("Ошибка сохранения:", err.message);
         }
     });
-</script>
-</body>
-</html>
+
+    socket.on('disconnect', () => {
+        console.log(`Пользователь отключился: ${socket.id}`);
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Сервер запущен на порту ${PORT}`);
+});
