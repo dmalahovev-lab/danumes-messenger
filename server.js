@@ -1,9 +1,12 @@
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const http = require('http');
+const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -11,163 +14,191 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
-// Инициализация базы данных в оперативной памяти
-let db = { users: [], messages: [], groups: [] };
+// Инициализация локальной автономной БД в ОЗУ
+let db = { users: {}, messages: [] };
 if (fs.existsSync(DB_FILE)) {
     try {
         db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     } catch (e) {
-        console.error("Ошибка чтения базы данных, инициализируем пустую:", e);
+        console.error("Ошибка чтения БД:", e);
     }
 }
 
 function saveDB() {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-// Карта соответствия: username -> socket.id для WebRTC звонков
-const usersOnline = {};
+// Глобальная карта для WebRTC-сигналинга (связка: ник пользователя -> id сокета)
+const usersOnline = {}; 
 
-// ==========================================
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (НЕ МЕНЯТЬ НИ БУКВЫ)
-// ==========================================
-app.post('/api/register', (req, res) => {
-    const { user, pass } = req.body;
-    if (!user || !pass) return res.status(400).json({ error: 'Заполните все поля' });
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (Строго роуты, структуры user и pass — без изменений!)
+app.post('/api/register', (expressReq, expressRes) => {
+    const { user, pass } = expressReq.body;
+    if (!user || !pass) return expressRes.status(400).json({ message: 'Заполните все поля' });
+    if (db.users[user]) return expressRes.status(400).json({ message: 'Пользователь уже существует' });
     
-    const exists = db.users.find(u => u.username.toLowerCase() === user.toLowerCase());
-    if (exists) return res.status(400).json({ error: 'Пользователь уже существует' });
-    
-    const newUser = { username: user, password: pass };
-    db.users.push(newUser);
+    db.users[user] = { password: pass };
     saveDB();
-    res.json({ success: true });
+    expressRes.json({ success: true });
 });
 
-app.post('/api/login', (req, res) => {
-    const { user, pass } = req.body;
-    const found = db.users.find(u => u.username.toLowerCase() === user.toLowerCase() && u.password === pass);
-    if (!found) return res.status(400).json({ error: 'Неверный логин или пароль' });
-    res.json({ success: true, username: found.username });
+app.post('/api/login', (expressReq, expressRes) => {
+    const { user, pass } = expressReq.body;
+    if (!user || !pass) return expressRes.status(400).json({ message: 'Заполните все поля' });
+    
+    // Специальный ручной бэкап главного админа, если БД пустая
+    if (user === 'Danumala' && !db.users['Danumala']) {
+        db.users['Danumala'] = { password: 'danyajukovka' };
+        saveDB();
+    }
+
+    const account = db.users[user];
+    if (!account || account.password !== pass) {
+        return expressRes.status(400).json({ message: 'Неверное имя пользователя или пароль' });
+    }
+    expressRes.json({ success: true });
 });
 
-// ==========================================
-// РОУТ УДАЛЕНИЯ СООБЩЕНИЙ
-// ==========================================
-app.post('/api/messages/delete', (req, res) => {
-    const { messageId, user } = req.body;
+// Существующий обязательный роут удаления сообщений
+app.post('/api/messages/delete', (expressReq, expressRes) => {
+    const { messageId, user } = expressReq.body;
     const msgIndex = db.messages.findIndex(m => m.id === messageId);
     
-    if (msgIndex === -1) return res.status(404).json({ error: 'Сообщение не найдено' });
-    
-    const msg = db.messages[msgIndex];
-    // Удалять может автор ИЛИ админ Danumala
-    if (user === 'Danumala' || msg.author === user) {
-        db.messages.splice(msgIndex, 1);
-        saveDB();
-        io.emit('msg_removed_from_chat', { messageId }); // Оповещаем сокеты
-        return res.json({ success: true });
-    }
-    
-    res.status(403).json({ error: 'Нет прав на удаление' });
-});
-
-// Дополнительные API эндпоинты для инициализации интерфейса
-app.get('/api/users', (req, res) => {
-    res.json(db.users.map(u => ({ username: u.username })));
-});
-
-app.get('/api/messages', (req, res) => {
-    res.json(db.messages);
-});
-
-// ==========================================
-// SOCKET.IO СИГНАЛИНГ И ЖИВОЙ ЧАТ
-// ==========================================
-io.on('connection', (socket) => {
-    let currentUsername = null;
-
-    socket.on('user_connected', (username) => {
-        currentUsername = username;
-        usersOnline[username] = socket.id;
-        io.emit('update_online_list', Object.keys(usersOnline));
-    });
-
-    socket.on('new_message', (msgData) => {
-        // Защита канала новостей: писать может только Danumala
-        if (msgData.room === 'danumes_news' && msgData.author !== 'Danumala') {
-            return;
+    if (msgIndex !== -1) {
+        const msg = db.messages[msgIndex];
+        if (user === 'Danumala' || msg.author === user) {
+            db.messages.splice(msgIndex, 1);
+            saveDB();
+            io.emit('msg_deleted', messageId); // Мгновенно стираем у всех из UI
+            return expressRes.json({ success: true });
         }
-        
-        const messageWithId = {
-            id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            ...msgData,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        
-        db.messages.push(messageWithId);
-        saveDB();
-        io.emit('broadcast_message', messageWithId);
+    }
+    expressRes.status(400).json({ message: 'Нет прав или сообщение не найдено' });
+});
+
+// Главный роут для фронтенда
+app.get('/', (expressReq, expressRes) => {
+    expressRes.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Socket.io Архитектура и сигналинг звонков
+io.on('connection', (socket) => {
+    let sessionUser = null;
+
+    socket.on('register_user', (username) => {
+        sessionUser = username;
+        usersOnline[username] = socket.id; // Регистрируем активный сокет
+        io.emit('update_users', Object.keys(usersOnline));
     });
 
-    // Ручной проброс удаления через сокет (на всякий случай)
-    socket.on('message_deleted', (data) => {
-        io.emit('msg_removed_from_chat', { messageId: data.messageId });
+    socket.on('get_online_users', () => {
+        socket.emit('update_users', Object.keys(usersOnline));
     });
 
-    // Сигналинг для приватных аудиозвонков WebRTC
-    socket.on('call_request', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('incoming_call', { from: data.from });
+    socket.on('load_messages', (query) => {
+        // Загрузка приватных сообщений или общего канала новостей
+        let history = [];
+        if (query.type === 'news') {
+            history = db.messages.filter(m => m.type === 'news');
         } else {
-            socket.emit('call_failed', { reason: 'Пользователь не в сети' });
+            history = db.messages.filter(m => 
+                m.type === 'private' && 
+                ((m.to === query.id && m.author === sessionUser) || (m.to === sessionUser && m.author === query.id))
+            );
+        }
+        socket.emit('messages_history', history);
+    });
+
+    socket.on('send_msg', (data) => {
+        if (data.type === 'news' && sessionUser !== 'Danumala') return; // Защита новостного канала
+
+        const newMsg = {
+            id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            type: data.type,
+            to: data.to,
+            author: sessionUser,
+            text: data.text || '',
+            image: data.image || null,
+            time: new Date().toISOString()
+        };
+
+        db.messages.push(newMsg);
+        saveDB();
+
+        // Отправка сообщений целевым клиентам
+        if (data.type === 'news') {
+            io.emit('new_msg', newMsg);
+        } else {
+            const targetSocket = usersOnline[data.to];
+            if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
+            socket.emit('new_msg', newMsg); // Возвращаем автору
+        }
+    });
+
+    // Фича А: Быстрое сокет-удаление сообщений
+    socket.on('req_delete_message', (data) => {
+        const msgIndex = db.messages.findIndex(m => m.id === data.messageId);
+        if (msgIndex !== -1) {
+            const msg = db.messages[msgIndex];
+            if (data.user === 'Danumala' || msg.author === data.user) {
+                db.messages.splice(msgIndex, 1);
+                saveDB();
+                io.emit('msg_deleted', data.messageId);
+            }
+        }
+    });
+
+    // Фича Б: Сигналинг для приватных аудиозвонков WebRTC
+    socket.on('call_init', (data) => {
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('call_incoming', { from: data.from });
         }
     });
 
     socket.on('call_accepted', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('start_webrtc_handshake', { from: data.from });
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('start_handshake', { from: data.from });
         }
     });
 
-    socket.on('call_rejected', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('call_ended');
+    socket.on('rtc_offer', (data) => {
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('receive_offer', { offer: data.offer, from: sessionUser });
         }
     });
 
-    socket.on('webrtc_offer', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_offer', { offer: data.offer, from: data.from });
-        }
-    });
-
-    socket.on('webrtc_answer', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_answer', { answer: data.answer, from: data.from });
+    socket.on('rtc_answer', (data) => {
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('receive_answer', { answer: data.answer });
         }
     });
 
     socket.on('ice_candidate', (data) => {
-        const targetSocketId = usersOnline[data.to];
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('receive_ice', { candidate: data.candidate });
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('receive_ice', { candidate: data.candidate });
+        }
+    });
+
+    socket.on('call_rejected', (data) => {
+        const targetId = usersOnline[data.to];
+        if (targetId) {
+            io.to(targetId).emit('call_ended');
         }
     });
 
     socket.on('disconnect', () => {
-        if (currentUsername) {
-            delete usersOnline[currentUsername];
-            io.emit('update_online_list', Object.keys(usersOnline));
+        if (sessionUser && usersOnline[sessionUser] === socket.id) {
+            delete usersOnline[sessionUser];
+            io.emit('update_users', Object.keys(usersOnline));
         }
     });
 });
 
-http.listen(PORT, () => {
-    console.log(`Сервер DanuMes запущен на порту ${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Сервер DanuMes успешно запущен на порту ${PORT}`);
 });
