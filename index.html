@@ -23,13 +23,13 @@
         .search-bar:focus { border-color: var(--purp); }
         .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
         .chat-item { padding: 16px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .chat-item:hover, .chat-item.active { background: rgba(179,136,255,0.1); }
+        .chat-item:hover, .chat-item.active { background: rgba(179, 136, 255, 0.1); }
         .chat-item-title { font-weight: bold; font-size: 16px; }
         .chat-item-sub { font-size: 13px; color: var(--gray); }
         .chat-window { flex: 1; background: var(--p-bg); border-radius: 20px; border: 1px solid var(--p-brd); display: flex; flex-direction: column; position: relative; overflow: hidden; }
         .chat-header { height: 75px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--p-brd); background: rgba(20, 18, 32, 0.4); }
         .user-info { display: flex; align-items: center; gap: 12px; }
-        .avatar { width: 42px; height: 42px; border-radius: 50%; background: #2a2544; color: var(--purp); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 1px solid rgba(179,136,255,0.3); }
+        .avatar { width: 42px; height: 42px; border-radius: 50%; background: #2a2544; color: var(--purp); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 1px solid rgba(179, 136, 255, 0.3); }
         .status-dot { font-size: 13px; color: #2ecc71; margin-top: 2px; }
         .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; }
         .chat-messages { flex: 1; overflow-y: scroll; padding: 24px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
@@ -158,7 +158,7 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
         });
 
-        // СВЯТОЙ КОД АВТОРИЗАЦИИ ИЗ REPO TEST (ПЕРЕМЕННЫЕ USER И PASS)
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ ИЗ REPO TEST (П ПЕРЕМЕННЫЕ USER И PASS)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
