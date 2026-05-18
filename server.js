@@ -10,13 +10,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"], credentials: true },
     transports: ['websocket'],
-    allowUpgrades: false,
-    maxHttpBufferSize: 1e8
+    allowUpgrades: false
 });
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
 
+// Увеличиваем лимиты для обработки стандартных HTTP POST запросов
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
@@ -47,7 +47,7 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, без изменений)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -73,6 +73,14 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
     }
     res.json({ success: true });
+});
+
+// НОВЫЙ АВТОНОМНЫЙ РОУТ ДЛЯ ЗАГРУЗКИ КАРТИНОК И АВАТАРОК (ОБХОД ЛИМИТОВ СОКЕТОВ)
+app.post('/api/upload', (req, res) => {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ message: 'Файл не найден' });
+    // Возвращаем ту же base64 строку, но через стабильный HTTP-канал
+    res.json({ url: image });
 });
 
 app.post('/api/messages/delete', (req, res) => {
@@ -131,7 +139,6 @@ io.on('connection', (socket) => {
 
     socket.on('get_online_users', () => { broadcastUsersList(); });
 
-    // Обработка бинарного буфера аватарки
     socket.on('update_profile_avatar', (data) => {
         if (sessionUser && db.users[sessionUser] && data.avatar) {
             db.users[sessionUser].avatar = data.avatar;
@@ -179,7 +186,7 @@ io.on('connection', (socket) => {
             to: data.to,
             author: sessionUser,
             text: data.text || '',
-            image: data.image || null, // Принимаем оптимизированную строку изображения
+            image: data.image || null,
             time: new Date().toISOString(),
             read: false
         };
