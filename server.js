@@ -80,11 +80,11 @@ function loadDBFromGitHub() {
                 if (fileContent) {
                     db = JSON.parse(fileContent);
                     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-                    console.log("✅ Вечная база успешно синхронизирована с новым репозиторием GitHub!");
+                    console.log("✅ Вечная база успешно синхронизирована с GitHub!");
                 }
             } catch (e) { console.error("Ошибка парсинга базы с GitHub:", e); }
         } else {
-            console.log("Файл базы на GitHub не найден, создаём локальный слепок.");
+            console.log("Файл базы на GitHub не найден, используем пустую структуру.");
             if (fs.existsSync(DB_FILE)) {
                 try {
                     const localContent = fs.readFileSync(DB_FILE, 'utf8').trim();
@@ -107,14 +107,27 @@ function saveDB() {
         
         const payload = {
             message: `Авто-сохранение базы данных: ${new Date().toISOString()}`,
-            content: Buffer.from(contentString).toString('base64'),
-            sha: dbSha || undefined
+            content: Buffer.from(contentString).toString('base64')
         };
+        
+        // КРИТИЧЕСКИЙ ФИКС: Если файл уже существовал, обязательно передаем SHA-хэш для перезаписи
+        if (dbSha) {
+            payload.sha = dbSha;
+        }
 
         githubRequest('PUT', `/repos/${GH_REPO}/contents/database.json`, payload, (err, status, data) => {
             if (!err && (status === 200 || status === 201) && data.content) {
                 dbSha = data.content.sha; 
                 console.log("☁️ Облачный бэкап успешно отправлен на GitHub!");
+            } else if (status === 409) {
+                // Защита от конфликта SHA: если гитхаб сбросил хэш, запрашиваем его заново
+                console.log("Конфликт SHA-хэша, запрашиваем актуальный маркер...");
+                githubRequest('GET', `/repos/${GH_REPO}/contents/database.json`, null, (gErr, gStatus, gData) => {
+                    if (!gErr && gStatus === 200 && gData.sha) {
+                        dbSha = gData.sha;
+                        saveDB(); // Перезапускаем сохранение с верным SHA
+                    }
+                });
             } else if (err) {
                 console.error("Ошибка отправки бэкапа на GitHub:", err.message);
             }
