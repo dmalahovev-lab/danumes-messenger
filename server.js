@@ -3,8 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
-const app = express();
+const app = report => express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -27,34 +28,104 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
 
+// АКТУАЛЬНЫЕ ДАННЫЕ ТВОЕГО GITHUB ИЗ ТЗ
+const GH_TOKEN = 'ghp_KCFTmwImy7VLlM0nPBLdqv4N7OrF073Gpl2';
+const GH_REPO = 'dmalahovev-lab/danumes-messenger';
+let dbSha = null; 
+
 let db = { users: {}, messages: [], groups: {} };
 
-// Чтение локальной базы данных
-if (fs.existsSync(DB_FILE)) {
-    try {
-        const fileContent = fs.readFileSync(DB_FILE, 'utf8').trim();
-        if (fileContent) db = JSON.parse(fileContent);
-    } catch (e) {
-        console.error("Ошибка чтения файла БД:", e);
+function githubRequest(method, urlPath, payload, callback) {
+    const options = {
+        hostname: '://github.com',
+        path: urlPath,
+        method: method,
+        headers: {
+            'User-Agent': 'Danumes-Messenger-Server',
+            'Authorization': `token ${GH_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    };
+
+    const req = https.request(options, (res) => {
+        let body = '';
+        res.on('data', (chunk) => body += chunk);
+        res.on('end', () => {
+            try {
+                const json = body ? JSON.parse(body) : {};
+                if (callback) callback(null, res.statusCode, json);
+            } catch (e) {
+                if (callback) callback(e, res.statusCode, null);
+            }
+        });
+    });
+
+    req.on('error', (e) => {
+        if (callback) callback(e, 0, null);
+    });
+
+    if (payload) {
+        req.write(JSON.stringify(payload));
     }
+    req.end();
 }
 
-if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
-if (!db.users) db.users = {};
-if (!db.messages) db.messages = [];
-if (!db.groups) db.groups = {};
+function loadDBFromGitHub() {
+    console.log("Загрузка вечной базы данных из GitHub...");
+    githubRequest('GET', `/repos/${GH_REPO}/contents/database.json`, null, (err, status, data) => {
+        if (!err && status === 200 && data.content) {
+            try {
+                dbSha = data.sha;
+                const fileContent = Buffer.from(data.content, 'base64').toString('utf8').trim();
+                if (fileContent) {
+                    db = JSON.parse(fileContent);
+                    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+                    console.log("✅ Вечная база успешно синхронизирована с новым репозиторием GitHub!");
+                }
+            } catch (e) { console.error("Ошибка парсинга базы с GitHub:", e); }
+        } else {
+            console.log("Файл базы на GitHub не найден, создаём локальный слепок.");
+            if (fs.existsSync(DB_FILE)) {
+                try {
+                    const localContent = fs.readFileSync(DB_FILE, 'utf8').trim();
+                    if (localContent) db = JSON.parse(localContent);
+                } catch(e){}
+            }
+        }
+        if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
+        if (!db.users) db.users = {};
+        if (!db.messages) db.messages = [];
+        if (!db.groups) db.groups = {};
+    });
+}
+loadDBFromGitHub();
 
 function saveDB() {
     try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+        const contentString = JSON.stringify(db, null, 2);
+        fs.writeFileSync(DB_FILE, contentString);
+        
+        const payload = {
+            message: `Авто-сохранение базы данных: ${new Date().toISOString()}`,
+            content: Buffer.from(contentString).toString('base64'),
+            sha: dbSha || undefined
+        };
+
+        githubRequest('PUT', `/repos/${GH_REPO}/contents/database.json`, payload, (err, status, data) => {
+            if (!err && (status === 200 || status === 201) && data.content) {
+                dbSha = data.content.sha; 
+                console.log("☁️ Облачный бэкап успешно отправлен на GitHub!");
+            } else if (err) {
+                console.error("Ошибка отправки бэкапа на GitHub:", err.message);
+            }
+        });
     } catch (e) {
-        console.error("Ошибка записи в файл БД:", e);
+        console.error("Ошибка локальной записи файла БД:", e);
     }
 }
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
