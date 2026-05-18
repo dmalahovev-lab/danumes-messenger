@@ -58,7 +58,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// --- СТАБИЛЬНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ИСПРАВЛЕН ИНДЕКС СТРОКИ) ---
+// --- ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ ВХОД С ТOЧНЫМ ИНДЕКСОМ СТРОКИ ---
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -81,7 +81,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        // ЖЕСТКИЙ ФИКС: Берем именно первый элемент [0] из массива найденных строк!
+        // ТОЧНЫЙ ФИКС: Берем первый элемент из массива строк базы данных!
         const user = usersList[0]; 
         const inputHash = hashPassword(password);
         
@@ -117,7 +117,6 @@ app.post('/api/sync', async (req, res) => {
             });
         }
         
-        // Гарантируем видимость текущего юзера и админа на случай пустой базы
         if (username) activeUsers[username] = { online: true, avatar: null };
         activeUsers[ADMIN_USERNAME] = { online: true, avatar: null };
 
