@@ -17,33 +17,27 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
         body { background-color: var(--bg-main); color: var(--text-white); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
         
-        /* ИСПРАВЛЕННОЕ ПОЗИЦИОНИРОВАНИЕ ЛОГОТИПА ДЛЯ ЭКРАНА ВХОДА */
-        .brand-logo { position: absolute; top: 40px; left: 40px; font-size: 28px; font-weight: bold; color: var(--text-white); z-index: 50; }
+        .brand-logo-main { font-size: 28px; font-weight: bold; color: var(--text-white); margin-bottom: 25px; text-align: center; }
         
-        #auth-container { background: linear-gradient(145deg, #131124, #1a1630); padding: 50px 40px; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--panel-border); z-index: 100; }
-        .auth-title { font-size: 26px; font-weight: 500; margin-bottom: 30px; }
+        #auth-container { background: linear-gradient(145deg, #131124, #1a1630); padding: 50px 40px; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); width: 100%; max-width: 400px; border: 1px solid var(--panel-border); z-index: 100; }
         .auth-input { width: 100%; padding: 16px 24px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.05); border-radius: 30px; background-color: var(--input-bg); color: #fff; font-size: 16px; outline: none; }
         .auth-input:focus { border-color: var(--accent-purple); }
         .auth-btn { width: 100%; padding: 16px; background: linear-gradient(90deg, #32105c, #51167a); border: none; border-radius: 30px; color: var(--text-white); font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; margin-bottom: 20px; }
         .auth-switch { color: var(--text-gray); font-size: 14px; cursor: pointer; text-decoration: underline; }
 
-        /* ИНТЕРФЕЙС ЧАТА БЕЗ НАЛОЖЕНИЯ ТЕКСТА */
-        #app-container { display: none; width: 100%; height: 100vh; padding: 24px; z-index: 10; }
+        #app-container { display: none; width: 100%; height: 100vh; padding: 24px; }
         .messenger-layout { display: flex; width: 100%; height: 100%; gap: 20px; }
         .sidebar { width: 320px; background: var(--panel-bg); border-radius: 20px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Изменен шапка сайдбара: Логотип теперь встроен прямо внутрь структуры */
-        .sidebar-header { padding: 24px 20px 15px 20px; display: flex; flex-direction: column; gap: 4px; }
-        .sidebar-logo { font-size: 24px; font-weight: bold; color: var(--text-white); margin-bottom: 2px; }
-        .sidebar-header h2 { font-size: 18px; color: var(--accent-purple); font-weight: normal; }
-        .sidebar-sub { font-size: 13px; color: var(--text-gray); margin-bottom: 12px; }
+        .sidebar-header { padding: 24px 20px 15px 20px; }
+        .sidebar-header h2 { font-size: 26px; font-weight: bold; color: var(--text-white); margin-bottom: 2px; }
+        .sidebar-sub { font-size: 14px; color: var(--text-gray); margin-bottom: 15px; }
         
         .search-bar { width: 100%; padding: 12px 16px; background-color: var(--input-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: #fff; font-size: 14px; outline: none; }
         .search-bar:focus { border-color: var(--accent-purple); }
         
         .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .chat-item { padding: 16px 14px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; background: rgba(255,255,255,0.02); }
-        .chat-item:hover, .chat-item.active { background: rgba(179, 136, 255, 0.15); }
+        .chat-item { padding: 16px 14px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+        .chat-item:hover, .chat-item.active { background: rgba(179, 136, 255, 0.1); }
         .chat-item-title { font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: space-between; }
         .chat-item-sub { font-size: 13px; color: var(--text-gray); }
 
@@ -52,7 +46,8 @@
         .user-info { display: flex; align-items: center; gap: 12px; }
         .avatar { width: 42px; height: 42px; border-radius: 50%; background: #2a2544; color: var(--accent-purple); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 1px solid rgba(179, 136, 255, 0.3); }
         .status-dot { font-size: 13px; color: #2ecc71; margin-top: 2px; }
-        .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; }
+        .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; transition: transform 0.2s; }
+        .call-icon-btn:hover { transform: scale(1.1); }
 
         .chat-messages { flex: 1; overflow-y: scroll; padding: 24px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
         .message { max-width: 45%; padding: 12px 16px; border-radius: 14px; word-wrap: break-word; font-size: 15px; line-height: 1.4; position: relative; }
@@ -62,7 +57,7 @@
         
         .input-panel { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 60px; background: #141220; border-radius: 30px; padding: 0 10px 0 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--panel-border); z-index: 10; }
         .img-btn-wrapper { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(179,136,255,0.1); cursor: pointer; }
-        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); display: block; line-height: 1; }
+        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); }
         .message-input { flex: 1; background: none; border: none; color: #fff; outline: none; font-size: 15px; }
         .submit-btn { background: linear-gradient(90deg, #46145e, #290b40); border: none; color: white; padding: 10px 24px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
@@ -87,10 +82,8 @@
 </head>
 <body>
 
-    <!-- Текущий брендинг виден только на форме авторизации -->
-    <div class="brand-logo" id="main-brand-title">Danumes</div>
-
     <div id="auth-container">
+        <div class="brand-logo-main">Danumes</div>
         <div class="auth-title" id="auth-header-text">Вход</div>
         <input type="text" id="username" class="auth-input" placeholder="Логин">
         <input type="password" id="password" class="auth-input" placeholder="Пароль">
@@ -102,9 +95,7 @@
         <div class="messenger-layout">
             <div class="sidebar">
                 <div class="sidebar-header">
-                    <!-- Логотип гармонично интегрирован в разметку, исключая наложение -->
-                    <div class="sidebar-logo">Danumes</div>
-                    <h2>Чаты</h2>
+                    <h2>Danumes</h2>
                     <div class="sidebar-sub">Danumes Платформа</div>
                     <input type="text" id="search" class="search-bar" placeholder="Поиск людей...">
                 </div>
@@ -123,7 +114,9 @@
                 </div>
                 <div class="chat-messages" id="chat-messages"></div>
                 <div class="input-panel">
-                    <div class="img-btn-wrapper" id="img-btn"><button class="icon-btn">📎</button></div>
+                    <div class="img-btn-wrapper" id="img-btn">
+                        <button class="icon-btn">📎</button>
+                    </div>
                     <input type="file" id="file-input" accept="image/*" style="display:none;">
                     <input type="text" class="message-input" id="msg-input" placeholder="Написать сообщение...">
                     <button class="submit-btn" id="send-btn">Отправить</button>
@@ -188,7 +181,7 @@
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if (!user || !pass) return showToast('Заполните все поля');
+            if (!user || !pass) return showToast('Заполните поля');
             const targetUrl = isSelectionForRegister ? '/api/register' : '/api/login';
             try {
                 const response = await fetch(targetUrl, {
@@ -198,14 +191,13 @@
                 });
                 if (response.ok) {
                     currentUser = { username: user };
-                    document.getElementById('main-brand-title').style.display = 'none';
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('app-container').style.display = 'flex';
                     initSocketChannels();
                 } else {
                     const d = await response.json(); showToast(d.message || 'Ошибка авторизации');
                 }
-            } catch (err) { showToast('Сервер просыпается, повторите через пару секунд.'); }
+            } catch (err) { showToast('Сервер подключается, повторите попытку.'); }
         });
 
         function initSocketChannels() {
@@ -336,11 +328,44 @@
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
+        // НАДЕЖНОЕ КЛИЕНТСКОЕ СЖАТИЕ КАРТИНОК ПЕРЕД ОТПРАВКОЙ ДЛЯ ПРОБИВАНИЯ ЛИМИТОВ RENDER
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files; if (!file || !activeChat.id) return;
+            const file = e.target.files[0];
+            if (!file || !activeChat.id) return;
+
             const reader = new FileReader();
-            reader.onload = () => { if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: reader.result }); };
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // Ограничиваем разрешение картинки для экономии пакета
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Сжимаем картинку в качественный легковесный JPEG (коэффициент 0.7)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    if (socket) {
+                        socket.emit('send_msg', { 
+                            type: activeChat.type, 
+                            to: activeChat.id, 
+                            image: compressedBase64 
+                        });
+                    }
+                };
+                img.src = event.target.result;
+            };
             reader.readAsDataURL(file);
         });
 
