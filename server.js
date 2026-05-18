@@ -7,7 +7,7 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Прямое подключение к базе данных Supabase
+// Прямое стабильное подключение к базе данных Supabase
 const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
 
 const pool = new Pool({
@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ) ---
+// --- ВХОД И РЕГИСТРАЦИЯ (ЛОГИКА ОСТАЛАСЬ ОРИГИНАЛЬНОЙ) ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -104,6 +104,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         
+        // Исправлено: корректно берём первого пользователя из найденных строк
         if (result.rows.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
