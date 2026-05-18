@@ -69,7 +69,7 @@ async function initDB() {
 
         console.log("🚀 Неубиваемая база данных Supabase успешно запущена и защищена!");
     } catch (e) {
-        console.error("Ошибка初始化 базы данных:", e);
+        console.error("Ошибка инициализации базы данных:", e);
     }
 }
 
@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ С ИСПРАВЛЕННЫМ ИНДЕКСОМ) ---
+// --- ВХОД И РЕГИСТРАЦИЯ (ПОЛНЫЙ ОРИГИНАЛ) ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -108,7 +108,6 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        // ИСПРАВЛЕНО: Добавлен индекс [0], чтобы читать данные конкретной строки базы
         const user = result.rows[0]; 
         const inputHash = hashPassword(password);
         
