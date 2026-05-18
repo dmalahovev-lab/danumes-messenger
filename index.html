@@ -59,7 +59,7 @@
         .chat-view { display: none; flex-direction: column; height: 100%; }
         .chat-header { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; }
         .messages-container { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 160px); }
-        .message-row { display: flex; width: 100%; position: relative; }
+        .message-row { display: flex; width: 100%; }
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
         .message-bubble { max-width: 45%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; word-break: break-word; cursor: pointer; }
@@ -77,31 +77,18 @@
         .modal-overlay.active { display: flex; }
         .modal-card { background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 30px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
-        
-        .admin-badge {
-            display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle;
-        }
-
-        .btn-attach {
-            width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s;
-        }
+        .admin-badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle; }
+        .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
         .btn-attach:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
-
-        /* Стиль всплывающего контекстного меню для удаления */
-        .custom-context-menu {
-            display: none; position: fixed; z-index: 2000; background: var(--bg-glass); border: 1px solid var(--border-glass); backdrop-filter: blur(12px); border-radius: 12px; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-        }
-        .context-item { padding: 8px 16px; font-size: 13px; font-weight: 600; color: #ef4444; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
-        .context-item:hover { background: rgba(239, 68, 68, 0.15); }
+        .custom-menu { display: none; position: fixed; z-index: 10000; background: var(--bg-sidebar); border: 1px solid var(--border-glass); border-radius: 12px; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); backdrop-filter: blur(12px); }
+        .custom-menu button { background: none; border: none; color: #ef4444; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; text-align: left; border-radius: 8px; }
+        .custom-menu button:hover { background: rgba(239, 68, 68, 0.1); }
     </style>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div class="toast-container" id="toast-box"></div>
-
-    <!-- Всплывающая кнопка «Удалить» -->
-    <div id="msg-context-menu" class="custom-context-menu">
-        <div class="context-item" onclick="confirmDeleteMessage()">🗑️ Удалить сообщение</div>
-    </div>
+    <div class="custom-menu" id="message-context-menu"><button onclick="triggerDeleteMessage()">Удалить сообщение</button></div>
 
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
@@ -158,27 +145,22 @@
         </div>
     </div>
 
-    <!-- Подключаем Socket.io клиент -->
-    <script src="/socket.io/socket.io.js"></script>
     <script>
         const SERVER_URL = window.location.origin;
-        const socket = io(SERVER_URL); // Инициализация сокетов реального времени
-        
         let currentUser = localStorage.getItem('danumes_user') || null;
-        let activeChat = null, isGroupChat = false, selectedMessageId = null;
+        let activeChat = null, isGroupChat = false, socket = null, selectedMessageId = null;
         let serverData = { users: {}, messages: [], groups: [] };
 
         if (currentUser) showMessenger();
 
-        // СВЕРХТЕХНОЛОГИЧНЫЙ СИНТЕЗАТОР ЗВУКА БЕЗ СТОРОННИХ ФАЙЛОВ
-        function playNotificationSound() {
+        function playNotifySound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator(), gain = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Нота Ре
-                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // Нота Ля
+                osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
                 osc.connect(gain); gain.connect(ctx.destination);
                 osc.start(); osc.stop(ctx.currentTime + 0.3);
             } catch(e){}
@@ -197,15 +179,13 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЙ ОРИГИНАЛЬНЫЙ ВХОД (НЕ МЕНЯЛСЯ НИ НА ОДНУ БУКВУ) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
-                const r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
                 const d = await r.json();
@@ -221,8 +201,28 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
+            initSocketConnection();
             startSync();
         }
+
+        function initSocketConnection() {
+            socket = io(SERVER_URL);
+            socket.on('chat message', (msg) => {
+                if (!serverData.messages) serverData.messages = [];
+                if (!serverData.messages.some(m => m.id === msg.id)) {
+                    serverData.messages.push(msg);
+                    if (msg.from !== currentUser) playNotifySound();
+                    renderMessages();
+                }
+            });
+            socket.on('message deleted', (data) => {
+                if (serverData.messages) {
+                    serverData.messages = serverData.messages.filter(m => m.id !== data.id);
+                    renderMessages();
+                }
+            });
+        }
+
         function startSync() { syncData(); setInterval(syncData, 3000); }
 
         async function syncData() {
@@ -232,27 +232,16 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: currentUser })
                 });
-                serverData = await r.json(); renderSidebar(); renderMessages();
+                const freshData = await r.json();
+                serverData.users = freshData.users;
+                serverData.groups = freshData.groups;
+                if (JSON.stringify(serverData.messages) !== JSON.stringify(freshData.messages)) {
+                    serverData.messages = freshData.messages;
+                    renderMessages();
+                }
+                renderSidebar();
             } catch(e){}
         }
-
-        // ПЕРЕХВАТ СОБЫТИЙ ОНЛАЙН-ОБНОВЛЕНИЙ ЧЕРЕЗ СОКЕТЫ
-        socket.on('chat message', (msg) => {
-            // Если пришло сообщение в открытый чат - рендерим и скроллим
-            if (activeChat && ((msg.isGroup && msg.to === activeChat) || (!msg.isGroup && ((msg.from === currentUser && msg.to === activeChat) || (msg.from === activeChat && msg.to === currentUser))))) {
-                serverData.messages.push(msg);
-                renderMessages();
-            }
-            // Включаем звук, если сообщение входящее и вкладка не активна или чат свернут
-            if (msg.from !== currentUser) {
-                playNotificationSound();
-            }
-        });
-
-        socket.on('message deleted', (data) => {
-            serverData.messages = serverData.messages.filter(m => m.id !== data.id);
-            renderMessages();
-        });
 
         function renderSidebar() {
             const container = document.getElementById('friends-list'), query = document.getElementById('chat-search').value.trim().toLowerCase();
@@ -269,8 +258,7 @@
             }
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser || (query && !u.toLowerCase().includes(query))) return;
-                const isOnline = serverData.users[u].online;
-                const div = document.createElement('div');
+                const isOnline = serverData.users[u].online, div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
                 const badgeHTML = (u === 'Danumala') ? '<span class="admin-badge">✓</span>' : '';
@@ -286,70 +274,87 @@
             document.getElementById('chat-title').innerText = name;
             document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
-            const headerBadge = document.getElementById('chat-header-badge');
-            headerBadge.innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
+            document.getElementById('chat-header-badge').innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
             renderMessages();
         }
 
         function renderMessages() {
-            const container = document.getElementById('messages-container'); if(!activeChat) return;
+            const container = document.getElementById('messages-container'); if(!activeChat || !serverData.messages) return;
             const currentScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
             container.innerHTML = '';
-            
             const filtered = serverData.messages.filter(m => isGroupChat ? (m.isGroup && m.to === activeChat) : (!m.isGroup && ((m.from === currentUser && m.to === activeChat) || (m.from === activeChat && m.to === currentUser))));
-            
             filtered.forEach(m => {
                 const div = document.createElement('div'), isOut = m.from === currentUser;
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
-                
-                let textContentHTML = m.text.startsWith('data:image/') 
-                    ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px; pointer-events:auto;">`
-                    : `<div>${m.text}</div>`;
-
+                let textContentHTML = m.text.startsWith('data:image/') ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px;">` : `<div>${m.text}</div>`;
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
-                
-                // Навешиваем контекстное меню для удаления сообщений
-                div.innerHTML = `
-                    <div class="message-bubble" oncontextmenu="handleMessageContext(event, '${m.id}', '${m.from}')">
-                        ${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}
-                        ${textContentHTML}
-                        <div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                    </div>
-                `;
+                div.innerHTML = `<div class="message-bubble" data-id="${m.id}" oncontextmenu="openContextMenu(event, '${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
                 container.appendChild(div);
             });
             if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
-        // ЛОГИКА ОТКРЫТИЯ МЕНЮ УДАЛЕНИЯ
-        function handleMessageContext(e, id, author) {
-            // Разрешаем удалять только свои сообщения или если ты админ Danumala
-            if (author === currentUser || currentUser === 'Danumala') {
-                e.preventDefault();
-                selectedMessageId = id;
-                const menu = document.getElementById('msg-context-menu');
-                menu.style.display = 'block';
-                menu.style.left = e.clientX + 'px';
-                menu.style.top = e.clientY + 'px';
-            }
+        function openContextMenu(e, id, from) {
+            if (from !== currentUser && currentUser !== 'Danumala') return;
+            e.preventDefault(); selectedMessageId = id;
+            const menu = document.getElementById('message-context-menu');
+            menu.style.display = 'block'; menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
         }
 
-        // Закрываем меню при клике в любое другое место экрана
-        document.addEventListener('click', () => {
-            document.getElementById('msg-context-menu').style.display = 'none';
-        });
+        document.addEventListener('click', () => { document.getElementById('message-context-menu').style.display = 'none'; });
 
-        async function confirmDeleteMessage() {
+        async function triggerDeleteMessage() {
             if (!selectedMessageId) return;
             try {
                 await fetch(`${SERVER_URL}/api/messages/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ id: selectedMessageId, username: currentUser })
                 });
-                showNotification('Сообщение удалено', true);
             } catch(e){}
         }
 
         async function sendMessage() {
-            const input = document.getElementById('message-input
+            const input = document.getElementById('message-input'), text = input.value.trim();
+            if(!text || !activeChat) return;
+            try {
+                await fetch(`${SERVER_URL}/api/messages/send`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
+                });
+                input.value = '';
+            } catch(e){}
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+        function triggerFileInput() { document.getElementById('image-file-input').click(); }
+
+        function handleImageUpload(event) {
+            const files = event.target.files; if (!files || files.length === 0) return;
+            const file = files[0]; if (!file.type.startsWith('image/')) return showNotification('Можно только картинки!');
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                if(activeChat) {
+                    try {
+                        await fetch(`${SERVER_URL}/api/messages/send`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ from: currentUser, to: activeChat, text: e.target.result, isGroup: isGroupChat })
+                        });
+                        showNotification('Изображение отправлено!', true);
+                    } catch(err){}
+                }
+            };
+            reader.readAsDataURL(file); event.target.value = '';
+        }
+
+        function openCreateGroupModal() {
+            document.getElementById('group-modal').classList.add('active');
+            const listContainer = document.getElementById('modal-members-list'); listContainer.innerHTML = '';
+            if (serverData && serverData.users) {
+                Object.keys(serverData.users).forEach(u => {
+                    if (u === currentUser) return;
+                    const row = document.createElement('div'); row.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:6px;';
+                    row.innerHTML = `<input type="checkbox" value="${u}" class="group-member-checkbox" style="width:auto;"><span style="font-size:14px;">${u}</span>`;
+                    listContainer.appendChild(row);
+                });
+            }
+            if(!listContainer.innerHTML) listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center
