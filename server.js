@@ -15,7 +15,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// АБСОЛЮТНО ТОЧНЫЕ И СВЕЖИЕ ДАННЫЕ ТВОЕГО ТЕКУЩЕГО ПРОЕКТА SUPABASE
 const SUPABASE_URL = 'https://supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10eGJpbXp0bWdpbWZ6cWxkZWtlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTExNzEzMywiZXhwIjoyMDk0NjkzMTMzfQ.AawhNSwRsTo0bc1ukUmXEUzfSGOmul9WozHacprlkLY';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26,7 +25,7 @@ app.use(express.static(__dirname));
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Сохранение логики, роутов и переменных)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Сохранение логики и переменных + фикс массивов)
 app.post('/api/register', async (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -64,6 +63,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
         }
         
+        // КРИТИЧЕСКИЙ ФИКС: Вытаскиваем конкретный объект пользователя из полученного массива
         const account = accounts[0];
         if (account.password !== pass) {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
@@ -241,6 +241,13 @@ io.on('connection', (socket) => {
             io.emit('msg_deleted', data.messageId);
         } catch(e) { console.error(e); }
     });
+
+    socket.on('call_init', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_incoming', { from: data.from }); });
+    socket.on('call_accepted', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('start_handshake', { from: data.from }); });
+    socket.on('rtc_offer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_offer', { offer: data.offer, from: sessionUser }); });
+    socket.on('rtc_answer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_answer', { answer: data.answer }); });
+    socket.on('ice_candidate', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_ice', { candidate: data.candidate }); });
+    socket.on('call_rejected', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_ended'); });
 
     socket.on('disconnect', () => { if (sessionUser && usersOnline[sessionUser] === socket.id) { delete usersOnline[sessionUser]; broadcastUsersList(); } });
 });
