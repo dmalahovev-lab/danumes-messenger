@@ -15,9 +15,9 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Нативное чтение ключей из защищенных переменных Render Environment
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// ЖЕСТКИЙ ФИКС: Принудительно приводим переменные окружения Render к типу String
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim();
+const SUPABASE_KEY = String(process.env.SUPABASE_KEY || '').trim();
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 app.use(express.json({ limit: '50mb' }));
@@ -33,7 +33,7 @@ app.post('/api/register', async (req, res) => {
     
     try {
         const { data: existingUser } = await supabase.from('users').select('username').eq('username', user).maybeSingle();
-        if (existingUser) return res.status(400).json({ message: 'Пополнили базу данных, юзер уже есть!' });
+        if (existingUser) return res.status(400).json({ message: 'Пользователь уже существует' });
         
         await supabase.from('users').insert([{ username: user, password: pass }]);
         res.json({ success: true });
