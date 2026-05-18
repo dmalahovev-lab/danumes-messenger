@@ -63,9 +63,8 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
         }
         
-        // КРИТИЧЕСКИЙ ФИКС: Вытаскиваем конкретный объект пользователя из полученного массива
-        const account = accounts[0];
-        if (account.password !== pass) {
+        // ЖЕСТКИЙ ФИКС: Читаем пароль строго из первого элемента массива объектов [0]
+        if (accounts[0].password !== pass) {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
         }
         res.json({ success: true });
@@ -85,8 +84,7 @@ app.post('/api/messages/delete', async (req, res) => {
     try {
         const { data: msgs } = await supabase.from('messages').select('author').eq('id', messageId);
         if (msgs && msgs.length > 0) {
-            const msg = msgs[0];
-            if (user === 'Danumala' || msg.author === user) {
+            if (user === 'Danumala' || msgs[0].author === user) {
                 await supabase.from('messages').delete().eq('id', messageId);
                 io.emit('msg_deleted', messageId);
                 return res.json({ success: true });
@@ -241,13 +239,6 @@ io.on('connection', (socket) => {
             io.emit('msg_deleted', data.messageId);
         } catch(e) { console.error(e); }
     });
-
-    socket.on('call_init', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_incoming', { from: data.from }); });
-    socket.on('call_accepted', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('start_handshake', { from: data.from }); });
-    socket.on('rtc_offer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_offer', { offer: data.offer, from: sessionUser }); });
-    socket.on('rtc_answer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_answer', { answer: data.answer }); });
-    socket.on('ice_candidate', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_ice', { candidate: data.candidate }); });
-    socket.on('call_rejected', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_ended'); });
 
     socket.on('disconnect', () => { if (sessionUser && usersOnline[sessionUser] === socket.id) { delete usersOnline[sessionUser]; broadcastUsersList(); } });
 });
