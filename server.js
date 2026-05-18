@@ -7,10 +7,9 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Восстанавливаем дефолтные транспорты, чтобы сокеты не вешали весь браузер
 const io = new Server(server, {
     cors: { origin: "*" },
-    maxHttpBufferSize: 1e7 // Увеличиваем лимит пакета до 10МБ на всякий случай
+    transports: ['websocket']
 });
 
 const PORT = process.env.PORT || 3000;
@@ -19,8 +18,7 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
-// Автономная ОЗУ-база данных с жесткой защитой от undefined объектов
-let db = { users: {}, messages: [] };
+let db = { users: {}, messages: [], groups: {} };
 
 if (fs.existsSync(DB_FILE)) {
     try {
@@ -31,9 +29,10 @@ if (fs.existsSync(DB_FILE)) {
     }
 }
 
-if (!db || typeof db !== 'object') db = { users: {}, messages: [] };
+if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
 if (!db.users) db.users = {};
 if (!db.messages) db.messages = [];
+if (!db.groups) db.groups = {};
 
 function saveDB() {
     try {
@@ -45,13 +44,12 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, роуты и переменные user/pass)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     if (db.users[user]) return res.status(400).json({ message: 'Пользователь уже существует' });
-    
-    db.users[user] = { password: pass };
+    db.users[user] = { password: pass, avatar: null };
     saveDB();
     res.json({ success: true });
 });
@@ -59,12 +57,10 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
-    
     if (user === 'Danumala' && !db.users['Danumala']) {
-        db.users['Danumala'] = { password: 'danyajukovka' };
+        db.users['Danumala'] = { password: 'danyajukovka', avatar: null };
         saveDB();
     }
-
     const account = db.users[user];
     if (!account || account.password !== pass) {
         return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
@@ -97,17 +93,88 @@ io.on('connection', (socket) => {
     socket.on('register_user', (username) => {
         sessionUser = username;
         usersOnline[username] = socket.id;
-        io.emit('update_users', Object.keys(usersOnline));
+        
+        // При входе отправляем пользователю его текущую аватарку из базы данных
+        const userAvatar = db.users[username] ? db.users[username].avatar : null;
+        socket.emit('auth_success_data', { avatar: userAvatar });
+
+        // Рассылаем обновленный список пользователей вместе с их аватарками
+        sendUpdatedUsersList();
     });
 
+    function sendUpdatedUsersList() {
+        const usersData = Object.keys(usersOnline).map(username => {
+            return {
+                username: username,
+                avatar: db.users[username] ? db.users[username].avatar : null
+            };
+        });
+        io.emit('update_users', usersData);
+        
+        // Также отправляем список доступных групп для текущего пользователя
+        sendGroupsList(socket);
+    }
+
+    function sendGroupsList(targetSocket) {
+        if (!sessionUser) return;
+        const userGroups = [];
+        Object.keys(db.groups).forEach(groupId => {
+            const group = db.groups[groupId];
+            if (group.members.includes(sessionUser)) {
+                userGroups.push({ id: groupId, name: group.name });
+            }
+        });
+        targetSocket.emit('update_groups', userGroups);
+    }
+
     socket.on('get_online_users', () => {
-        socket.emit('update_users', Object.keys(usersOnline));
+        sendUpdatedUsersList();
+    });
+
+    // Фича профиля: Сохранение кастомной аватарки
+    socket.on('update_profile_avatar', (data) => {
+        if (sessionUser && db.users[sessionUser]) {
+            db.users[sessionUser].avatar = data.avatar;
+            saveDB();
+            sendUpdatedUsersList(); // Обновляем аватарку у всех в реальном времени
+        }
+    });
+
+    // Фича групп: Создание приватной группы
+    socket.on('create_private_group', (data) => {
+        if (!sessionUser) return;
+        const groupId = 'group_' + Date.now();
+        // Включаем создателя и выбранных участников
+        const members = data.members;
+        if (!members.includes(sessionUser)) members.push(sessionUser);
+
+        db.groups[groupId] = {
+            name: data.name,
+            creator: sessionUser,
+            members: members
+        };
+        saveDB();
+
+        // Оповещаем всех участников группы онлайн, чтобы у них появился новый чат
+        members.forEach(member => {
+            const targetSocketId = usersOnline[member];
+            if (targetSocketId) {
+                const targetSocket = io.sockets.sockets.get(targetSocketId);
+                if (targetSocket) sendGroupsList(targetSocket);
+            }
+        });
     });
 
     socket.on('load_messages', (query) => {
         let history = [];
         if (query.type === 'news') {
             history = db.messages.filter(m => m.type === 'news');
+        } else if (query.type === 'group') {
+            // Загрузка сообщений группы, если пользователь в ней состоит
+            const group = db.groups[query.id];
+            if (group && group.members.includes(sessionUser)) {
+                history = db.messages.filter(m => m.type === 'group' && m.to === query.id);
+            }
         } else {
             history = db.messages.filter(m => 
                 m.type === 'private' && 
@@ -119,6 +186,12 @@ io.on('connection', (socket) => {
 
     socket.on('send_msg', (data) => {
         if (data.type === 'news' && sessionUser !== 'Danumala') return;
+        
+        // Защита: проверка на участие в группе перед отправкой
+        if (data.type === 'group') {
+            const group = db.groups[data.to];
+            if (!group || !group.members.includes(sessionUser)) return;
+        }
 
         const newMsg = {
             id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -136,6 +209,13 @@ io.on('connection', (socket) => {
 
         if (data.type === 'news') {
             io.emit('new_msg', newMsg);
+        } else if (data.type === 'group') {
+            // Рассылаем сообщение всем онлайн участникам группы
+            const group = db.groups[data.to];
+            group.members.forEach(member => {
+                const targetSocket = usersOnline[member];
+                if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
+            });
         } else {
             const targetSocket = usersOnline[data.to];
             if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
@@ -159,9 +239,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('typing_status', (data) => {
-        const targetSocket = usersOnline[data.to];
-        if (targetSocket) {
-            io.to(targetSocket).emit('user_typing_broadcast', { from: sessionUser, isTyping: data.isTyping });
+        if (data.type === 'private') {
+            const targetSocket = usersOnline[data.to];
+            if (targetSocket) io.to(targetSocket).emit('user_typing_broadcast', { from: sessionUser, isTyping: data.isTyping });
         }
     });
 
@@ -205,7 +285,10 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (sessionUser && usersOnline[sessionUser] === socket.id) {
             delete usersOnline[sessionUser];
-            io.emit('update_users', Object.keys(usersOnline));
+            io.emit('update_users', Object.keys(usersOnline).map(username => ({
+                username: username,
+                avatar: db.users[username] ? db.users[username].avatar : null
+            })));
         }
     });
 });
