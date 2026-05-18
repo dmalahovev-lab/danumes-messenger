@@ -7,7 +7,6 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// ЖЕСТКИЙ ФИКС ЛИМИТОВ: Разрешаем Socket.io принимать большие Base64 пакеты до 100МБ
 const io = new Server(server, {
     cors: { origin: "*" },
     transports: ['websocket'],
@@ -47,7 +46,7 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не тронут ни один символ)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал + вшитый аккаунт друга)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -60,10 +59,19 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
+    
+    // Авто-генерация главного админа в ОЗУ
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka', avatar: null };
         saveDB();
     }
+
+    // ВШИТЫЙ АККАУНТ ДРУГА ПО ТЗ
+    if (user === 'RunFly' && !db.users['RunFly']) {
+        db.users['RunFly'] = { password: 'GGWWXXJJ2001', avatar: null };
+        saveDB();
+    }
+
     const account = db.users[user];
     if (!account || account.password !== pass) {
         return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
