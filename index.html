@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Danumes Messenger</title>
     <style>
+        /* ПОЛНЫЙ ДИЗАЙН ИЗ FIGMA С ИСПРАВЛЕНИЕМ ОТСТУПОВ */
         :root {
             --bg-main: #080610;
             --panel-bg: rgba(30, 27, 46, 0.55);
@@ -23,16 +24,20 @@
         .auth-input { width: 100%; padding: 16px 24px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.05); border-radius: 30px; background-color: var(--input-bg); color: #fff; font-size: 16px; outline: none; }
         .auth-input:focus { border-color: var(--accent-purple); }
         .auth-btn { width: 100%; padding: 16px; background: linear-gradient(90deg, #32105c, #51167a); border: none; border-radius: 30px; color: var(--text-white); font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; margin-bottom: 20px; }
+        .auth-btn:hover { opacity: 0.9; }
         .auth-switch { color: var(--text-gray); font-size: 14px; cursor: pointer; text-decoration: underline; }
 
         #app-container { display: none; width: 100%; height: 100vh; padding: 24px; }
         .messenger-layout { display: flex; width: 100%; height: 100%; gap: 20px; }
-        .sidebar { width: 320px; background: var(--panel-bg); border-radius: 20px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; overflow: hidden; }
-        .sidebar-header { padding: 24px 20px 15px 20px; }
-        .sidebar-header h2 { font-size: 26px; font-weight: bold; color: var(--text-white); margin-bottom: 2px; }
-        .sidebar-sub { font-size: 14px; color: var(--text-gray); margin-bottom: 15px; }
         
-        .search-bar { width: 100%; padding: 12px 16px; background-color: var(--input-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: #fff; font-size: 14px; outline: none; }
+        /* Исправленный Сайдбар: Текст больше не слипается */
+        .sidebar { width: 320px; background: var(--panel-bg); border-radius: 20px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; overflow: hidden; }
+        .sidebar-header { padding: 24px 20px 20px 20px; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar-header h2 { font-size: 26px; font-weight: bold; color: var(--text-white); }
+        .sidebar-sub { font-size: 14px; color: var(--text-gray); margin-bottom: 10px; }
+        
+        /* Исправленная овальная лупа поиска */
+        .search-bar { width: 100%; padding: 14px 20px; background-color: var(--input-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 25px; color: #fff; font-size: 14px; outline: none; }
         .search-bar:focus { border-color: var(--accent-purple); }
         
         .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
@@ -46,8 +51,7 @@
         .user-info { display: flex; align-items: center; gap: 12px; }
         .avatar { width: 42px; height: 42px; border-radius: 50%; background: #2a2544; color: var(--accent-purple); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 1px solid rgba(179, 136, 255, 0.3); }
         .status-dot { font-size: 13px; color: #2ecc71; margin-top: 2px; }
-        .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; transition: transform 0.2s; }
-        .call-icon-btn:hover { transform: scale(1.1); }
+        .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; }
 
         .chat-messages { flex: 1; overflow-y: scroll; padding: 24px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
         .message { max-width: 45%; padding: 12px 16px; border-radius: 14px; word-wrap: break-word; font-size: 15px; line-height: 1.4; position: relative; }
@@ -55,17 +59,16 @@
         .message.outgoing { background: #3c1e6d; align-self: flex-end; border-bottom-right-radius: 2px; }
         .message img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
         
-        /* Стили под галочки прочтения */
-        .msg-meta { font-size: 11px; color: var(--text-gray); text-align: right; margin-top: 4px; display: flex; justify-content: flex-end; gap: 4px; }
-        .tick { color: var(--accent-purple); font-weight: bold; }
-
-        .input-panel { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 60px; background: #141220; border-radius: 30px; padding: 0 10px 0 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--panel-border); z-index: 10; }
-        .img-btn-wrapper { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(179,136,255,0.1); cursor: pointer; }
-        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); }
+        /* Исправленная круглая скрепка для картинок */
+        .input-panel { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 60px; background: #141220; border-radius: 30px; padding: 0 10px 0 12px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--panel-border); z-index: 10; }
+        .img-btn-wrapper { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(179,136,255,0.15); cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+        .img-btn-wrapper:hover { background: rgba(179,136,255,0.25); }
+        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); display: flex; align-items: center; justify-content: center; }
         .message-input { flex: 1; background: none; border: none; color: #fff; outline: none; font-size: 15px; }
-        .submit-btn { background: linear-gradient(90deg, #46145e, #290b40); border: none; color: white; padding: 10px 24px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .submit-btn { background: linear-gradient(90deg, #46145e, #290b40); border: none; color: white; padding: 12px 26px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
-        .badge-admin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #a855f7; color: #fff; font-size: 11px; font-weight: bold; border-radius: 50%; margin-left: 6px; box-shadow: 0 0 8px #a855f7; vertical-align: middle; }
+        /* Фиолетовая неоновая галочка админа ✓ */
+        .badge-admin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #a855f7; color: #fff; font-size: 11px; font-weight: bold; border-radius: 50%; margin-left: 6px; box-shadow: 0 0 10px #a855f7; vertical-align: middle; }
 
         #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #1c192e; border: 1px solid #3c1e6d; border-radius: 8px; padding: 4px 0; min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
@@ -82,7 +85,6 @@
         .btn-mute { background: #34495e; color: white; }
         .btn-mute.active { background: #e67e22; }
     </style>
-    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -151,7 +153,7 @@
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
-        let isMuted = false, typingTimeout = null;
+        let isMuted = false;
         const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
         function showToast(text) {
@@ -182,6 +184,7 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
         });
 
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -201,48 +204,27 @@
                 } else {
                     const d = await response.json(); showToast(d.message || 'Ошибка авторизации');
                 }
-            } catch (err) { showToast('Сервер подключается, повторите попытку.'); }
+            } catch (err) { showToast('Не удалось подключиться к серверу.'); }
         });
 
         function initSocketChannels() {
-            socket = io({ transports: ['websocket'], upgrade: false });
+            // Инициализируем сокеты БЕЗ принудительного урезания протокола, чтобы не вешать JavaScript
+            socket = io();
+            
             socket.on('connect', () => {
                 socket.emit('register_user', currentUser.username);
                 buildSidebarStructure();
             });
             socket.on('update_users', (users) => { cachedUsersList = users; renderSidebarList(users); });
-            
             socket.on('messages_history', (messages) => {
                 const box = document.getElementById('chat-messages'); box.innerHTML = '';
                 messages.forEach(renderSingleMessage); box.scrollTop = box.scrollHeight;
-                // При загрузке истории отправляем сигнал, что чат прочитан
-                if(activeChat.type === 'private') socket.emit('mark_as_read', { chatWith: activeChat.id });
             });
-
             socket.on('new_msg', (msg) => {
                 if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
                     renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-                    if(activeChat.type === 'private' && msg.author === activeChat.id) {
-                        socket.emit('mark_as_read', { chatWith: activeChat.id });
-                    }
                 }
             });
-
-            // Слушатель обновления галочек (для отправителя)
-            socket.on('chat_read_by_recipient', (data) => {
-                if(activeChat.type === 'private' && activeChat.id === data.readBy) {
-                    document.querySelectorAll('.message.outgoing .tick').forEach(el => el.innerText = '✓✓');
-                }
-            });
-
-            // Слушатель трансляции "Печатает..."
-            socket.on('user_typing_broadcast', (data) => {
-                if(activeChat.type === 'private' && activeChat.id === data.from) {
-                    const statusEl = document.getElementById('header-status');
-                    statusEl.innerHTML = data.isTyping ? `<span style="color:#b388ff; animation: blink 1s infinite;">✍ печатает...</span>` : `● Онлайн`;
-                }
-            });
-
             socket.on('msg_deleted', (messageId) => {
                 const el = document.querySelector(`[data-id="${messageId}"]`); if (el) el.remove();
             });
@@ -290,153 +272,4 @@
             socket.on('receive_ice', async (data) => {
                 if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
-            socket.on('call_ended', endCallUI);
-        }
-
-        function buildSidebarStructure() {
-            const chatsContainer = document.getElementById('chats'); chatsContainer.innerHTML = '';
-            const newsDiv = document.createElement('div'); newsDiv.className = 'chat-item';
-            newsDiv.innerHTML = `<div class="chat-item-title">📢 Danumes News</div><div class="chat-item-sub">Последнее сообщение канала</div>`;
-            newsDiv.onclick = () => selectChat('news', 'danumes_news', 'Danumes News');
-            chatsContainer.appendChild(newsDiv);
-            if (socket) socket.emit('get_online_users');
-        }
-
-        function renderSidebarList(users) {
-            const chatsContainer = document.getElementById('chats');
-            chatsContainer.querySelectorAll('.chat-item').forEach((item, index) => { if(index > 0) item.remove(); });
-            users.forEach(u => {
-                if (u !== currentUser.username) {
-                    const div = document.createElement('div');
-                    div.className = 'chat-item' + (activeChat.id === u ? ' active' : '');
-                    let adminBadge = u === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
-                    div.innerHTML = `<div class="chat-item-title">👤 ${u}${adminBadge}</div><div class="chat-item-sub">Нажмите для диалога</div>`;
-                    div.onclick = () => selectChat('private', u, u);
-                    chatsContainer.appendChild(div);
-                }
-            });
-        }
-
-        document.getElementById('search').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase().trim();
-            const filtered = cachedUsersList.filter(u => u.toLowerCase().includes(query));
-            renderSidebarList(filtered);
-        });
-
-        function selectChat(type, id, title) {
-            activeChat = { type, id };
-            let adminBadge = id === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
-            document.getElementById('current-chat-title').innerHTML = title + adminBadge;
-            document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
-            document.getElementById('header-status').style.display = type === 'private' ? 'block' : 'none';
-            document.getElementById('header-status').innerText = '● Онлайн';
-            document.getElementById('chat-messages').innerHTML = '';
-            document.getElementById('call-btn').style.display = (type === 'private' && id !== 'danumes_news') ? 'inline-block' : 'none';
-            if (socket) {
-                socket.emit('load_messages', { type, id });
-                if(type === 'private') socket.emit('mark_as_read', { chatWith: id });
-            }
-        }
-
-        function renderSingleMessage(msg) {
-            const box = document.getElementById('chat-messages'); const div = document.createElement('div');
-            const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
-            div.dataset.id = msg.id; div.dataset.author = msg.author;
-            let adminMark = msg.author === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
-            
-            let content = `<strong>${msg.author}${adminMark}:</strong><br>`;
-            if (msg.text) content += `<span>${msg.text}</span>`;
-            if (msg.image) content += `<img src="${msg.image}">`;
-            
-            // Отрисовка галочки прочтения для исходящих сообщений
-            if (isOwn && msg.type !== 'news') {
-                let tickSymbol = msg.read ? '✓✓' : '✓';
-                content += `<div class="msg-meta"><span class="tick">${tickSymbol}</span></div>`;
-            }
-            
-            div.innerHTML = content; box.appendChild(div);
-        }
-
-        // Отслеживание ввода текста для статуса "Печатает..."
-        document.getElementById('msg-input').addEventListener('input', () => {
-            if (socket && activeChat.type === 'private') {
-                socket.emit('typing_status', { to: activeChat.id, isTyping: true });
-                clearTimeout(typingTimeout);
-                typingTimeout = setTimeout(() => {
-                    socket.emit('typing_status', { to: activeChat.id, isTyping: false });
-                }, 2000);
-            }
-        });
-
-        const sendMessage = () => {
-            const input = document.getElementById('msg-input'); const text = input.value.trim();
-            if (!text || !activeChat.id) return;
-            if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') return showToast('Писать в этот канал может только админ.');
-            if (socket) {
-                socket.emit('typing_status', { to: activeChat.id, isTyping: false });
-                socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
-            }
-            input.value = '';
-        };
-        document.getElementById('send-btn').addEventListener('click', sendMessage);
-        document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-        document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
-        document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files; if (!file || !activeChat.id) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; let width = img.width, height = img.height;
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                    if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: compressedBase64 });
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-
-        document.getElementById('chat-messages').addEventListener('contextmenu', (e) => {
-            const msgEl = e.target.closest('.message'); if (!msgEl) return;
-            if (currentUser.username === 'Danumala' || currentUser.username === msgEl.dataset.author) {
-                e.preventDefault(); selectedMessageId = msgEl.dataset.id;
-                const menu = document.getElementById('custom-context-menu');
-                menu.style.left = `${e.pageX}px`; menu.style.top = `${e.pageY}px`; menu.style.display = 'block';
-            }
-        });
-        document.addEventListener('click', () => document.getElementById('custom-context-menu').style.display = 'none');
-        document.getElementById('ctx-delete-btn').addEventListener('click', () => {
-            if (selectedMessageId && socket) socket.emit('req_delete_message', { messageId: selectedMessageId, user: currentUser.username });
-        });
-
-        document.getElementById('call-btn').addEventListener('click', async () => {
-            document.getElementById('call-status-title').innerText = "Исходящий вызов";
-            document.getElementById('caller-name').innerText = `Звоним ${activeChat.id}...`;
-            document.getElementById('accept-call-btn').style.display = 'none';
-            document.getElementById('mute-call-btn').style.display = 'flex';
-            document.getElementById('call-modal').style.display = 'flex';
-            
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            currentCallSession = { from: currentUser.username, to: activeChat.id };
-            if (socket) socket.emit('call_init', { to: activeChat.id, from: currentUser.username });
-        });
-
-        document.getElementById('accept-call-btn').addEventListener('click', async () => {
-            stopRingtone();
-            document.getElementById('call-status-title').innerText = "Разговор...";
-            document.getElementById('accept-call-btn').style.display = 'none';
-            document.getElementById('mute-call-btn').style.display = 'flex';
-            
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            if (socket) socket.emit('call_accepted', { to: currentCallSession.from, from: currentUser.username });
-        });
-
-        document.getElementById('mute-call-btn').addEventListener('click', () => {
-            if (localStream) {
-                isMuted = !isMuted;
-                localStream.getAudioTracks()[0].
+            socket.on('call_ended
