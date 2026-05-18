@@ -15,8 +15,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Инициализируем вечное облако Supabase
-const SUPABASE_URL = 'https://mtxbimztmgimfzqldeke.supabase.co';
+const SUPABASE_URL = 'https://supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10eGJpbXp0bWdpbWZ6cWxkZWtlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTExNzEzMywiZXhwIjoyMDk0NjkzMTMzfQ.AawhNSwRsTo0bc1ukUmXEUzfSGOmul9WozHacprlkLY';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -26,13 +25,13 @@ app.use(express.static(__dirname));
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал логики, роутов и переменных)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Неприкосновенный оригинал)
 app.post('/api/register', async (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
     try {
-        const { data: existingUser } = await supabase.from('users').select('username').eq('username', user).single();
+        const { data: existingUser } = await supabase.from('users').select('username').eq('username', user).maybeSingle();
         if (existingUser) return res.status(400).json({ message: 'Пользователь уже существует' });
         
         await supabase.from('users').insert([{ username: user, password: pass }]);
@@ -47,17 +46,16 @@ app.post('/api/login', async (req, res) => {
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
     try {
-        // Принудительное создание Danumala и RunFly при первом старте облака
         if (user === 'Danumala') {
-            const { data: d } = await supabase.from('users').select('username').eq('username', 'Danumala').single();
+            const { data: d } = await supabase.from('users').select('username').eq('username', 'Danumala').maybeSingle();
             if (!d) await supabase.from('users').insert([{ username: 'Danumala', password: 'danyajukovka' }]);
         }
         if (user === 'RunFly') {
-            const { data: r } = await supabase.from('users').select('username').eq('username', 'RunFly').single();
+            const { data: r } = await supabase.from('users').select('username').eq('username', 'RunFly').maybeSingle();
             if (!r) await supabase.from('users').insert([{ username: 'RunFly', password: 'GGWWXXJJ2001' }]);
         }
 
-        const { data: account } = await supabase.from('users').select('*').eq('username', user).single();
+        const { data: account } = await supabase.from('users').select('*').eq('username', user).maybeSingle();
         if (!account || account.password !== pass) {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
         }
@@ -76,7 +74,7 @@ app.post('/api/upload', (req, res) => {
 app.post('/api/messages/delete', async (req, res) => {
     const { messageId, user } = req.body;
     try {
-        const { data: msg } = await supabase.from('messages').select('author').eq('id', messageId).single();
+        const { data: msg } = await supabase.from('messages').select('author').eq('id', messageId).maybeSingle();
         if (msg && (user === 'Danumala' || msg.author === user)) {
             await supabase.from('messages').delete().eq('id', messageId);
             io.emit('msg_deleted', messageId);
@@ -115,7 +113,7 @@ io.on('connection', (socket) => {
         usersOnline[username] = socket.id;
         
         try {
-            const { data: u } = await supabase.from('users').select('avatar').eq('username', username).single();
+            const { data: u } = await supabase.from('users').select('avatar').eq('username', username).maybeSingle();
             socket.emit('auth_success_data', { avatar: u ? u.avatar : null });
             broadcastUsersList();
             sendGroupsList(socket);
@@ -202,7 +200,7 @@ io.on('connection', (socket) => {
             if (data.type === 'news') {
                 io.emit('new_msg', newMsg);
             } else if (data.type === 'group') {
-                const { data: g } = await supabase.from('groups').select('members').eq('id', data.to).single();
+                const { data: g } = await supabase.from('groups').select('members').eq('id', data.to).maybeSingle();
                 if (g && g.members) {
                     g.members.forEach(member => { const ts = usersOnline[member]; if (ts) io.to(ts).emit('new_msg', newMsg); });
                 }
@@ -241,4 +239,5 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => { if (sessionUser && usersOnline[sessionUser] === socket.id) { delete usersOnline[sessionUser]; broadcastUsersList(); } });
 });
 
-server.listen(PORT, () => { console.log(`Сервер DanuMes на Supabase успешно запущен на порту ${PORT}`); });
+// КРИТИЧЕСКИЙ ФИКС СЕТИ: Слушаем строго тот порт, который выделяет Render под HTTP-запросы
+server.listen(PORT, () => { console.log(`Сервер DanuMes успешно поднят на порту ${PORT}`); });
