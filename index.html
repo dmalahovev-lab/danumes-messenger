@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes Messenger</title>
     <style>
-        /* СТРОГО ОРИГИНАЛЬНЫЙ КОД ДИЗАЙНА ИЗ ВАШЕГО GITHUB TEST */
         body {
             background-color: #121212;
             color: #ffffff;
@@ -16,6 +15,7 @@
             height: 100vh;
             margin: 0;
         }
+
         #auth-container {
             background: linear-gradient(145deg, #1e1e1e, #252525);
             padding: 40px;
@@ -25,12 +25,14 @@
             width: 100%;
             max-width: 360px;
         }
+
         .auth-title {
             font-size: 24px;
             font-weight: bold;
             color: #b388ff;
             margin-bottom: 25px;
         }
+
         .auth-input {
             width: 100%;
             padding: 12px;
@@ -43,9 +45,11 @@
             box-sizing: border-box;
             outline: none;
         }
+
         .auth-input:focus {
             border-color: #b388ff;
         }
+
         .auth-btn {
             width: 100%;
             padding: 12px;
@@ -60,23 +64,25 @@
             margin-bottom: 15px;
             transition: background 0.2s;
         }
+
         .auth-btn:hover {
             background-color: #9575cd;
         }
+
         .auth-switch {
             color: #aaa;
             font-size: 14px;
             cursor: pointer;
             text-decoration: underline;
         }
+
         .auth-switch:hover {
             color: #b388ff;
         }
 
-        /* КОРРЕКТНАЯ СТРУКТУРА ПРИЛОЖЕНИЯ (ОГРАНИЧЕНИЕ 45% И ФИКСИРОВАННЫЙ ВВОД) */
+        /* Дополнительные стили интерфейса приложения с ограничением ширины сообщений до 45% */
         #app-container { display: none; width: 100%; height: 100vh; }
         .messenger-layout { display: flex; width: 100%; height: 100%; }
-        
         .sidebar { width: 300px; background: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; }
         .sidebar-header { padding: 15px; border-bottom: 1px solid #333; }
         .search-bar { width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #333; border-radius: 5px; color: #fff; outline: none; }
@@ -84,42 +90,30 @@
         .chat-item { padding: 15px; border-bottom: 1px solid #252525; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .chat-item:hover, .chat-item.active { background: #2a2a2a; }
         .badge-admin { color: #b388ff; margin-left: 5px; font-weight: bold; }
-
         .chat-window { flex: 1; display: flex; flex-direction: column; background: #151515; position: relative; }
         .chat-header { height: 60px; background: #1e1e1e; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #333; }
-        
-        /* Кастомный скролл истории сообщений */
         .chat-messages { flex: 1; overflow-y: scroll; padding: 20px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 90px; }
-        
-        /* Сообщения строго до 45% ширины */
         .message { max-width: 45%; padding: 10px 14px; border-radius: 8px; word-wrap: break-word; font-size: 15px; position: relative; }
         .message.incoming { background: #2a2a2a; align-self: flex-start; }
         .message.outgoing { background: #371e5c; align-self: flex-end; }
         .message img { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
-        
-        /* Панель ввода намертво внизу */
         .input-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #1e1e1e; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; align-items: center; z-index: 10; }
         .message-input { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #333; border-radius: 5px; color: #fff; outline: none; resize: none; height: 40px; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #b388ff; }
-
-        /* Элементы новых фич (Контекстное меню, Тосты, Звонки) */
         #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #252525; border: 1px solid #444; border-radius: 5px; padding: 5px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
         #ctx-delete-btn:hover { background: rgba(255, 77, 77, 0.1); }
-        
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #2a2a2a; color: #fff; padding: 12px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; animation: slideIn 0.2s ease forwards; border-left: 4px solid #b388ff; }
-        
         #call-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 90%; max-width: 360px; text-align: center; border: 1px solid #333; }
-        
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <!-- СТРОГО ОРИГИНАЛЬНАЯ РАЗМЕТКА ИЗ REPO TEST -->
+    <!-- СТРОГО ОРИГИНАЛЬНАЯ РАЗМЕТКА ИЗ ВАШЕГО РЕПОЗИТОРИЯ TEST -->
     <div id="auth-container">
         <div class="auth-title" id="auth-header-text">Вход в DanuMes</div>
         <input type="text" id="username" class="auth-input" placeholder="Имя пользователя">
@@ -152,7 +146,7 @@
         </div>
     </div>
 
-    <!-- Новые фичи (Контекстное меню и Модалка вызова) -->
+    <!-- Функциональные элементы новых фич -->
     <div id="custom-context-menu">
         <button id="ctx-delete-btn">🗑️ Удалить сообщение</button>
     </div>
@@ -173,8 +167,7 @@
     <audio id="remote-audio" autoplay></audio>
 
     <script>
-        /* ПРИНУДИТЕЛЬНЫЙ ФИКС ДЛЯ СЕРВЕРОВ RENDER:
-           Бесплатный тариф обрубает долгое HTTP-опрашивание (polling), поэтому переключаемся строго на WebSockets. */
+        // Инициализируем сокеты строго по WebSocket протоколу для стабильной работы на Render
         const socket = io({ transports: ['websocket'] });
         
         let currentUser = null;
@@ -196,8 +189,7 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
-        // Логирование событий соединения для дебага в консоли
-        socket.on('connect', () => console.log('Соединение с сервером DanuMes успешно установлено!'));
+        socket.on('connect', () => console.log('Подключение к DanuMes установлено.'));
         socket.on('connect_error', () => showToast('Ошибка подключения к серверу. Убедитесь, что сервер на Render запущен.', 'error'));
 
         function playNotifySound() {
@@ -233,7 +225,7 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
         });
 
-        // СВЯТОЙ КОД ВХОДА/РЕГИСТРАЦИИ (Строго оригинальные переменные user и pass)
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ (Строго оригинальные переменные user, pass и роуты)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -386,7 +378,7 @@
             if (msg.author !== currentUser.username) playNotifySound();
         });
 
-        // Задача А: Удаление через кастомное контекстное меню
+        // Контекстное меню удаления сообщений у всех участников
         const ctxMenu = document.getElementById('custom-context-menu');
         document.getElementById('chat-messages').addEventListener('contextmenu', (e) => {
             const msgEl = e.target.closest('.message');
@@ -414,7 +406,7 @@
             if (el) el.remove();
         });
 
-        // Задача Б: Приватные аудиозвонки (WebRTC)
+        // Приватные аудиозвонки (WebRTC сигналинг)
         document.getElementById('call-btn').addEventListener('click', async () => {
             showToast(`Вызов ${activeChat.id}...`);
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
