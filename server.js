@@ -20,13 +20,13 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Добавлен лимит для больших Base64 изображений
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 const ADMIN_USERNAME = 'Danumala';
 const NEWS_GROUP_NAME = 'DanuMes news';
 
-// Временная оперативная память для мгновенного шлюза входа
 let sessionBackup = {};
 
 function hashPassword(password) {
@@ -45,14 +45,11 @@ app.post('/api/register', async (req, res) => {
 
     try {
         const { data: usersList } = await supabase.from('users').select('username').eq('username', username);
-        
         if (usersList && usersList.length > 0) {
             return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
         }
 
         const securePassword = hashPassword(password);
-        
-        // Безопасно сохраняем в резервную память сервера
         sessionBackup[username] = securePassword;
 
         await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
@@ -60,7 +57,6 @@ app.post('/api/register', async (req, res) => {
 
         res.json({ success: true });
     } catch (e) { 
-        // Если база лагает при создании, всё равно регистрируем локально
         sessionBackup[username] = hashPassword(password);
         res.json({ success: true }); 
     }
@@ -74,7 +70,6 @@ app.post('/api/login', async (req, res) => {
 
     const inputHash = hashPassword(password);
 
-    // Жесткий сквозной шлюз безопасности для твоего админ-аккаунта Danumala
     if (username === ADMIN_USERNAME && password === 'danyajukovka') {
         try {
             await supabase.from('users').insert([{ username: ADMIN_USERNAME, password: inputHash, last_seen: Date.now() }]);
@@ -83,21 +78,17 @@ app.post('/api/login', async (req, res) => {
         return res.json({ success: true });
     }
 
-    // Мгновенная проверка по оперативной памяти (если пользователь только что зарегистрировался)
     if (sessionBackup[username] && sessionBackup[username] === inputHash) {
         return res.json({ success: true });
     }
 
     try {
         const { data: usersList, error } = await supabase.from('users').select('*').eq('username', username);
-        
         if (error || !usersList || usersList.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        // ТОЧНЫЙ ФИКС: Явно берём ПЕРВЫЙ элемент массива
         const user = usersList[0]; 
-        
         if (user.password !== inputHash) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
@@ -130,7 +121,6 @@ app.post('/api/sync', async (req, res) => {
             });
         }
         
-        // Наполняем локальными сессиями, чтобы ни один аккаунт не потерялся визуально
         Object.keys(sessionBackup).forEach(u => {
             if (!activeUsers[u]) activeUsers[u] = { online: true, avatar: null };
         });
@@ -167,6 +157,33 @@ app.post('/api/sync', async (req, res) => {
         fallbackUsers[ADMIN_USERNAME] = { online: true, avatar: null };
         res.json({ users: fallbackUsers, messages: [], groups: [{ name: NEWS_GROUP_NAME }] }); 
     }
+});
+
+// --- ВOЗВРАЩЕН РОУТ ОТПРАВКИ СООБЩЕНИЙ С ФРОНТЕНДА ---
+app.post('/api/messages/send', async (req, res) => {
+    const { from, to, text, isGroup } = req.body;
+    if (!from || !text || !to) return res.status(400).json({ success: false, error: 'Неполные данные' });
+    
+    if (isGroup && to === NEWS_GROUP_NAME && from !== ADMIN_USERNAME) {
+        return res.status(403).json({ success: false, error: 'Только администратор может писать в этот канал!' });
+    }
+    
+    const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    try {
+        await supabase.from('messages').insert([{ id: id, username: from, text: text, to_destination: to, timestamp: Date.now() }]);
+        io.emit('chat message', { id: id, username: from, text: text, to: to, timestamp: Date.now() });
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ success: false }); }
+});
+
+// --- УДАЛЕНИЕ СООБЩЕНИЙ ---
+app.post('/api/messages/delete', async (req, res) => {
+    const { id, username } = req.body;
+    if (!id || !username) return res.status(400).json({ success: false });
+    try {
+        await supabase.from('messages').delete().eq('id', id);
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ success: false }); }
 });
 
 // --- СВЯЗЬ SOCKET.IO ---
