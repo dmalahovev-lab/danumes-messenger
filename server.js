@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
-const app = report => express();
+const app = express();
 const server = http.createServer(app);
 
 // ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ С СЕКРЕТНЫМ КЛЮЧОМ СЕРВЕРА
@@ -66,7 +66,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// --- ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ ВХОД С ТOЧНЫМ ИНДЕКСОМ И СТРАХОВКОЙ ---
+// --- ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ ВХОД С СТРАХОВКОЙ ---
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -95,7 +95,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        // ТОЧНЫЙ ФИКС: Явно берём ПЕРВЫЙ элемент массива [0]
+        // ТОЧНЫЙ ФИКС: Явно берём ПЕРВЫЙ элемент массива
         const user = usersList[0]; 
         
         if (user.password !== inputHash) {
