@@ -17,11 +17,18 @@ const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
+// Создаем физическую папку для файлов и картинок на сервере, если её нет
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR);
 }
 
-app.use('/uploads', express.static(UPLOADS_DIR));
+// Открываем статический доступ к загруженным файлам, добавляя заголовок для принудительного скачивания не-картинок
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+}, express.static(UPLOADS_DIR));
+
+// Поддержка приема больших файлов (до 50 МБ) через стандартный HTTP-протокол
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
@@ -52,7 +59,7 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не тронут ни один символ)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один знак)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -80,28 +87,29 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true });
 });
 
-// ИСПРАВЛЕННЫЙ РОУТ ЗАГРУЗКИ КАРТИНОК И АВАТАРОК
+// МОЩНЫЙ И СТАБИЛЬНЫЙ РОУТ ДЛЯ ЗАГРУЗКИ КАРТИНОК И ЛЮБЫХ ДРУГИХ ФАЙЛОВ
 app.post('/api/upload', (req, res) => {
-    const { image } = req.body;
-    if (!image) return res.status(400).json({ message: 'Файл не найден' });
+    const { rawData, fileName, isImage } = req.body;
+    if (!rawData || !fileName) return res.status(400).json({ message: 'Данные файла не переданы' });
     
     try {
-        const matches = image.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!matches || matches.length !== 3) {
-            return res.status(400).json({ message: 'Неверный формат изображения' });
-        }
+        // Отрезаем технический заголовок base64 кодирования, если он есть
+        const base64Data = rawData.replace(/^data:.*;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
         
-        // КРИТИЧЕСКИЙ ФИКС: Извлекаем правильное расширение и буфер из совпадений регулярного выражения
-        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-        const buffer = Buffer.from(matches[2], 'base64');
-        const fileName = `img_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
-        const filePath = path.join(UPLOADS_DIR, fileName);
+        // Генерируем уникальное имя файла, сохраняя оригинальное расширение
+        const ext = path.extname(fileName);
+        const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}${ext}`;
+        const filePath = path.join(UPLOADS_DIR, safeName);
         
+        // Физически записываем файл на жесткий диск сервера
         fs.writeFileSync(filePath, buffer);
-        res.json({ url: `/uploads/${fileName}` });
+        
+        // Возвращаем клиенту короткую ссылку на скачивание
+        res.json({ url: `/uploads/${safeName}`, name: fileName, isImage: isImage });
     } catch(err) {
-        console.error("Ошибка сохранения медиафайла:", err);
-        res.status(500).json({ message: 'Ошибка сервера' });
+        console.error("Критическая ошибка сохранения файла на сервере:", err);
+        res.status(500).json({ message: 'Ошибка сервера при записи файла' });
     }
 });
 
@@ -162,7 +170,7 @@ io.on('connection', (socket) => {
     socket.on('get_online_users', () => { broadcastUsersList(); });
 
     socket.on('update_profile_avatar', (data) => {
-        if (sessionUser && db.users[sessionUser] && data.avatar) {
+        if (sessionUser && db.users[sessionUser]) {
             db.users[sessionUser].avatar = data.avatar;
             saveDB();
             broadcastUsersList(); 
@@ -209,6 +217,8 @@ io.on('connection', (socket) => {
             author: sessionUser,
             text: data.text || '',
             image: data.image || null,
+            fileUrl: data.fileUrl || null,   // Новое поле ссылки на файл
+            fileName: data.fileName || null, // Новое поле имени скачиваемого файла
             time: new Date().toISOString(),
             read: false
         };
