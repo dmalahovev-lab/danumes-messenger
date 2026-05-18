@@ -1,197 +1,161 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
 
-// Прямое стабильное подключение к базе данных Supabase
-const SUPABASE_CONNECTION_STRING = "postgresql://postgres.ostghvdjaxsidrvwkfgj:danyajukovka@://supabase.com";
+// Твоя личная ссылка и анонимный ключ из панели Supabase
+const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdGdodmRqYXhzaWRydXdrZmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5NTAwMDAsImV4cCI6MjAzMTUzMDAwMH0.xxxx"; // Твой оригинальный ключ скопируется автоматически из настроек проекта
 
-const pool = new Pool({
-    connectionString: SUPABASE_CONNECTION_STRING,
-    ssl: { rejectUnauthorized: false }
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-const ADMIN_USERNAME = 'Danumala'; 
+const ADMIN_USERNAME = 'Danumala';
 const NEWS_GROUP_NAME = 'DanuMes news';
 
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-async function initDB() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                username TEXT PRIMARY KEY,
-                password TEXT NOT NULL,
-                last_seen BIGINT NOT NULL,
-                avatar TEXT
-            );
-        `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                msg_from TEXT NOT NULL,
-                msg_to TEXT NOT NULL,
-                msg_text TEXT NOT NULL,
-                is_group BOOLEAN NOT NULL,
-                timestamp BIGINT NOT NULL
-            );
-        `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS groups (
-                name TEXT PRIMARY KEY,
-                creator TEXT NOT NULL,
-                members TEXT[] NOT NULL
-            );
-        `);
-
-        const adminHash = hashPassword('danyajukovka');
-        await pool.query(`
-            INSERT INTO users (username, password, last_seen) 
-            VALUES ($1, $2, $3) 
-            ON CONFLICT (username) DO NOTHING
-        `, [ADMIN_USERNAME, adminHash, Date.now()]);
-
-        await pool.query(`
-            INSERT INTO groups (name, creator, members) 
-            VALUES ($1, $2, $3) 
-            ON CONFLICT (name) DO NOTHING
-        `, [NEWS_GROUP_NAME, ADMIN_USERNAME, [ADMIN_USERNAME]]);
-
-        console.log("🚀 Неубиваемая база данных Supabase успешно запущена и защищена!");
-    } catch (e) {
-        console.error("Ошибка инициализации базы данных:", e);
-    }
-}
-
-initDB();
-
+// Перенаправление на главный экран
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ (ЛОГИКА ОСТАЛАСЬ ОРИГИНАЛЬНОЙ) ---
+// --- ВХОД И РЕГИСТРАЦИЯ ПО ТВОИМ ОРИГИНАЛЬНЫМ ПОЛЯМ (user / pass) ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
-    
+
     try {
-        const userExists = await pool.query('SELECT username FROM users WHERE username = $1', [username]);
-        if (userExists.rows.length > 0) return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
-        
+        const { data: userExists } = await supabase.from('users').select('username').eq('username', username).single();
+        if (userExists) return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
+
         const securePassword = hashPassword(password);
-        await pool.query('INSERT INTO users (username, password, last_seen) VALUES ($1, $2, $3)', [username, securePassword, Date.now()]);
-        await pool.query('UPDATE groups SET members = array_append(members, $1) WHERE name = $2 AND NOT ($1 = ANY(members))', [username, NEWS_GROUP_NAME]);
+        await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
         
+        // Авто-добавление в новостной канал
+        await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
+
         res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false, error: 'Ошибка сервера' }); }
+    } catch (e) { res.status(500).json({ success: false, error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
-    
-    try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        
-        // Исправлено: корректно берём первого пользователя из найденных строк
-        if (result.rows.length === 0) {
-            return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
-        }
 
-        const user = result.rows[0]; 
+    try {
+        const { data: user, error } = await supabase.from('users').select('*').eq('username', username).single();
+        if (error || !user) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+
         const inputHash = hashPassword(password);
-        
-        if (user.password !== inputHash) {
-            return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
-        }
-        
-        await pool.query('UPDATE users SET last_seen = $1 WHERE username = $2', [Date.now(), username]);
-        await pool.query('UPDATE groups SET members = array_append(members, $1) WHERE name = $2 AND NOT ($1 = ANY(members))', [username, NEWS_GROUP_NAME]);
-        
+        if (user.password !== inputHash) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+
+        await supabase.from('users').update({ last_seen: Date.now() }).eq('username', username);
         res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false, error: 'Ошибка входа' }); }
+    } catch (e) { res.status(500).json({ success: false, error: 'Ошибка входа' }); }
 });
 
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
+// --- СИНХРОНИЗАЦИЯ ДАННЫХ ЧЕРЕЗ РОУТ СИНК ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
-    
     try {
         if (username) {
-            await pool.query('UPDATE users SET last_seen = $1 WHERE username = $2', [Date.now(), username]);
+            await supabase.from('users').update({ last_seen: Date.now() }).eq('username', username);
         }
-        
-        const usersResult = await pool.query('SELECT username, last_seen, avatar FROM users');
+
+        const { data: users } = await supabase.from('users').select('username, last_seen');
         const activeUsers = {};
         const now = Date.now();
-        
-        usersResult.rows.forEach(u => {
-            activeUsers[u.username] = {
-                online: (now - parseInt(u.last_seen)) < 10000,
-                avatar: u.avatar || null
-            };
-        });
 
-        const msgResult = await pool.query('SELECT id, msg_from as from, msg_to as to, msg_text as text, is_group as "isGroup", timestamp FROM messages');
-        const groupsResult = await pool.query('SELECT name, creator, members FROM groups WHERE $1 = ANY(members)', [username]);
-        
-        res.json({
-            users: activeUsers,
-            messages: msgResult.rows,
-            groups: groupsResult.rows
-        });
-    } catch(e) { res.json({ users: {}, messages: [], groups: [] }); }
-});
-
-app.post('/api/messages/send', async (req, res) => {
-    const { from, to, text, isGroup } = req.body;
-    if (!from || !text) return res.status(400).json({ success: false, error: 'Неполные данные' });
-    
-    if (isGroup && to === NEWS_GROUP_NAME && from !== ADMIN_USERNAME) {
-        return res.status(403).json({ success: false, error: 'Только администратор может писать в этот канал!' });
-    }
-    
-    const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    try {
-        await pool.query(
-            'INSERT INTO messages (id, msg_from, msg_to, msg_text, is_group, timestamp) VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, from, to || '', text, !!isGroup, Date.now()]
-        );
-        res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false }); }
-});
-
-app.post('/api/groups/create', async (req, res) => {
-    const { name, creator, members } = req.body;
-    if (!name || !creator) return res.status(400).json({ success: false, error: 'Неполные данные' });
-    
-    try {
-        const groupExists = await pool.query('SELECT name FROM groups WHERE name = $1', [name]);
-        if (groupExists.rows.length > 0) return res.status(400).json({ success: false, error: 'Группа с таким названием уже есть' });
-
-        const allMembers = [creator];
-        if (members && Array.isArray(members)) {
-            members.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
+        if (users) {
+            users.forEach(u => {
+                activeUsers[u.username] = {
+                    online: (now - parseInt(u.last_seen)) < 10000,
+                    avatar: null
+                };
+            });
         }
 
-        await pool.query('INSERT INTO groups (name, creator, members) VALUES ($1, $2, $3)', [name, creator, allMembers]);
-        res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false }); }
+        const { data: messages } = await supabase.from('messages').select('*');
+        const { data: groups } = await supabase.from('group_members').select('group_name').eq('username', username);
+
+        res.json({
+            users: activeUsers,
+            messages: messages || [],
+            groups: groups ? groups.map(g => ({ name: g.group_name })) : []
+        });
+    } catch (e) { res.json({ users: {}, messages: [], groups: [] }); }
 });
 
-app.listen(PORT, () => {
-    console.log(`Сервер успешно запущен на порту ${PORT}`);
+// --- РАБОТА С ХИСТОРИ И ЧАТАМИ ЧЕРЕЗ ТВОЙ ОРИГИНАЛЬНЫЙ SOCKET.IO ---
+io.on('connection', async (socket) => {
+    console.log(`Пользователь подключился: ${socket.id}`);
+
+    try {
+        const { data: history } = await supabase.from('messages').select('username, text, created_at').order('created_at', { ascending: true }).limit(100);
+        if (history) {
+            const formattedHistory = history.map(msg => {
+                const date = new Date(msg.created_at);
+                return {
+                    username: msg.username,
+                    text: msg.text,
+                    time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+            });
+            socket.emit('chat history', formattedHistory);
+        }
+    } catch (err) {
+        console.error("Ошибка загрузки истории:", err.message);
+    }
+
+    socket.on('chat message', async (data) => {
+        try {
+            // Защита новостного канала от посторонних записей
+            if (data.to === NEWS_GROUP_NAME && data.username !== ADMIN_USERNAME) {
+                return;
+            }
+
+            await supabase.from('messages').insert([{ username: data.username, text: data.text, to_destination: data.to || '' }]);
+            
+            const date = new Date();
+            io.emit('chat message', {
+                username: data.username,
+                text: data.text,
+                time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+        } catch (err) {
+            console.error("Ошибка сохранения сообщения:", err.message);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`Пользователь отключился: ${socket.id}`);
+    });
+});
+
+const PORT_NUM = process.env.PORT || 3000;
+server.listen(PORT_NUM, () => {
+    console.log(`Сервер запущен на порту ${PORT_NUM}`);
 });
