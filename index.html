@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Глобальный мессенджер</title>
+    <title>DanuMes — Глобальный messenger</title>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a13; --bg-glass: rgba(15, 22, 42, 0.7); --bg-glass-hover: rgba(30, 41, 59, 0.5);
             --border-glass: rgba(255, 255, 255, 0.08); --text-main: #f3f4f6; --text-muted: #9ca3af;
             --accent-purple: #a855f7; --accent-blue: #3b82f6; --glow: rgba(168, 85, 247, 0.4);
-            --bg-sidebar: #0b0f19; --msg-inbound: rgba(30, 41, 59, 0.8);
-            --msg-outbound: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            --bg-sidebar: #0b0f19; --msg-inbound: rgba(30, 41, 59, 0.8); --msg-outbound: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
         }
         :root[data-theme="light"] {
             --bg-main: #f8fafc; --bg-glass: rgba(255, 255, 255, 0.8); --bg-glass-hover: rgba(241, 245, 249, 0.9);
             --border-glass: rgba(0, 0, 0, 0.08); --text-main: #0f172a; --text-muted: #64748b;
             --accent-purple: #8b5cf6; --accent-blue: #2563eb; --glow: rgba(139, 92, 246, 0.2);
-            --bg-sidebar: #f1f5f9; --msg-inbound: rgba(241, 245, 249, 0.9);
-            --msg-outbound: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%);
+            --bg-sidebar: #f1f5f9; --msg-inbound: rgba(241, 245, 249, 0.9); --msg-outbound: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; user-select: none; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%); }
@@ -54,13 +52,12 @@
         .main-content { background: var(--bg-main); display: flex; flex-direction: column; height: 100vh; position: relative; overflow: hidden; }
         .welcome-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--bg-main); z-index: 5; }
         .chat-view { display: none; flex-direction: column; height: 100%; }
-        .chat-header { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; }
+        .chat-header { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: space-between; }
         .messages-container { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 160px); }
         .message-row { display: flex; width: 100%; }
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
-        .message-bubble { max-width: 45%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; word-break: break-word; cursor: pointer; transition: background 0.2s; }
-        .message-bubble:hover { filter: brightness(1.1); }
+        .message-bubble { max-width: 45%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; word-break: break-word; cursor: pointer; }
         .inbound .message-bubble { background: var(--msg-inbound); color: var(--text-main); border: 1px solid var(--border-glass); border-bottom-left-radius: 4px; }
         .outbound .message-bubble { background: var(--msg-outbound); color: white; border-bottom-right-radius: 4px; }
         .message-time { font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right; }
@@ -76,17 +73,40 @@
         .modal-card { background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 30px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
         .admin-badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle; }
-        .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
-        .btn-attach:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
+        .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .btn-call { width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; font-size: 18px; display: none; justify-content: center; align-items: center; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="toast-container" id="toast-box"></div>
+    <audio id="remote-audio" autoplay style="display:none;"></audio>
+
+    <div class="modal-overlay" id="call-modal">
+        <div class="modal-card">
+            <h3 id="call-modal-title" style="margin-bottom:15px;">Звонок...</h3>
+            <p id="call-modal-text" style="color:var(--text-muted); margin-bottom:20px;">Ожидание ответа</p>
+            <div id="call-accept-box" style="display:none; margin-bottom:15px;">
+                <button class="btn btn-primary" style="background:#10b981;" onclick="acceptIncomingCall()">Ответить</button>
+            </div>
+            <button class="btn btn-primary" style="background:#ef4444; width:100%;" onclick="endCall()">Сбросить</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal-card">
+            <h3 style="margin-bottom:15px;">Удалить сообщение?</h3>
+            <p style="color:var(--text-muted); margin-bottom:20px;">Оно удалится у всех участников диалога.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" style="background:#ef4444; padding:10px;" id="confirm-delete-btn">Удалить</button>
+                <button class="btn btn-secondary" style="padding:10px;" onclick="closeDeleteModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
 
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
             <h3 style="margin-bottom:15px;">Новая группа</h3>
-            <div class="input-wrap" style="margin-bottom: 15px;">
+            <div class="input-wrap">
                 <label>Название сообщества</label>
                 <input type="text" id="new-group-name" placeholder="Введите имя группы...">
             </div>
@@ -125,7 +145,17 @@
             <div class="main-content">
                 <div class="welcome-view" id="welcome-view"><span>💬</span><h2 id="welcome-title">Добро пожаловать в DanuMes</h2><p>Вы успешно зашли в сеть. Откройте чат слева.</p></div>
                 <div class="chat-view" id="chat-view">
-                    <div class="chat-header"><div class="avatar-fallback" id="chat-avatar">?</div><div><h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3><div id="chat-header-badge" style="display:inline-block;"></div><p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p></div></div>
+                    <div class="chat-header">
+                        <div style="display:flex; align-items:center;">
+                            <div class="avatar-fallback" id="chat-avatar">?</div>
+                            <div>
+                                <h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3>
+                                <div id="chat-header-badge" style="display:inline-block;"></div>
+                                <p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p>
+                            </div>
+                        </div>
+                        <button class="btn-call" id="call-btn" onclick="startVoiceCall()">📞</button>
+                    </div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar">
                         <button class="btn-attach" onclick="triggerFileInput()">📷</button>
@@ -138,12 +168,13 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
-        let activeChat = null, isGroupChat = false;
-        let serverData = { users: {}, messages: [], groups: [] };
-        let lastMessageCount = 0;
+        let activeChat = null, isGroupChat = false, lastMessageCount = 0, socket = null;
+        let serverData = { users: {}, messages: [], groups: [] }, targetDeleteId = null;
+        let localStream = null, peerConnection = null, pendingOffer = null;
 
         if (currentUser) showMessenger();
 
@@ -173,15 +204,14 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- СТРОГО ТВОЙ ТЕСТОВЫЙ ОРИГИНАЛЬНЫЙ АДРЕС И ПОЛЯ user / pass ---
+        // --- ТВОЙ ОРИГИНАЛЬНЫЙ ТЕСТОВЫЙ ВХОД С СЕРВЕРА ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
                 const d = await r.json();
@@ -197,7 +227,7 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
-            startSync();
+            initSocketLogic(); startSync();
         }
         function startSync() { syncData(); setInterval(syncData, 2500); }
 
@@ -205,21 +235,13 @@
             if(!currentUser) return;
             try {
                 const r = await fetch(`${SERVER_URL}/api/sync`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user: currentUser })
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user: currentUser })
                 });
                 serverData = await r.json();
-                
                 if(serverData.messages && serverData.messages.length > lastMessageCount) {
-                    const lastMsg = serverData.messages[serverData.messages.length - 1];
-                    if(lastMsg && lastMsg.from !== currentUser && lastMessageCount > 0) {
-                        playNotifySound();
-                    }
-                    lastMessageCount = serverData.messages.length;
-                } else if(serverData.messages) {
+                    if(serverData.messages[serverData.messages.length - 1].from !== currentUser && lastMessageCount > 0) playNotifySound();
                     lastMessageCount = serverData.messages.length;
                 }
-                
                 renderSidebar(); renderMessages();
             } catch(e){}
         }
@@ -257,6 +279,7 @@
             document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
             document.getElementById('chat-header-badge').innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
+            document.getElementById('call-btn').style.display = isGroup ? 'none' : 'flex'; // Показываем 📞 только в ЛС
             renderMessages();
         }
 
@@ -270,23 +293,30 @@
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
                 let textContentHTML = m.text.startsWith('data:image/') ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px;">` : `<div>${m.text}</div>`;
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
-                div.innerHTML = `<div class="message-bubble" onclick="askDeleteMessage('${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
+                div.innerHTML = `<div class="message-bubble" onclick="openDeleteModal('${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
                 container.appendChild(div);
             });
             if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
-        async function askDeleteMessage(id, from) {
+        // --- УДАЛЕНИЕ СООБЩЕНИЙ НА САЙТЕ БЕЗ АЛЕРТОВ БРАУЗЕРА ---
+        function openDeleteModal(id, from) {
             if(from !== currentUser && currentUser !== 'Danumala') return;
-            if(confirm('Удалить это сообщение для всех?')) {
-                try {
-                    await fetch(`${SERVER_URL}/api/messages/delete`, {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id: id, username: currentUser })
-                    });
-                    syncData();
-                } catch(e){}
-            }
+            targetDeleteId = id;
+            document.getElementById('delete-modal').classList.add('active');
+            document.getElementById('confirm-delete-btn').onclick = executeDeleteMessage;
+        }
+        function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('active'); targetDeleteId = null; }
+
+        async function executeDeleteMessage() {
+            if(!targetDeleteId) return;
+            try {
+                await fetch(`${SERVER_URL}/api/messages/delete`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: targetDeleteId, username: currentUser })
+                });
+                closeDeleteModal(); syncData(); showNotification('Сообщение удалено!', true);
+            } catch(e){}
         }
 
         async function sendMessage() {
@@ -310,42 +340,4 @@
 
         function handleImageUpload(event) {
             const files = event.target.files; if (!files || files.length === 0) return;
-            const file = files[0]; if (!file.type.startsWith('image/')) return showNotification('Разрешены только картинки!');
-            const reader = new FileReader();
-            reader.onload = function(e) { if(activeChat) sendDirectMessage(e.target.result); };
-            reader.readAsDataURL(file); event.target.value = '';
-        }
-
-        function openCreateGroupModal() {
-            document.getElementById('group-modal').classList.add('active');
-            const listContainer = document.getElementById('modal-members-list'); listContainer.innerHTML = '';
-            if (serverData && serverData.users) {
-                Object.keys(serverData.users).forEach(u => {
-                    if (u === currentUser) return;
-                    const row = document.createElement('div'); row.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:6px;';
-                    row.innerHTML = `<input type="checkbox" value="${u}" class="group-member-checkbox" style="width:auto;"><span style="font-size:14px;">${u}</span>`;
-                    listContainer.appendChild(row);
-                });
-            }
-            if(!listContainer.innerHTML) listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center;">Нет других участников</div>';
-            document.getElementById('new-group-name').focus();
-        }
-        function closeCreateGroupModal() { document.getElementById('group-modal').classList.remove('active'); document.getElementById('new-group-name').value = ''; }
-        function handleModalKeyPress(e) { if (e.key === 'Enter') submitCreateGroup(); }
-
-        async function submitCreateGroup() {
-            const name = document.getElementById('new-group-name').value.trim(); if (!name) return showNotification('Введите название группы');
-            const checkedBoxes = document.querySelectorAll('.group-member-checkbox:checked'), selectedMembers = [];
-            checkedBoxes.forEach(box => selectedMembers.push(box.value));
-            try {
-                await fetch(`${SERVER_URL}/api/groups/create`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name, creator: currentUser, members: selectedMembers })
-                });
-                closeCreateGroupModal(); syncData(); showNotification('Группа создана!', true);
-            } catch(e) { showNotification('Не удалось создать группу'); }
-        }
-        function logout() { localStorage.removeItem('danumes_user'); location.reload(); }
-    </script>
-</body>
-</html>
+            const file = files[0]; if (!file.type.startsWith('image
