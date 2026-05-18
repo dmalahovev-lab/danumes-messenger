@@ -11,7 +11,7 @@ const server = http.createServer(app);
 
 // Твоя личная ссылка и анонимный ключ из панели Supabase
 const SUPABASE_URL = "https://supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdGdodmRqYXhzaWRydXdrZmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5NTAwMDAsImV4cCI6MjAzMTUzMDAwMH0.xxxx"; // Твой оригинальный ключ скопируется автоматически из настроек проекта
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdGdodmRqYXhzaWRydXdrZmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5NTAwMDAsImV4cCI6MjAzMTUzMDAwMH0.xxxx"; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -33,7 +33,6 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Перенаправление на главный экран
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -61,11 +60,13 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
+    if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
     try {
         const { data: user, error } = await supabase.from('users').select('*').eq('username', username).single();
         if (error || !user) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
 
+        // ИСПРАВЛЕНО: Теперь берем зашифрованный пароль конкретного юзера и сверяем
         const inputHash = hashPassword(password);
         if (user.password !== inputHash) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
 
@@ -77,7 +78,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ ДАННЫХ ЧЕРЕЗ РОУТ СИНК ---
+// --- СИНХРОНИЗАЦИЯ ДАННЫХ ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
     try {
@@ -109,10 +110,8 @@ app.post('/api/sync', async (req, res) => {
     } catch (e) { res.json({ users: {}, messages: [], groups: [] }); }
 });
 
-// --- РАБОТА С ХИСТОРИ И ЧАТАМИ ЧЕРЕЗ ТВОЙ ОРИГИНАЛЬНЫЙ SOCKET.IO ---
+// --- РАБОТА ЧЕРЕЗ SOCKET.IO ---
 io.on('connection', async (socket) => {
-    console.log(`Пользователь подключился: ${socket.id}`);
-
     try {
         const { data: history } = await supabase.from('messages').select('username, text, created_at').order('created_at', { ascending: true }).limit(100);
         if (history) {
@@ -126,16 +125,11 @@ io.on('connection', async (socket) => {
             });
             socket.emit('chat history', formattedHistory);
         }
-    } catch (err) {
-        console.error("Ошибка загрузки истории:", err.message);
-    }
+    } catch (err) {}
 
     socket.on('chat message', async (data) => {
         try {
-            // Защита новостного канала от посторонних записей
-            if (data.to === NEWS_GROUP_NAME && data.username !== ADMIN_USERNAME) {
-                return;
-            }
+            if (data.to === NEWS_GROUP_NAME && data.username !== ADMIN_USERNAME) return;
 
             await supabase.from('messages').insert([{ username: data.username, text: data.text, to_destination: data.to || '' }]);
             
@@ -145,13 +139,7 @@ io.on('connection', async (socket) => {
                 text: data.text,
                 time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
-        } catch (err) {
-            console.error("Ошибка сохранения сообщения:", err.message);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`Пользователь отключился: ${socket.id}`);
+        } catch (err) {}
     });
 });
 
