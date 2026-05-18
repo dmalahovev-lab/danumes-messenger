@@ -9,9 +9,9 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const server = http.createServer(app);
 
-// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ ИЗ ПАНЕЛИ SUPABASE
+// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ С ВШИТЫМ СЕКРЕТНЫМ КЛЮЧОМ СЕРВЕРА
 const SUPABASE_URL = "https://supabase.co";
-const SUPABASE_KEY = "sb_publishable_wzFzoj3VV-hzH1KIu_r3iQ_gKWfA15D"; 
+const SUPABASE_KEY = "sb_secret_9AnQ-25ojmwnT2WqVfv2sQ_MpsF6phy"; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -34,34 +34,40 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ ПО ТВОЕЙ ОРИГИНАЛЬНОЙ СТРУКТУРЕ ---
+// --- СТАБИЛЬНАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ В SUPABASE ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
     try {
-        const { data: userExists } = await supabase.from('users').select('username').eq('username', username).single();
-        if (userExists) return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
+        // Ищем пользователя через массив, чтобы избежать падения метода .single()
+        const { data: usersList, error: findError } = await supabase.from('users').select('username').eq('username', username);
+        
+        if (usersList && usersList.length > 0) {
+            return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
+        }
 
         const securePassword = hashPassword(password);
         
+        // Добавляем запись в таблицу пользователей
         await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
+        // Автоматически добавляем нового участника в канал новостей
         await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
 
         res.json({ success: true });
     } catch (e) { 
-        // Подстраховка для стабильной работы
         res.json({ success: true }); 
     }
 });
 
+// --- СТАБИЛЬНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ---
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
-    // Жесткий сквозной шлюз для твоего админ-аккаунта Danumala
+    // Жесткий сквозной шлюз безопасности для твоего админ-аккаунта Danumala
     if (username === ADMIN_USERNAME && password === 'danyajukovka') {
         try {
             const adminHash = hashPassword('danyajukovka');
@@ -72,11 +78,19 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        const { data: user, error } = await supabase.from('users').select('*').eq('username', username).single();
-        if (error || !user) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        // Ищем пользователя в виде массива строк
+        const { data: usersList, error } = await supabase.from('users').select('*').eq('username', username);
+        
+        if (error || !usersList || usersList.length === 0) {
+            return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        }
 
+        const user = usersList[0]; // Достаем первый найденный объект пользователя из массива
         const inputHash = hashPassword(password);
-        if (user.password !== inputHash) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        
+        if (user.password !== inputHash) {
+            return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        }
 
         await supabase.from('users').update({ last_seen: Date.now() }).eq('username', username);
         res.json({ success: true });
@@ -88,7 +102,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ ЧАТА ---
+// --- СИНХРОНИЗАЦИЯ СЕТИ ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
     try {
@@ -124,7 +138,7 @@ app.post('/api/sync', async (req, res) => {
     }
 });
 
-// --- СВЯЗЬ ЧЕРЕЗ SOCKET.IO ---
+// --- СВЯЗЬ SOCKET.IO ---
 io.on('connection', async (socket) => {
     try {
         const { data: history } = await supabase.from('messages').select('username, text, created_at').order('created_at', { ascending: true }).limit(100);
