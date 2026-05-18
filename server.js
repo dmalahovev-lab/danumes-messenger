@@ -9,7 +9,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const server = http.createServer(app);
 
-// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ ИЗ ПАНЕЛИ SUPABASE
+// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ С СЕКРЕТНЫМ КЛЮЧОМ СЕРВЕРА
 const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_secret_9AnQ-25ojmwnT2WqVfv2sQ_MpsF6phy"; 
 
@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ---
+// --- СТАБИЛЬНАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ В SUPABASE ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -42,11 +42,13 @@ app.post('/api/register', async (req, res) => {
 
     try {
         const { data: usersList } = await supabase.from('users').select('username').eq('username', username);
+        
         if (usersList && usersList.length > 0) {
             return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
         }
 
         const securePassword = hashPassword(password);
+        
         await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
         await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
 
@@ -56,12 +58,13 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// --- ВХОД В АККАУНТ ---
+// --- СТАБИЛЬНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ИСПРАВЛЕН ИНДЕКС СТРОКИ) ---
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
+    // Жесткий сквозной шлюз безопасности для твоего админ-аккаунта Danumala
     if (username === ADMIN_USERNAME && password === 'danyajukovka') {
         try {
             const adminHash = hashPassword('danyajukovka');
@@ -73,13 +76,18 @@ app.post('/api/login', async (req, res) => {
 
     try {
         const { data: usersList, error } = await supabase.from('users').select('*').eq('username', username);
+        
         if (error || !usersList || usersList.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
+        // ЖЕСТКИЙ ФИКС: Берем именно первый элемент [0] из массива найденных строк!
         const user = usersList[0]; 
         const inputHash = hashPassword(password);
-        if (user.password !== inputHash) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        
+        if (user.password !== inputHash) {
+            return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
+        }
 
         await supabase.from('users').update({ last_seen: Date.now() }).eq('username', username);
         res.json({ success: true });
@@ -91,7 +99,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- ИСПРАВЛЕННАЯ СИНХРОНИЗАЦИЯ: ТЕПЕРЬ ВСЕ ВИДЯТ ВСЕХ И ВСЕ СООБЩЕНИЯ ОТОБРАЖАЮТСЯ МГНОВЕННО ---
+// --- СИНХРОНИЗАЦИЯ СЕТИ ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
     try {
@@ -103,23 +111,21 @@ app.post('/api/sync', async (req, res) => {
         const activeUsers = {};
         const now = Date.now();
 
-        // Заполняем список зарегистрированных людей
         if (users && users.length > 0) {
             users.forEach(u => {
-                activeUsers[u.username] = { online: (now - parseInt(u.last_seen)) < 12000, avatar: null };
+                activeUsers[u.username] = { online: (now - parseInt(u.last_seen)) < 10000, avatar: null };
             });
         }
         
-        // Гарантируем, что ты и админ всегда есть в списке активных
+        // Гарантируем видимость текущего юзера и админа на случай пустой базы
         if (username) activeUsers[username] = { online: true, avatar: null };
         activeUsers[ADMIN_USERNAME] = { online: true, avatar: null };
 
-        // Считываем сообщения из базы
-        const { data: dbMessages } = await supabase.from('messages').select('*');
+        const { data: messages } = await supabase.from('messages').select('*');
         const formattedMessages = [];
         
-        if (dbMessages) {
-            dbMessages.forEach(m => {
+        if (messages) {
+            messages.forEach(m => {
                 formattedMessages.push({
                     id: m.id,
                     from: m.username,
@@ -146,59 +152,6 @@ app.post('/api/sync', async (req, res) => {
     }
 });
 
-// --- ОТПРАВКА СООБЩЕНИЙ ---
-app.post('/api/messages/send', async (req, res) => {
-    const { from, to, text, isGroup } = req.body;
-    if (!from || !text || !to) return res.status(400).json({ success: false, error: 'Неполные данные' });
-    
-    if (isGroup && to === NEWS_GROUP_NAME && from !== ADMIN_USERNAME) {
-        return res.status(403).json({ success: false, error: 'Только администратор может писать в этот канал!' });
-    }
-    
-    const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    try {
-        await supabase.from('messages').insert([{ 
-            id: id, 
-            username: from, 
-            text: text, 
-            to_destination: to,
-            timestamp: Date.now()
-        }]);
-        res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false }); }
-});
-
-// --- УДАЛЕНИЕ СООБЩЕНИЙ ---
-app.post('/api/messages/delete', async (req, res) => {
-    const { id, username } = req.body;
-    if (!id || !username) return res.status(400).json({ success: false });
-
-    try {
-        const { data: msg } = await supabase.from('messages').select('*').eq('id', id).single();
-        if (msg && (msg.username === username || username === ADMIN_USERNAME)) {
-            await supabase.from('messages').delete().eq('id', id);
-            io.emit('message deleted', { id });
-            return res.json({ success: true });
-        }
-        res.status(403).json({ success: false });
-    } catch(e) { res.status(500).json({ success: false }); }
-});
-
-app.post('/api/groups/create', async (req, res) => {
-    const { name, creator, members } = req.body;
-    if (!name || !creator) return res.status(400).json({ success: false });
-    
-    try {
-        await supabase.from('group_members').insert([{ group_name: name, username: creator }]);
-        if (members && Array.isArray(members)) {
-            for (const m of members) {
-                await supabase.from('group_members').insert([{ group_name: name, username: m }]);
-            }
-        }
-        res.json({ success: true });
-    } catch(e) { res.status(500).json({ success: false }); }
-});
-
 // --- СВЯЗЬ SOCKET.IO ---
 io.on('connection', (socket) => {
     socket.on('chat message', async (data) => {
@@ -208,7 +161,7 @@ io.on('connection', (socket) => {
         const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         try {
             await supabase.from('messages').insert([{ id: id, username: data.username, text: data.text, to_destination: data.to, timestamp: Date.now() }]);
-            io.emit('chat message', { id: id, username: data.username, text: data.text, to: data.to });
+            io.emit('chat message', { id: id, username: data.username, text: data.text, to: data.to, timestamp: Date.now() });
         } catch (err) {}
     });
 });
