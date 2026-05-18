@@ -139,7 +139,7 @@
         </div>
     </div>
     <audio id="remote-audio" autoplay></audio>
-               <script>
+                   <script>
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
@@ -324,7 +324,7 @@
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
         document.getElementById('msg-input').addEventListener('input', () => { if (activeChat.type === 'private' && socket) { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: true }); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: false }); }, 2000); } });
 
-        // НАДЕЖНЫЙ HTTP-ТРАНСПОРТ ЗАГРУЗКИ ИЗОБРАЖЕНИЙ (ВМЕСТО ПАДАЮЩИХ СОКЕТОВ)
+        // HTTP ЗАГРУЗКА ИЗОБРАЖЕНИЙ: Теперь клиент получает от сервера короткую ссылку вместо Base64
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file || !activeChat.id) return;
@@ -334,7 +334,6 @@
                     if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL('image/jpeg', 0.6);
                     
-                    // Шлем POST-запрос на HTTP-роут, минуя ограничения буфера сокетов
                     try {
                         const res = await fetch('/api/upload', {
                             method: 'POST',
@@ -342,6 +341,7 @@
                             body: JSON.stringify({ image: compressed })
                         });
                         const data = await res.json();
+                        // Шлем в сокет только короткую текстовую ссылку вида /uploads/img_xxx.jpg
                         if (res.ok && socket) {
                             socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: data.url });
                         }
@@ -355,7 +355,7 @@
         });
         document.getElementById('close-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').style.display = 'none'; });
 
-        // НАДЕЖНЫЙ HTTP-ТРАНСПОРТ ДЛЯ ОБНОВЛЕНИЯ АВАТАРОК
+        // HTTP ЗАГРУЗКА АВАТАРОК
         document.getElementById('profile-avatar-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file) return;
             const r = new FileReader(); r.onload = (event) => {
@@ -410,6 +410,7 @@
     </script>
 </body>
 </html>
+
 
 
 
