@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const app = report => express();
+const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
