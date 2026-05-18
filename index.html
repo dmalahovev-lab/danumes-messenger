@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes Messenger</title>
     <style>
-        /* СТРОГИЙ ОРИГИНАЛЬНЫЙ ДИЗАЙН ИЗ РЕПОЗИТОРИЯ TEST */
+        /* СТРОГО ОРИГИНАЛЬНЫЙ ДИЗАЙН ИЗ ВАШЕГО REPO TEST */
         body {
             background-color: #121212;
             color: #ffffff;
@@ -15,7 +15,6 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            overflow: hidden;
         }
         #auth-container {
             background: linear-gradient(145deg, #1e1e1e, #252525);
@@ -74,7 +73,7 @@
             color: #b388ff;
         }
 
-        /* КОМПАКТНЫЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА (МАКС 45% ШИРИНА) */
+        /* ОСТАЛЬНОЙ ФУНКЦИОНАЛ ПРИЛОЖЕНИЯ С УЧЕТОМ ОГРАНИЧЕНИЯ В 45% */
         #app-container { display: none; width: 100%; height: 100vh; }
         .messenger-layout { display: flex; width: 100%; height: 100%; }
         
@@ -89,21 +88,18 @@
         .chat-window { flex: 1; display: flex; flex-direction: column; background: #151515; position: relative; }
         .chat-header { height: 60px; background: #1e1e1e; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #333; }
         
-        /* Зафиксированная кастомная прокрутка */
         .chat-messages { flex: 1; overflow-y: scroll; padding: 20px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 90px; }
         
-        /* Сообщения строго до 45% ширины экрана */
         .message { max-width: 45%; padding: 10px 14px; border-radius: 8px; word-wrap: break-word; font-size: 15px; position: relative; }
         .message.incoming { background: #2a2a2a; align-self: flex-start; }
         .message.outgoing { background: #371e5c; align-self: flex-end; }
         .message img { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
         
-        /* Намертво зафиксированная панель ввода */
         .input-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #1e1e1e; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; align-items: center; z-index: 10; }
         .message-input { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #333; border-radius: 5px; color: #fff; outline: none; resize: none; height: 40px; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #b388ff; }
 
-        /* Контекстное меню, уведомления и плашка звонков */
+        /* Всплывающие узлы дополнительных фич */
         #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #252525; border: 1px solid #444; border-radius: 5px; padding: 5px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
         #ctx-delete-btn:hover { background: rgba(255, 77, 77, 0.1); }
@@ -112,7 +108,6 @@
         .toast { background: #2a2a2a; color: #fff; padding: 12px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; animation: slideIn 0.2s ease forwards; border-left: 4px solid #b388ff; }
         
         #call-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 90%; max-width: 360px; text-align: center; border: 1px solid #333; }
         
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
@@ -120,7 +115,7 @@
 </head>
 <body>
 
-    <!-- СВЯТАЯ ФОРМА АВТОРИЗАЦИИ С ТВОИМ СТРОГИМ ДИЗАЙНОМ ИЗ TEST -->
+    <!-- СТРОГО ОРИГИНАЛЬНАЯ РАЗМЕТКА ФОРМЫ ИЗ REPO TEST -->
     <div id="auth-container">
         <div class="auth-title" id="auth-header-text">Вход в DanuMes</div>
         <input type="text" id="username" class="auth-input" placeholder="Имя пользователя">
@@ -129,7 +124,7 @@
         <div id="auth-toggle" class="auth-switch">Нет аккаунта? Создать</div>
     </div>
 
-    <!-- Основное рабочее пространство -->
+    <!-- Основное рабочее пространство приложения -->
     <div id="app-container">
         <div class="messenger-layout">
             <div class="sidebar">
@@ -160,7 +155,7 @@
 
     <div id="toast-container"></div>
 
-    <!-- Красивая всплывающая плашка вызова -->
+    <!-- Модалка звонка WebRTC -->
     <div id="call-modal">
         <div class="modal-content">
             <div style="font-size: 40px; margin-bottom: 10px;">📞</div>
@@ -175,7 +170,9 @@
     <audio id="remote-audio" autoplay></audio>
 
     <script>
-        const socket = io();
+        // ФИКС ПОДКЛЮЧЕНИЯ ДЛЯ RENDER: Инициализируем сокеты строго через чистый WebSocket протокол
+        const socket = io({ transports: ['websocket'] });
+        
         let currentUser = null;
         let activeChat = { type: null, id: null };
         let isSelectionForRegister = false;
@@ -194,6 +191,10 @@
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 4000);
         }
+
+        // Логирование событий для отладки соединения
+        socket.on('connect', () => console.log('Соединение с сервером DanuMes успешно установлено!'));
+        socket.on('connect_error', () => showToast('Ошибка подключения к серверу. Убедитесь, что сервер на Render запущен.', 'error'));
 
         function playNotifySound() {
             try {
@@ -220,7 +221,7 @@
         }
         function stopRingtone() { clearInterval(ringtoneInterval); }
 
-        // Ротация Вход / Создать аккаунт
+        // СВЯТОЙ КОД ПЕРЕКЛЮЧЕНИЯ ИЗ REPO TEST
         document.getElementById('auth-toggle').addEventListener('click', () => {
             isSelectionForRegister = !isSelectionForRegister;
             document.getElementById('auth-header-text').innerText = isSelectionForRegister ? 'Регистрация в DanuMes' : 'Вход в DanuMes';
@@ -228,7 +229,7 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
         });
 
-        // ИСПРАВЛЕННАЯ СВЯЗКА АВТОРИЗАЦИИ (строго переменные user, pass и раздельные fetch-урлы)
+        // СВЯТОЙ КОД КНОПКИ АВТОРИЗАЦИИ (переменные user и pass ИЗ REPO TEST)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -294,7 +295,6 @@
             });
         }
 
-        // Живой поиск в сайдбаре на лету
         document.getElementById('search').addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase().trim();
             const filtered = cachedUsersList.filter(u => u.toLowerCase().includes(val));
@@ -345,7 +345,6 @@
             box.appendChild(div);
         }
 
-        // Отправка текстовых сообщений по Enter
         document.getElementById('msg-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -363,7 +362,6 @@
             }
         });
 
-        // Картинки в Base64
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files;
