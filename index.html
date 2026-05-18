@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes Messenger</title>
     <style>
-        /* СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ ДИЗАЙН ИЗ REPO TEST */
         body {
             background-color: #121212;
             color: #ffffff;
@@ -81,7 +80,6 @@
             color: #b388ff;
         }
 
-        /* Настройки рабочего интерфейса (Сообщения 45%, ввод намертво внизу) */
         #app-container { display: none; width: 100%; height: 100vh; }
         .messenger-layout { display: flex; width: 100%; height: 100%; }
         .sidebar { width: 300px; background: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; }
@@ -101,8 +99,6 @@
         .input-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #1e1e1e; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; align-items: center; z-index: 10; }
         .message-input { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #333; border-radius: 5px; color: #fff; outline: none; resize: none; height: 40px; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #b388ff; }
-        
-        /* Дополнительные плашки под новые фичи */
         #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #252525; border: 1px solid #444; border-radius: 5px; padding: 5px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
         #ctx-delete-btn:hover { background: rgba(255, 77, 77, 0.1); }
@@ -115,7 +111,6 @@
 </head>
 <body>
 
-    <!-- СТРОГО ОРИГИНАЛЬНАЯ ВЕРСТКА ФОРМЫ ИЗ REPO TEST -->
     <div id="auth-container">
         <div class="auth-title" id="auth-header-text">Вход в DanuMes</div>
         <input type="text" id="username" class="auth-input" placeholder="Имя пользователя">
@@ -124,7 +119,6 @@
         <div id="auth-toggle" class="auth-switch">Нет аккаунта? Создать</div>
     </div>
 
-    <!-- Чат-клиент -->
     <div id="app-container">
         <div class="messenger-layout">
             <div class="sidebar">
@@ -168,8 +162,8 @@
     <audio id="remote-audio" autoplay></audio>
 
     <script>
-        // Чистый WebSocket транспорт, чтобы пробиться через файрволы Render
-        const socket = io({ transports: ['websocket'], upgrade: false });
+        // Инициализацию сокетов делаем ленивой (null), чтобы она не крашила страницу при старте
+        let socket = null;
         
         let currentUser = null;
         let activeChat = { type: null, id: null };
@@ -189,7 +183,31 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
-        // Переключение режимов
+        function playNotifySound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator(), gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                osc.start(); osc.stop(ctx.currentTime + 0.15);
+            } catch(e){}
+        }
+
+        function playRingtone() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                ringtoneInterval = setInterval(() => {
+                    let osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }, 1000);
+            } catch(e){}
+        }
+        function stopRingtone() { clearInterval(ringtoneInterval); }
+
         document.getElementById('auth-toggle').addEventListener('click', () => {
             isSelectionForRegister = !isSelectionForRegister;
             document.getElementById('auth-header-text').innerText = isSelectionForRegister ? 'Регистрация в DanuMes' : 'Вход в DanuMes';
@@ -197,7 +215,7 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
         });
 
-        // СВЯТОЙ КОД АВТОРИЗАЦИИ (строго переменные user и pass)
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ (строго переменные user и pass, оригинальные урлы fetch)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -218,15 +236,93 @@
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('app-container').style.display = 'block';
                     showToast(`Вы вошли под ником ${user}`);
-                    socket.emit('register_user', user);
-                    buildSidebarStructure();
+                    
+                    // ПОДКЛЮЧАЕМ СОКЕТЫ СТРОГО ПОСЛЕ УСПЕШНОГО ВХОДА
+                    initSocketConnection();
                 } else {
                     showToast(data.message || 'Ошибка авторизации');
                 }
             } catch (err) {
-                showToast('Ошибка подключения к серверу.');
+                showToast('Ошибка авторизации. Сервер просыпается, подождите 10 секунд и повторите.');
             }
         });
+
+        // Инициализация сокетов и биндинг всех слушателей вынесены в отдельную безопасную функцию
+        function initSocketConnection() {
+            socket = io({ transports: ['websocket'], upgrade: false });
+
+            socket.on('connect', () => {
+                socket.emit('register_user', currentUser.username);
+                buildSidebarStructure();
+            });
+
+            socket.on('connect_error', () => {
+                showToast('Потеряно соединение с сервером чата.');
+            });
+
+            socket.on('update_users', (users) => {
+                cachedUsersList = users;
+                renderSidebarList(users);
+            });
+
+            socket.on('messages_history', (messages) => {
+                const box = document.getElementById('chat-messages');
+                box.innerHTML = '';
+                messages.forEach(renderSingleMessage);
+                box.scrollTop = box.scrollHeight;
+            });
+
+            socket.on('new_msg', (msg) => {
+                if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
+                    renderSingleMessage(msg);
+                    const box = document.getElementById('chat-messages');
+                    box.scrollTop = box.scrollHeight;
+                }
+                if (msg.author !== currentUser.username) playNotifySound();
+            });
+
+            socket.on('msg_deleted', (messageId) => {
+                const el = document.querySelector(`[data-id="${messageId}"]`);
+                if (el) el.remove();
+            });
+
+            // WebRTC обработчики событий
+            socket.on('call_incoming', (data) => {
+                currentCallSession = data;
+                document.getElementById('caller-name').innerText = `Вам звонит ${data.from}`;
+                document.getElementById('call-modal').style.display = 'flex';
+                playRingtone();
+            });
+
+            socket.on('start_handshake', async (data) => {
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+                peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
+                peerConnection.onicecandidate = (e) => {
+                    if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate });
+                };
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                socket.emit('rtc_offer', { to: data.from, offer: offer });
+            });
+
+            socket.on('receive_offer', async (data) => {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const ans = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(ans);
+                socket.emit('rtc_answer', { to: data.from, answer: ans });
+            });
+
+            socket.on('receive_answer', async (data) => {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            });
+
+            socket.on('receive_ice', async (data) => {
+                if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            });
+
+            socket.on('call_ended', endCallUI);
+        }
 
         function buildSidebarStructure() {
             const chatsContainer = document.getElementById('chats');
@@ -236,13 +332,8 @@
             newsDiv.innerHTML = `<span>📢 DanuMes news</span>`;
             newsDiv.onclick = () => selectChat('news', 'danumes_news', 'DanuMes news');
             chatsContainer.appendChild(newsDiv);
-            socket.emit('get_online_users');
+            if (socket) socket.emit('get_online_users');
         }
-
-        socket.on('update_users', (users) => {
-            cachedUsersList = users;
-            renderSidebarList(users);
-        });
 
         function renderSidebarList(users) {
             const chatsContainer = document.getElementById('chats');
@@ -282,15 +373,8 @@
             } else {
                 callBtn.style.display = 'none';
             }
-            socket.emit('load_messages', { type, id });
+            if (socket) socket.emit('load_messages', { type, id });
         }
-
-        socket.on('messages_history', (messages) => {
-            const box = document.getElementById('chat-messages');
-            box.innerHTML = '';
-            messages.forEach(renderSingleMessage);
-            box.scrollTop = box.scrollHeight;
-        });
 
         function renderSingleMessage(msg) {
             const box = document.getElementById('chat-messages');
@@ -317,7 +401,7 @@
                     e.target.value = '';
                     return;
                 }
-                socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
+                if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
                 e.target.value = '';
             }
         });
@@ -328,21 +412,12 @@
             if (!file || !activeChat.id) return;
             const reader = new FileReader();
             reader.onload = () => {
-                socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: reader.result });
+                if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: reader.result });
             };
             reader.readAsDataURL(file);
         });
 
-        socket.on('new_msg', (msg) => {
-            if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
-                renderSingleMessage(msg);
-                const box = document.getElementById('chat-messages');
-                box.scrollTop = box.scrollHeight;
-            }
-            if (msg.author !== currentUser.username) playNotifySound();
-        });
-
-        // Удаление сообщений у всех участников
+        // Контекстное меню удаления
         const ctxMenu = document.getElementById('custom-context-menu');
         document.getElementById('chat-messages').addEventListener('contextmenu', (e) => {
             const msgEl = e.target.closest('.message');
@@ -361,26 +436,14 @@
 
         document.getElementById('ctx-delete-btn').addEventListener('click', () => {
             if (!selectedMessageId) return;
-            socket.emit('req_delete_message', { messageId: selectedMessageId, user: currentUser.username });
+            if (socket) socket.emit('req_delete_message', { messageId: selectedMessageId, user: currentUser.username });
         });
 
-        socket.on('msg_deleted', (messageId) => {
-            const el = document.querySelector(`[data-id="${messageId}"]`);
-            if (el) el.remove();
-        });
-
-        // Аудиозвонки (WebRTC)
+        // Клик на трубку
         document.getElementById('call-btn').addEventListener('click', async () => {
             showToast(`Вызов ${activeChat.id}...`);
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            socket.emit('call_init', { to: activeChat.id, from: currentUser.username });
-        });
-
-        socket.on('call_incoming', (data) => {
-            currentCallSession = data;
-            document.getElementById('caller-name').innerText = `Вам звонит ${data.from}`;
-            document.getElementById('call-modal').style.display = 'flex';
-            playRingtone();
+            if (socket) socket.emit('call_init', { to: activeChat.id, from: currentUser.username });
         });
 
         document.getElementById('accept-call-btn').addEventListener('click', async () => {
@@ -391,36 +454,9 @@
             localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
             peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
             peerConnection.onicecandidate = (e) => {
-                if (e.candidate) socket.emit('ice_candidate', { to: currentCallSession.from, candidate: e.candidate });
+                if (e.candidate && socket) socket.emit('ice_candidate', { to: currentCallSession.from, candidate: e.candidate });
             };
-            socket.emit('call_accepted', { to: currentCallSession.from, from: currentUser.username });
-        });
-
-        socket.on('start_handshake', async (data) => {
-            peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-            peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
-            peerConnection.onicecandidate = (e) => {
-                if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate });
-            };
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit('rtc_offer', { to: data.from, offer: offer });
-        });
-
-        socket.on('receive_offer', async (data) => {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-            const ans = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(ans);
-            socket.emit('rtc_answer', { to: data.from, answer: ans });
-        });
-
-        socket.on('receive_answer', async (data) => {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        });
-
-        socket.on('receive_ice', async (data) => {
-            if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            if (socket) socket.emit('call_accepted', { to: currentCallSession.from, from: currentUser.username });
         });
 
         const endCallUI = () => {
@@ -432,11 +468,9 @@
         };
 
         document.getElementById('reject-call-btn').addEventListener('click', () => {
-            if(currentCallSession) socket.emit('call_rejected', { to: currentCallSession.from });
+            if (currentCallSession && socket) socket.emit('call_rejected', { to: currentCallSession.from });
             endCallUI();
         });
-
-        socket.on('call_ended', endCallUI);
     </script>
 </body>
 </html>
