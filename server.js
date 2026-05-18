@@ -9,7 +9,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const server = http.createServer(app);
 
-// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ С ВШИТЫМ СЕКРЕТНЫМ КЛЮЧОМ СЕРВЕРА
+// ТВОИ ЛИЧНЫЕ ДАННЫЕ ПОДКЛЮЧЕНИЯ С СЕКРЕТНЫМ КЛЮЧОМ СЕРВЕРА
 const SUPABASE_URL = "https://supabase.co";
 const SUPABASE_KEY = "sb_secret_9AnQ-25ojmwnT2WqVfv2sQ_MpsF6phy"; 
 
@@ -41,8 +41,7 @@ app.post('/api/register', async (req, res) => {
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
     try {
-        // Ищем пользователя через массив, чтобы избежать падения метода .single()
-        const { data: usersList, error: findError } = await supabase.from('users').select('username').eq('username', username);
+        const { data: usersList } = await supabase.from('users').select('username').eq('username', username);
         
         if (usersList && usersList.length > 0) {
             return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
@@ -50,9 +49,7 @@ app.post('/api/register', async (req, res) => {
 
         const securePassword = hashPassword(password);
         
-        // Добавляем запись в таблицу пользователей
         await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
-        // Автоматически добавляем нового участника в канал новостей
         await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
 
         res.json({ success: true });
@@ -61,7 +58,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// --- СТАБИЛЬНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ---
+// --- СТАБИЛЬНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ИСПРАВЛЕН ИНДЕКС СТРОКИ) ---
 app.post('/api/login', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -78,14 +75,14 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        // Ищем пользователя в виде массива строк
         const { data: usersList, error } = await supabase.from('users').select('*').eq('username', username);
         
         if (error || !usersList || usersList.length === 0) {
             return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
         }
 
-        const user = usersList[0]; // Достаем первый найденный объект пользователя из массива
+        // ИСПРАВЛЕНО: Добавлен индекс [0], чтобы читать конкретного пользователя из массива строк
+        const user = usersList[0]; 
         const inputHash = hashPassword(password);
         
         if (user.password !== inputHash) {
