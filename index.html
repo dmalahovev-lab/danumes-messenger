@@ -139,7 +139,7 @@
         </div>
     </div>
     <audio id="remote-audio" autoplay></audio>
-           <script>
+               <script>
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
@@ -324,18 +324,28 @@
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
         document.getElementById('msg-input').addEventListener('input', () => { if (activeChat.type === 'private' && socket) { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: true }); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: false }); }, 2000); } });
 
-        // УЛЬТРА-СЖАТИЕ ИЗОБРАЖЕНИЙ: Максимальное уменьшение веса пакета для Render
+        // НАДЕЖНЫЙ HTTP-ТРАНСПОРТ ЗАГРУЗКИ ИЗОБРАЖЕНИЙ (ВМЕСТО ПАДАЮЩИХ СОКЕТОВ)
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file || !activeChat.id) return;
             const r = new FileReader(); r.onload = (event) => {
-                const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); const MAX = 500; let w = img.width, h = img.height;
+                const img = new Image(); img.onload = async () => {
+                    const canvas = document.createElement('canvas'); const MAX = 600; let w = img.width, h = img.height;
                     if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
-                    // Сжимаем в JPEG до 0.5 качества, чтобы файл весил копейки
-                    const compressed = canvas.toDataURL('image/jpeg', 0.5);
-                    if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: compressed });
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    // Шлем POST-запрос на HTTP-роут, минуя ограничения буфера сокетов
+                    try {
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: compressed })
+                        });
+                        const data = await res.json();
+                        if (res.ok && socket) {
+                            socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: data.url });
+                        }
+                    } catch(err) { showToast('Ошибка отправки изображения.'); }
                 }; img.src = event.target.result;
             }; r.readAsDataURL(file);
         });
@@ -345,18 +355,27 @@
         });
         document.getElementById('close-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').style.display = 'none'; });
 
-        // УЛЬТРА-СЖАТИЕ АВАТАРОК: Ограничение до 80x80px для обхода блокировок
+        // НАДЕЖНЫЙ HTTP-ТРАНСПОРТ ДЛЯ ОБНОВЛЕНИЯ АВАТАРОК
         document.getElementById('profile-avatar-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file) return;
             const r = new FileReader(); r.onload = (event) => {
-                const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); canvas.width = 80; canvas.height = 80;
-                    canvas.getContext('2d').drawImage(img, 0, 0, 80, 80); 
-                    // Аватарка весит всего 1.5 КБ
-                    const base64 = canvas.toDataURL('image/jpeg', 0.5);
-                    document.getElementById('profile-preview').src = base64;
-                    if (socket) socket.emit('update_profile_avatar', { avatar: base64 });
-                    showToast('Аватар обновлен!');
+                const img = new Image(); img.onload = async () => {
+                    const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 100;
+                    canvas.getContext('2d').drawImage(img, 0, 0, 100, 100); const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    try {
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: base64 })
+                        });
+                        const data = await res.json();
+                        if (res.ok && socket) {
+                            document.getElementById('profile-preview').src = data.url;
+                            socket.emit('update_profile_avatar', { avatar: data.url });
+                            showToast('Аватар успешно сохранен!');
+                        }
+                    } catch(err) { showToast('Ошибка сохранения аватара.'); }
                 }; img.src = event.target.result;
             }; r.readAsDataURL(file);
         });
@@ -391,6 +410,7 @@
     </script>
 </body>
 </html>
+
 
 
 
