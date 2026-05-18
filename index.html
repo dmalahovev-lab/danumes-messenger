@@ -189,7 +189,7 @@
                 if (data && data.avatar) document.getElementById('profile-preview').src = data.avatar;
             });
 
-            socket.on('update_users', (users) => { cachedUsersList = users; renderSidebarList(); });
+            let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             
             socket.on('update_groups', (groups) => {
                 const c = document.getElementById('chats');
@@ -211,7 +211,7 @@
 
             socket.on('new_msg', (msg) => {
                 if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
-                    renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+                    let b = (msg.author === 'Danumala' || msg.author === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
                     if (activeChat.type === 'private' && msg.author !== currentUser.username) socket.emit('mark_as_read', { chatWith: activeChat.id });
                 }
             });
@@ -285,7 +285,7 @@
 
         function selectChat(type, id, title) {
             activeChat = { type, id };
-            let b = id === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
+            let b = (id === 'Danumala' || id === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             document.getElementById('current-chat-title').innerHTML = title + b;
             document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
             document.getElementById('header-status').style.display = type === 'private' ? 'block' : 'none';
