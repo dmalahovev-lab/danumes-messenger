@@ -7,7 +7,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// ФИКС ДЛЯ RENDER: Явно разрешаем только транспорт websocket для стабильного апгрейда протокола
+// Настройка Socket.io строго через WebSocket транспорт для Render
 const io = new Server(server, {
     cors: { origin: "*" },
     transports: ['websocket']
@@ -19,26 +19,42 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
+// Автономная ОЗУ-база данных с жесткой защитой от undefined объектов
 let db = { users: {}, messages: [] };
+
 if (fs.existsSync(DB_FILE)) {
     try {
-        db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        const fileContent = fs.readFileSync(DB_FILE, 'utf8').trim();
+        if (fileContent) {
+            db = JSON.parse(fileContent);
+        }
     } catch (e) {
-        console.error("Ошибка чтения БД:", e);
+        console.error("Ошибка чтения файла БД, инициализируем заново:", e);
     }
 }
 
+// КРИТИЧЕСКИЙ ФИКС: Если объект users почему-то не создался, принудительно создаем его
+if (!db || typeof db !== 'object') db = { users: {}, messages: [] };
+if (!db.users) db.users = {};
+if (!db.messages) db.messages = [];
+
 function saveDB() {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    } catch (e) {
+        console.error("Ошибка записи в файл БД:", e);
+    }
 }
 
-// Защищенный глобальный объект онлайн-пользователей
+// Карта активных сокетов пользователей
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (Роуты и деструктуризация user/pass строго без изменений)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (Роуты, деструктуризация user и pass — 100% оригинал)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
+    
+    // Теперь эта строчка никогда не упадет, так как db.users гарантированно существует
     if (db.users[user]) return res.status(400).json({ message: 'Пользователь уже существует' });
     
     db.users[user] = { password: pass };
@@ -50,6 +66,7 @@ app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
+    // Ручной бэкап учетных данных главного админа в ОЗУ
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka' };
         saveDB();
@@ -62,6 +79,7 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true });
 });
 
+// Роут удаления сообщений по ТЗ
 app.post('/api/messages/delete', (req, res) => {
     const { messageId, user } = req.body;
     const msgIndex = db.messages.findIndex(m => m.id === messageId);
@@ -82,6 +100,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Socket.io Логика мессенджера
 io.on('connection', (socket) => {
     let sessionUser = null;
 
@@ -133,7 +152,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Удаление сообщений через сокеты
+    // Фича А: Быстрое сокет-удаление
     socket.on('req_delete_message', (data) => {
         const msgIndex = db.messages.findIndex(m => m.id === data.messageId);
         if (msgIndex !== -1) {
@@ -146,7 +165,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // WebRTC Сигналинг звонков
+    // Фича Б: Сигналинг для приватных аудиозвонков WebRTC
     socket.on('call_init', (data) => {
         const targetId = usersOnline[data.to];
         if (targetId) io.to(targetId).emit('call_incoming', { from: data.from });
@@ -186,5 +205,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Сервер мессенджера запущен на порту ${PORT}`);
+    console.log(`Сервер DanuMes успешно запущен на порту ${PORT}`);
 });
