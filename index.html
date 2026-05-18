@@ -20,10 +20,7 @@
             --msg-outbound: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; user-select: none; }
-        body {
-            background: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden;
-            background-image: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
-        }
+        body { background: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%); }
         .screen { display: none; width: 100%; height: 100%; justify-content: center; align-items: center; }
         .screen.active { display: flex; }
         .auth-card { background: var(--bg-glass); border: 1px solid var(--border-glass); backdrop-filter: blur(16px); padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; }
@@ -62,7 +59,8 @@
         .message-row { display: flex; width: 100%; }
         .message-row.inbound { justify-content: flex-start; }
         .message-row.outbound { justify-content: flex-end; }
-        .message-bubble { max-width: 45%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; word-break: break-word; cursor: pointer; }
+        .message-bubble { max-width: 45%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; word-break: break-word; cursor: pointer; transition: background 0.2s; }
+        .message-bubble:hover { filter: brightness(1.1); }
         .inbound .message-bubble { background: var(--msg-inbound); color: var(--text-main); border: 1px solid var(--border-glass); border-bottom-left-radius: 4px; }
         .outbound .message-bubble { background: var(--msg-outbound); color: white; border-bottom-right-radius: 4px; }
         .message-time { font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right; }
@@ -80,15 +78,10 @@
         .admin-badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle; }
         .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
         .btn-attach:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
-        .custom-menu { display: none; position: fixed; z-index: 10000; background: var(--bg-sidebar); border: 1px solid var(--border-glass); border-radius: 12px; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); backdrop-filter: blur(12px); }
-        .custom-menu button { background: none; border: none; color: #ef4444; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; text-align: left; border-radius: 8px; }
-        .custom-menu button:hover { background: rgba(239, 68, 68, 0.1); }
     </style>
-    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div class="toast-container" id="toast-box"></div>
-    <div class="custom-menu" id="message-context-menu"><button onclick="triggerDeleteMessage()">Удалить сообщение</button></div>
 
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
@@ -148,8 +141,9 @@
     <script>
         const SERVER_URL = window.location.origin;
         let currentUser = localStorage.getItem('danumes_user') || null;
-        let activeChat = null, isGroupChat = false, socket = null, selectedMessageId = null;
+        let activeChat = null, isGroupChat = false;
         let serverData = { users: {}, messages: [], groups: [] };
+        let lastMessageCount = 0;
 
         if (currentUser) showMessenger();
 
@@ -158,7 +152,7 @@
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator(), gain = ctx.createGain();
                 osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
                 osc.connect(gain); gain.connect(ctx.destination);
@@ -179,13 +173,15 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
+        // --- СТРОГО ТВОЙ ТЕСТОВЫЙ ОРИГИНАЛЬНЫЙ АДРЕС И ПОЛЯ user / pass ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
                 const d = await r.json();
@@ -201,29 +197,9 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
-            initSocketConnection();
             startSync();
         }
-
-        function initSocketConnection() {
-            socket = io(SERVER_URL);
-            socket.on('chat message', (msg) => {
-                if (!serverData.messages) serverData.messages = [];
-                if (!serverData.messages.some(m => m.id === msg.id)) {
-                    serverData.messages.push(msg);
-                    if (msg.from !== currentUser) playNotifySound();
-                    renderMessages();
-                }
-            });
-            socket.on('message deleted', (data) => {
-                if (serverData.messages) {
-                    serverData.messages = serverData.messages.filter(m => m.id !== data.id);
-                    renderMessages();
-                }
-            });
-        }
-
-        function startSync() { syncData(); setInterval(syncData, 3000); }
+        function startSync() { syncData(); setInterval(syncData, 2500); }
 
         async function syncData() {
             if(!currentUser) return;
@@ -232,14 +208,19 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: currentUser })
                 });
-                const freshData = await r.json();
-                serverData.users = freshData.users;
-                serverData.groups = freshData.groups;
-                if (JSON.stringify(serverData.messages) !== JSON.stringify(freshData.messages)) {
-                    serverData.messages = freshData.messages;
-                    renderMessages();
+                serverData = await r.json();
+                
+                if(serverData.messages && serverData.messages.length > lastMessageCount) {
+                    const lastMsg = serverData.messages[serverData.messages.length - 1];
+                    if(lastMsg && lastMsg.from !== currentUser && lastMessageCount > 0) {
+                        playNotifySound();
+                    }
+                    lastMessageCount = serverData.messages.length;
+                } else if(serverData.messages) {
+                    lastMessageCount = serverData.messages.length;
                 }
-                renderSidebar();
+                
+                renderSidebar(); renderMessages();
             } catch(e){}
         }
 
@@ -258,7 +239,8 @@
             }
             Object.keys(serverData.users).forEach(u => {
                 if(u === currentUser || (query && !u.toLowerCase().includes(query))) return;
-                const isOnline = serverData.users[u].online, div = document.createElement('div');
+                const isOnline = serverData.users[u].online;
+                const div = document.createElement('div');
                 div.className = `friend-item ${activeChat === u && !isGroupChat ? 'active' : ''}`;
                 div.onclick = () => selectChat(u, false);
                 const badgeHTML = (u === 'Danumala') ? '<span class="admin-badge">✓</span>' : '';
@@ -279,7 +261,7 @@
         }
 
         function renderMessages() {
-            const container = document.getElementById('messages-container'); if(!activeChat || !serverData.messages) return;
+            const container = document.getElementById('messages-container'); if(!activeChat) return;
             const currentScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
             container.innerHTML = '';
             const filtered = serverData.messages.filter(m => isGroupChat ? (m.isGroup && m.to === activeChat) : (!m.isGroup && ((m.from === currentUser && m.to === activeChat) || (m.from === activeChat && m.to === currentUser))));
@@ -288,40 +270,38 @@
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
                 let textContentHTML = m.text.startsWith('data:image/') ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px;">` : `<div>${m.text}</div>`;
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
-                div.innerHTML = `<div class="message-bubble" data-id="${m.id}" oncontextmenu="openContextMenu(event, '${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
+                div.innerHTML = `<div class="message-bubble" onclick="askDeleteMessage('${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msgBadgeHTML}</div>` : ''}${textContentHTML}<div class="message-time">${new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div></div>`;
                 container.appendChild(div);
             });
             if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
-        function openContextMenu(e, id, from) {
-            if (from !== currentUser && currentUser !== 'Danumala') return;
-            e.preventDefault(); selectedMessageId = id;
-            const menu = document.getElementById('message-context-menu');
-            menu.style.display = 'block'; menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
-        }
-
-        document.addEventListener('click', () => { document.getElementById('message-context-menu').style.display = 'none'; });
-
-        async function triggerDeleteMessage() {
-            if (!selectedMessageId) return;
-            try {
-                await fetch(`${SERVER_URL}/api/messages/delete`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: selectedMessageId, username: currentUser })
-                });
-            } catch(e){}
+        async function askDeleteMessage(id, from) {
+            if(from !== currentUser && currentUser !== 'Danumala') return;
+            if(confirm('Удалить это сообщение для всех?')) {
+                try {
+                    await fetch(`${SERVER_URL}/api/messages/delete`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: id, username: currentUser })
+                    });
+                    syncData();
+                } catch(e){}
+            }
         }
 
         async function sendMessage() {
             const input = document.getElementById('message-input'), text = input.value.trim();
             if(!text || !activeChat) return;
+            sendDirectMessage(text); input.value = '';
+        }
+
+        async function sendDirectMessage(content) {
             try {
                 await fetch(`${SERVER_URL}/api/messages/send`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from: currentUser, to: activeChat, text: text, isGroup: isGroupChat })
+                    body: JSON.stringify({ from: currentUser, to: activeChat, text: content, isGroup: isGroupChat })
                 });
-                input.value = '';
+                syncData();
             } catch(e){}
         }
 
@@ -330,19 +310,9 @@
 
         function handleImageUpload(event) {
             const files = event.target.files; if (!files || files.length === 0) return;
-            const file = files[0]; if (!file.type.startsWith('image/')) return showNotification('Можно только картинки!');
+            const file = files[0]; if (!file.type.startsWith('image/')) return showNotification('Разрешены только картинки!');
             const reader = new FileReader();
-            reader.onload = async function(e) {
-                if(activeChat) {
-                    try {
-                        await fetch(`${SERVER_URL}/api/messages/send`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ from: currentUser, to: activeChat, text: e.target.result, isGroup: isGroupChat })
-                        });
-                        showNotification('Изображение отправлено!', true);
-                    } catch(err){}
-                }
-            };
+            reader.onload = function(e) { if(activeChat) sendDirectMessage(e.target.result); };
             reader.readAsDataURL(file); event.target.value = '';
         }
 
@@ -357,4 +327,25 @@
                     listContainer.appendChild(row);
                 });
             }
-            if(!listContainer.innerHTML) listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center
+            if(!listContainer.innerHTML) listContainer.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center;">Нет других участников</div>';
+            document.getElementById('new-group-name').focus();
+        }
+        function closeCreateGroupModal() { document.getElementById('group-modal').classList.remove('active'); document.getElementById('new-group-name').value = ''; }
+        function handleModalKeyPress(e) { if (e.key === 'Enter') submitCreateGroup(); }
+
+        async function submitCreateGroup() {
+            const name = document.getElementById('new-group-name').value.trim(); if (!name) return showNotification('Введите название группы');
+            const checkedBoxes = document.querySelectorAll('.group-member-checkbox:checked'), selectedMembers = [];
+            checkedBoxes.forEach(box => selectedMembers.push(box.value));
+            try {
+                await fetch(`${SERVER_URL}/api/groups/create`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, creator: currentUser, members: selectedMembers })
+                });
+                closeCreateGroupModal(); syncData(); showNotification('Группа создана!', true);
+            } catch(e) { showNotification('Не удалось создать группу'); }
+        }
+        function logout() { localStorage.removeItem('danumes_user'); location.reload(); }
+    </script>
+</body>
+</html>
