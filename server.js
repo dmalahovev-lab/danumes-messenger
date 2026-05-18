@@ -21,7 +21,7 @@ const DB_FILE = path.join(__dirname, 'database.json');
 const ADMIN_USERNAME = 'Danumala';
 const NEWS_GROUP_NAME = 'DanuMes news';
 
-// Локальная база данных прямо в памяти сервера
+// Безопасное чтение локальной базы данных при старте
 function loadLocalDatabase() {
     try {
         if (fs.existsSync(DB_FILE)) {
@@ -31,18 +31,19 @@ function loadLocalDatabase() {
             }
         }
     } catch (e) {
-        console.error("Ошибка чтения локальной БД:", e);
+        console.error("Ошибка чтения файла БД:", e);
     }
     return { users: {}, messages: [], groups: [] };
 }
 
 let globalState = loadLocalDatabase();
 
+// Безопасная запись базы данных в файл
 function saveLocalDatabase() {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(globalState, null, 2), 'utf8');
     } catch (e) {
-        console.error("Ошибка записи локальной БД:", e);
+        console.error("Ошибка записи файла БД:", e);
     }
 }
 
@@ -50,7 +51,7 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Инициализация админа Danumala и новостей при старте
+// Первоначальное создание админа Danumala и канала новостей
 function initLocalSystem() {
     if (!globalState.users) globalState.users = {};
     if (!globalState.groups) globalState.groups = [];
@@ -72,7 +73,7 @@ function initLocalSystem() {
         });
     }
 
-    // Автодобавление всех в новости
+    // Автоматически добавляем всех зарегистрированных людей в канал новостей
     globalState.groups.forEach(g => {
         if (g.name === NEWS_GROUP_NAME) {
             Object.keys(globalState.users).forEach(u => {
@@ -113,7 +114,7 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true });
 });
 
-// --- СВЕРХСТАБИЛЬНЫЙ АВТОНОМНЫЙ ВХОД ДЛЯ ВСЕХ ---
+// --- СВЕРХСТАБИЛЬНЫЙ АВТОНОМНЫЙ ВХОД ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ---
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -137,7 +138,7 @@ app.post('/api/login', (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ ЧАТА ---
+// --- СИНХРОНИЗАЦИЯ ЧАТА ДЛЯ СВЯЗИ ВСЕХ АККАУНТОВ ---
 app.post('/api/sync', (req, res) => {
     const username = (req.body.user || '').trim();
     if (username && globalState.users[username]) {
@@ -163,26 +164,73 @@ app.post('/api/sync', (req, res) => {
     });
 });
 
-// --- СВЯЗЬ SOCKET.IO ---
-io.on('connection', (socket) => {
-    // Шлём историю из памяти
-    const formattedHistory = (globalState.messages || []).map(msg => {
-        return {
-            username: msg.from,
-            text: msg.text,
-            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-    });
-    socket.emit('chat history', formattedHistory.slice(-100));
+// --- ИСПРАВЛЕНО: ОТПРАВКА КАРТИНОК И СООБЩЕНИЙ С СОХРАНЕНИЕМ В БД ---
+app.post('/api/messages/send', (req, res) => {
+    const { from, to, text, isGroup } = req.body;
+    if (!from || !text || !to) return res.status(400).json({ success: false, error: 'Неполные данные' });
 
+    // Блокировка новостного канала от отправки обычными юзерами
+    if (isGroup && to === NEWS_GROUP_NAME && from !== ADMIN_USERNAME) {
+        return res.status(403).json({ success: false, error: 'Только администратор может писать в этот канал!' });
+    }
+
+    const newMessage = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        from,
+        to,
+        text,
+        isGroup: !!isGroup,
+        timestamp: Date.now()
+    };
+
+    if (!globalState.messages) globalState.messages = [];
+    globalState.messages.push(newMessage);
+    
+    saveLocalDatabase(); // Записываем сообщение намертво в базу данных файла
+    
+    // Дублируем отправку по сокетам, если кто-то подключен в реальном времени
+    io.emit('chat message', {
+        username: newMessage.from,
+        text: newMessage.text,
+        to: newMessage.to,
+        isGroup: newMessage.isGroup
+    });
+
+    res.json({ success: true, message: newMessage });
+});
+
+// --- СОЗДАНИЕ ГРУПП ---
+app.post('/api/groups/create', (req, res) => {
+    const { name, creator, members } = req.body;
+    if (!name || !creator) return res.status(400).json({ success: false, error: 'Неполные данные' });
+
+    if (!globalState.groups) globalState.groups = [];
+    if (globalState.groups.some(g => g.name === name)) {
+        return res.status(400).json({ success: false, error: 'Группа с таким названием уже есть' });
+    }
+
+    const allMembers = [creator];
+    if (members && Array.isArray(members)) {
+        members.forEach(m => { if (!allMembers.includes(m)) allMembers.push(m); });
+    }
+
+    globalState.groups.push({ name, creator, members: allMembers });
+    saveLocalDatabase();
+    res.json({ success: true });
+});
+
+// --- СЕТЕВАЯ ЛОГИКА SOCKET.IO ---
+io.on('connection', (socket) => {
     socket.on('chat message', (data) => {
-        if (!data.username || !data.text) return;
+        // Защитный шлюз: если клиент пытается слать старые сокет-сообщения в обход базы,
+        // сервер перехватывает их и перенаправляет в нашу надежную систему хранения
+        if (!data.username || !data.text || !data.to) return;
         if (data.to === NEWS_GROUP_NAME && data.username !== ADMIN_USERNAME) return;
 
         const newMessage = {
             id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             from: data.username,
-            to: data.to || '',
+            to: data.to,
             text: data.text,
             isGroup: data.to === NEWS_GROUP_NAME || globalState.groups.some(g => g.name === data.to),
             timestamp: Date.now()
@@ -194,7 +242,8 @@ io.on('connection', (socket) => {
         io.emit('chat message', {
             username: newMessage.from,
             text: newMessage.text,
-            time: new Date(newMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            to: newMessage.to,
+            isGroup: newMessage.isGroup
         });
     });
 });
