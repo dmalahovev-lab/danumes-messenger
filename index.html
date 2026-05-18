@@ -139,7 +139,7 @@
         </div>
     </div>
     <audio id="remote-audio" autoplay></audio>
-        <script>
+           <script>
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
@@ -182,7 +182,6 @@
         });
 
         function initSocketChannels() {
-            // Включаем принудительный WebSocket и добавляем авто-реконнект для стабильности на Render
             socket = io({ 
                 transports: ['websocket'], 
                 upgrade: false,
@@ -274,7 +273,6 @@
                 if (u && u.username && u.username !== currentUser.username) {
                     const d = document.createElement('div');
                     d.className = 'chat-item'; d.setAttribute('data-type', 'user');
-                    // ВШИТАЯ ГАЛОЧКА ДЛЯ ВАС И ДЛЯ ВАШЕГО ДРУГА RUNFLY [3]
                     let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
                     let a = u.avatar ? `<img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : `<div class="avatar" style="width:30px;height:30px;font-size:12px;">👤</div>`;
                     d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${a}<div class="chat-item-title">${u.username}${b}</div></div><div class="chat-item-sub">Нажмите для диалога</div>`;
@@ -297,7 +295,6 @@
 
         function selectChat(type, id, title) {
             activeChat = { type, id };
-            // ГАЛОЧКА В ШАПКЕ ЧАТА ДЛЯ ВАС И ДРУГА
             let b = (id === 'Danumala' || id === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             document.getElementById('current-chat-title').innerHTML = title + b;
             document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
@@ -312,7 +309,6 @@
             const box = document.getElementById('chat-messages'); const div = document.createElement('div');
             const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
             div.dataset.id = msg.id; div.dataset.author = msg.author;
-            // ГАЛОЧКА НАД СООБЩЕНИЕМ ДЛЯ ВАС И ДРУГА
             let b = (msg.author === 'Danumala' || msg.author === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             let t = isOwn ? `<span class="tick">${msg.read ? '✓✓' : '✓'}</span>` : '';
             let c = `<strong>${msg.author}${b}:</strong><br>`; if (msg.text) c += `<span>${msg.text}</span>`; if (msg.image) c += `<img src="${msg.image}">`; c += t; div.innerHTML = c; box.appendChild(div);
@@ -328,14 +324,17 @@
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
         document.getElementById('msg-input').addEventListener('input', () => { if (activeChat.type === 'private' && socket) { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: true }); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: false }); }, 2000); } });
 
+        // УЛЬТРА-СЖАТИЕ ИЗОБРАЖЕНИЙ: Максимальное уменьшение веса пакета для Render
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file || !activeChat.id) return;
             const r = new FileReader(); r.onload = (event) => {
                 const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); const MAX = 800; let w = img.width, h = img.height;
+                    const canvas = document.createElement('canvas'); const MAX = 500; let w = img.width, h = img.height;
                     if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h); 
+                    // Сжимаем в JPEG до 0.5 качества, чтобы файл весил копейки
+                    const compressed = canvas.toDataURL('image/jpeg', 0.5);
                     if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: compressed });
                 }; img.src = event.target.result;
             }; r.readAsDataURL(file);
@@ -346,12 +345,15 @@
         });
         document.getElementById('close-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').style.display = 'none'; });
 
+        // УЛЬТРА-СЖАТИЕ АВАТАРОК: Ограничение до 80x80px для обхода блокировок
         document.getElementById('profile-avatar-input').addEventListener('change', (e) => {
             const file = e.target.files; if (!file) return;
             const r = new FileReader(); r.onload = (event) => {
                 const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 100;
-                    canvas.getContext('2d').drawImage(img, 0, 0, 100, 100); const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                    const canvas = document.createElement('canvas'); canvas.width = 80; canvas.height = 80;
+                    canvas.getContext('2d').drawImage(img, 0, 0, 80, 80); 
+                    // Аватарка весит всего 1.5 КБ
+                    const base64 = canvas.toDataURL('image/jpeg', 0.5);
                     document.getElementById('profile-preview').src = base64;
                     if (socket) socket.emit('update_profile_avatar', { avatar: base64 });
                     showToast('Аватар обновлен!');
@@ -389,5 +391,6 @@
     </script>
 </body>
 </html>
+
 
 
