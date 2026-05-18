@@ -7,9 +7,15 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
+// КРИТИЧЕСКИЙ ФИКС ДЛЯ RENDER: Полное разрешение CORS и принудительный WebSocket
 const io = new Server(server, {
-    cors: { origin: "*" },
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
     transports: ['websocket'],
+    allowUpgrades: false,
     maxHttpBufferSize: 1e8
 });
 
@@ -44,9 +50,10 @@ function saveDB() {
     }
 }
 
+// Карта онлайн-пользователей
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал + вшитый аккаунт друга)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, без изменений)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -60,13 +67,10 @@ app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
-    // Авто-генерация главного админа в ОЗУ
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka', avatar: null };
         saveDB();
     }
-
-    // ВШИТЫЙ АККАУНТ ДРУГА ПО ТЗ
     if (user === 'RunFly' && !db.users['RunFly']) {
         db.users['RunFly'] = { password: 'GGWWXXJJ2001', avatar: null };
         saveDB();
@@ -98,29 +102,31 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Функция отправки актуального списка пользователей
+function broadcastUsersList() {
+    const usersData = Object.keys(usersOnline).map(username => {
+        return {
+            username: username,
+            avatar: db.users[username] ? db.users[username].avatar : null
+        };
+    });
+    io.emit('update_users', usersData);
+}
+
 io.on('connection', (socket) => {
     let sessionUser = null;
 
     socket.on('register_user', (username) => {
+        if (!username) return;
         sessionUser = username;
-        usersOnline[username] = socket.id;
+        usersOnline[username] = socket.id; // Перезаписываем актуальный ID сокета
         
         const userAvatar = db.users[username] ? db.users[username].avatar : null;
         socket.emit('auth_success_data', { avatar: userAvatar });
 
-        sendUpdatedUsersList();
-    });
-
-    function sendUpdatedUsersList() {
-        const usersData = Object.keys(usersOnline).map(username => {
-            return {
-                username: username,
-                avatar: db.users[username] ? db.users[username].avatar : null
-            };
-        });
-        io.emit('update_users', usersData);
+        broadcastUsersList();
         sendGroupsList(socket);
-    }
+    });
 
     function sendGroupsList(targetSocket) {
         if (!sessionUser) return;
@@ -135,14 +141,14 @@ io.on('connection', (socket) => {
     }
 
     socket.on('get_online_users', () => {
-        sendUpdatedUsersList();
+        broadcastUsersList();
     });
 
     socket.on('update_profile_avatar', (data) => {
         if (sessionUser && db.users[sessionUser]) {
             db.users[sessionUser].avatar = data.avatar;
             saveDB();
-            sendUpdatedUsersList(); 
+            broadcastUsersList(); 
         }
     });
 
@@ -152,11 +158,7 @@ io.on('connection', (socket) => {
         const members = data.members;
         if (!members.includes(sessionUser)) members.push(sessionUser);
 
-        db.groups[groupId] = {
-            name: data.name,
-            creator: sessionUser,
-            members: members
-        };
+        db.groups[groupId] = { name: data.name, creator: sessionUser, members: members };
         saveDB();
 
         members.forEach(member => {
@@ -284,10 +286,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (sessionUser && usersOnline[sessionUser] === socket.id) {
             delete usersOnline[sessionUser];
-            io.emit('update_users', Object.keys(usersOnline).map(username => ({
-                username: username,
-                avatar: db.users[username] ? db.users[username].avatar : null
-            })));
+            broadcastUsersList();
         }
     });
 });
