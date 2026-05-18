@@ -79,15 +79,36 @@
         .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
         .btn-attach:hover { border-color: var(--accent-purple); color: var(--accent-purple); }
         
-        .btn-call { width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 16px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
+        .btn-call { width: 40px; height: 40px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; font-size: 16px; display: none; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
         .btn-call:hover { background: #10b981; color: white; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
-        .btn-call.active-call { background: #ef4444; color: white; border-color: #ef4444; animation: pulseCall 1.5s infinite; }
-        @keyframes pulseCall { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        .call-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 10, 19, 0.85); backdrop-filter: blur(12px); justify-content: center; align-items: center; z-index: 10000; }
+        .call-modal-overlay.active { display: flex; }
+        .call-card { background: var(--bg-glass); border: 1px solid var(--border-glass); padding: 40px; border-radius: 24px; text-align: center; width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .call-avatar { width: 80px; height: 80px; background: rgba(168, 85, 247, 0.1); color: var(--accent-purple); border-radius: 50%; font-size: 32px; font-weight: bold; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; animation: pulseGlow 1.5s infinite ease-in-out; }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(168, 85, 247, 0); } 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); } }
+        .btn-call-end { background: #ef4444 !important; color: white !important; width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 600; margin-top: 20px; cursor: pointer; }
+        .btn-call-answer { background: #10b981 !important; color: white !important; flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; }
+        .btn-call-decline { background: #ef4444 !important; color: white !important; flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div class="toast-container" id="toast-box"></div>
+
+    <div class="call-modal-overlay" id="call-overlay">
+        <div class="call-card">
+            <div class="call-avatar" id="call-avatar-icon">📞</div>
+            <h3 id="call-user-title" style="font-size: 20px; margin-bottom: 5px;">Звонок...</h3>
+            <p id="call-status-text" style="color: var(--text-muted); font-size: 14px;">Подключение</p>
+            <div id="call-actions-incoming" style="display: none; gap: 12px; margin-top: 24px;">
+                <button class="btn-call-answer" onclick="answerIncomingCall()">Ответить</button>
+                <button class="btn-call-decline" onclick="declineIncomingCall()">Отклонить</button>
+            </div>
+            <div id="call-actions-active">
+                <button class="btn-call-end" onclick="hangUpCall()">Завершить</button>
+            </div>
+        </div>
+    </div>
 
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
@@ -101,29 +122,6 @@
             <div class="modal-buttons">
                 <button class="btn btn-primary" style="padding:10px;" onclick="submitCreateGroup()">Создать</button>
                 <button class="btn btn-secondary" style="padding:10px;" onclick="closeCreateGroupModal()">Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модалка входящего звонка -->
-    <div class="modal-overlay" id="call-modal">
-        <div class="modal-card" style="max-width:320px;">
-            <span style="font-size:40px; display:block; margin-bottom:10px; animation: pulseCall 1s infinite;">📞</span>
-            <h3 id="call-modal-title" style="margin-bottom:20px;">Входящий вызов...</h3>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" style="background:#10b981;" onclick="answerIncomingCall()">Ответить</button>
-                <button class="btn btn-secondary" style="background:#ef4444; border:none; color:white;" onclick="declineIncomingCall()">Сбросить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Окно удаления сообщения на самом сайте -->
-    <div class="modal-overlay" id="delete-msg-modal">
-        <div class="modal-card" style="max-width:320px;">
-            <h3 style="margin-bottom:20px;">Удалить это сообщение для всех?</h3>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" style="background:#ef4444; border:none;" id="confirm-delete-btn">Удалить</button>
-                <button class="btn btn-secondary" onclick="closeDeleteModal()">Отмена</button>
             </div>
         </div>
     </div>
@@ -155,16 +153,15 @@
                 <div class="welcome-view" id="welcome-view"><span>💬</span><h2 id="welcome-title">Добро пожаловать в DanuMes</h2><p>Вы успешно зашли в сеть. Откройте чат слева.</p></div>
                 <div class="chat-view" id="chat-view">
                     <div class="chat-header">
-                        <div style="display:flex; align-items:center;">
+                        <div style="display: flex; align-items: center;">
                             <div class="avatar-fallback" id="chat-avatar">?</div>
                             <div>
-                                <h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3>
+                                <h3 id="chat-title" style="font-size:16px; font-weight: 600; display:inline-block;">Чат</h3>
                                 <div id="chat-header-badge" style="display:inline-block;"></div>
                                 <p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p>
                             </div>
                         </div>
-                        <!-- Кнопка вызова 📞 в шапке приватного чата -->
-                        <button class="btn-call" id="call-action-btn" onclick="toggleCallState()">📞</button>
+                        <button class="btn-call" id="call-trigger-btn" onclick="startVoiceCall()">📞</button>
                     </div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar">
@@ -180,20 +177,16 @@
 
     <script>
         const SERVER_URL = window.location.origin;
+        let socket = io(SERVER_URL);
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null, isGroupChat = false;
         let serverData = { users: {}, messages: [], groups: [] };
         let lastMessageCount = 0;
-        
-        let socket = null;
+
         let localStream = null;
         let peerConnection = null;
         let currentCallTarget = null;
-        let isCallActive = false;
-        let pendingOffer = null;
-        let selectedMsgId = null;
-
-        const rtcConfig = { iceServers: [{ urls: 'ice:://google.com' }] };
+        const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
         if (currentUser) showMessenger();
 
@@ -223,13 +216,12 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ОРИГИНАЛЬНАЯ ЛОГИКА АВТОРИЗАЦИИ (РЕПОЗИТОРИЙ TEST) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
-                const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
+                const r = await fetch(`${SERVER_URL}/api/auth/${endpoint}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
@@ -247,43 +239,9 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
-            initSocketConnection();
+            socket.emit('register-socket', currentUser);
             startSync();
         }
-
-        function initSocketConnection() {
-            socket = io(SERVER_URL);
-            socket.emit('register-socket', currentUser);
-
-            socket.on('incoming-call', async (data) => {
-                pendingOffer = data.offer;
-                currentCallTarget = data.from;
-                document.getElementById('call-modal-title').innerText = `Входящий вызов от @${data.from}`;
-                document.getElementById('call-modal').classList.add('active');
-            });
-
-            socket.on('call-accepted', async (data) => {
-                if (peerConnection) {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    showNotification('Звонок установлен!', true);
-                }
-            });
-
-            socket.on('ice-candidate', async (data) => {
-                if (peerConnection && data.candidate) {
-                    try { await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch(e){}
-                }
-            });
-
-            socket.on('call-ended', () => {
-                handleLocalCallTermination();
-                showNotification('Звонок завершён');
-            });
-
-            socket.on('chat message', () => { syncData(); });
-            socket.on('message deleted', () => { syncData(); });
-        }
-
         function startSync() { syncData(); setInterval(syncData, 2500); }
 
         async function syncData() {
@@ -297,11 +255,14 @@
                 
                 if(serverData.messages && serverData.messages.length > lastMessageCount) {
                     const lastMsg = serverData.messages[serverData.messages.length - 1];
-                    if(lastMsg && lastMsg.from !== currentUser && lastMessageCount > 0) playNotifySound();
+                    if(lastMsg && lastMsg.from !== currentUser && lastMessageCount > 0) {
+                        playNotifySound();
+                    }
                     lastMessageCount = serverData.messages.length;
                 } else if(serverData.messages) {
                     lastMessageCount = serverData.messages.length;
                 }
+                
                 renderSidebar(); renderMessages();
             } catch(e){}
         }
@@ -340,9 +301,7 @@
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
             document.getElementById('chat-header-badge').innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
             
-            const callBtn = document.getElementById('call-action-btn');
-            callBtn.style.display = isGroup ? 'none' : 'flex';
-            
+            document.getElementById('call-trigger-btn').style.display = isGroup ? 'none' : 'flex';
             renderMessages();
         }
 
@@ -356,4 +315,4 @@
                 div.className = `message-row ${isOut ? 'outbound' : 'inbound'}`;
                 let textContentHTML = m.text.startsWith('data:image/') ? `<img src="${m.text}" style="max-width:100%; max-height:250px; border-radius:10px; display:block; margin-top:5px;">` : `<div>${m.text}</div>`;
                 const msgBadgeHTML = (m.from === 'Danumala') ? '<span class="admin-badge" style="width:12px; height:12px; font-size:8px;">✓</span>' : '';
-                div.innerHTML = `<div class="message-bubble" onclick="openDeleteModal('${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center
+                div.innerHTML = `<div class="message-bubble" onclick="askDeleteMessage('${m.id}', '${m.from}')">${!isOut && isGroupChat ? `<div style="font-size:11px; color:var(--accent-purple); font-weight:700; margin-bottom:2px; display:flex; align-items:center;">@${m.from}${msg
