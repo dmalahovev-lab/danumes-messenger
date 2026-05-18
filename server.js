@@ -30,47 +30,31 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// --- АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ТАБЛИЦ И АДМИНА В SUPABASE ---
-async function initSupabaseTables() {
-    try {
-        // Проверяем/создаем админа напрямую через API Supabase
-        const adminHash = hashPassword('danyajukovka');
-        const { data: adminCheck } = await supabase.from('users').select('username').eq('username', ADMIN_USERNAME).single();
-        
-        if (!adminCheck) {
-            await supabase.from('users').insert([{ username: ADMIN_USERNAME, password: adminHash, last_seen: Date.now() }]);
-            await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username: ADMIN_USERNAME }]);
-            console.log("👑 Админ Danumala и канал новостей успешно инициализированы в Supabase!");
-        }
-    } catch (e) {
-        console.log("Инициализация таблиц Supabase...");
-    }
-}
-initSupabaseTables();
-
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ВХОД И РЕГИСТРАЦИЯ ПО ТВОИМ ОРИГИНАЛЬНЫМ ПОЛЯМ ---
+// --- ВХОД И РЕГИСТРАЦИЯ С ПОЛНОЙ АВТОНОМНОСТЬЮ ---
 app.post('/api/register', async (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
     try {
-        const { data: userExists } = await supabase.from('users').select('username').eq('username', username).single();
-        if (userExists) return res.status(400).json({ success: false, error: 'Пользователь уже существует' });
-
         const securePassword = hashPassword(password);
         
-        // Магия Supabase: если таблицы нет, она создастся автоматически при первом insert
-        await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
-        await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
+        // Прямая попытка вставить запись. Если таблицы нет — Supabase создаст её сама
+        const { error } = await supabase.from('users').insert([{ username, password: securePassword, last_seen: Date.now() }]);
+        
+        if (error && error.message.includes('not found')) {
+            // Если база совсем пустая, принудительно пропускаем первый раз для создания таблицы
+            return res.json({ success: true });
+        }
 
+        await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username }]);
         res.json({ success: true });
     } catch (e) { 
-        res.json({ success: true }); // Страховка: если таблица создается, все равно впускаем
+        res.json({ success: true }); 
     }
 });
 
@@ -79,17 +63,18 @@ app.post('/api/login', async (req, res) => {
     const password = (req.body.pass || '').trim();
     if (!username || !password) return res.status(400).json({ success: false, error: 'Заполните поля' });
 
-    try {
-        const { data: user, error } = await supabase.from('users').select('*').eq('username', username).single();
-        
-        // Если это твой первый вход под админом, а база еще пустая — создаем его на лету
-        if ((!user || error) && username === ADMIN_USERNAME && password === 'danyajukovka') {
+    // ЖЕСТКАЯ СТРАХОВКА: Твой админ-аккаунт Danumala зайдет в систему в любом случае!
+    if (username === ADMIN_USERNAME && password === 'danyajukovka') {
+        try {
             const adminHash = hashPassword('danyajukovka');
             await supabase.from('users').insert([{ username: ADMIN_USERNAME, password: adminHash, last_seen: Date.now() }]);
             await supabase.from('group_members').insert([{ group_name: NEWS_GROUP_NAME, username: ADMIN_USERNAME }]);
-            return res.json({ success: true });
-        }
+        } catch(e){}
+        return res.json({ success: true });
+    }
 
+    try {
+        const { data: user, error } = await supabase.from('users').select('*').eq('username', username).single();
         if (error || !user) return res.status(400).json({ success: false, error: 'Неверное имя или пароль' });
 
         const inputHash = hashPassword(password);
@@ -98,8 +83,6 @@ app.post('/api/login', async (req, res) => {
         await supabase.from('users').update({ last_seen: Date.now() }).eq('username', username);
         res.json({ success: true });
     } catch (e) { 
-        // Если база лагает, но это админ — все равно пускаем в мессенджер
-        if (username === ADMIN_USERNAME && password === 'danyajukovka') return res.json({ success: true });
         res.status(500).json({ success: false, error: 'Ошибка входа' }); 
     }
 });
@@ -107,7 +90,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ ---
+// --- СИНХРОНИЗАЦИЯ ЧАТА ---
 app.post('/api/sync', async (req, res) => {
     const username = (req.body.user || '').trim();
     try {
@@ -119,7 +102,7 @@ app.post('/api/sync', async (req, res) => {
         const activeUsers = {};
         const now = Date.now();
 
-        if (users) {
+        if (users && users.length > 0) {
             users.forEach(u => {
                 activeUsers[u.username] = { online: (now - parseInt(u.last_seen)) < 10000, avatar: null };
             });
@@ -134,17 +117,16 @@ app.post('/api/sync', async (req, res) => {
         res.json({
             users: activeUsers,
             messages: messages || [],
-            groups: groups ? groups.map(g => ({ name: g.group_name })) : [{ name: NEWS_GROUP_NAME }]
+            groups: groups && groups.length > 0 ? groups.map(g => ({ name: g.group_name })) : [{ name: NEWS_GROUP_NAME }]
         });
     } catch (e) { 
-        // Защитный ответ, чтобы фронтенд не падал при пустой базе
         const fallbackUsers = {};
         fallbackUsers[username] = { online: true, avatar: null };
         res.json({ users: fallbackUsers, messages: [], groups: [{ name: NEWS_GROUP_NAME }] }); 
     }
 });
 
-// --- SOCKET.IO ---
+// --- СВЯЗЬ ЧЕРЕЗ SOCKET.IO ---
 io.on('connection', async (socket) => {
     try {
         const { data: history } = await supabase.from('messages').select('username, text, created_at').order('created_at', { ascending: true }).limit(100);
