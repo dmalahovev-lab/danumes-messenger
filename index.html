@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DanuMes — Глобальный messenger</title>
+    <title>DanuMes — Глобальный мессенджер</title>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a13; --bg-glass: rgba(15, 22, 42, 0.7); --bg-glass-hover: rgba(30, 41, 59, 0.5);
             --border-glass: rgba(255, 255, 255, 0.08); --text-main: #f3f4f6; --text-muted: #9ca3af;
             --accent-purple: #a855f7; --accent-blue: #3b82f6; --glow: rgba(168, 85, 247, 0.4);
-            --bg-sidebar: #0b0f19; --msg-inbound: rgba(30, 41, 59, 0.8); --msg-outbound: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            --bg-sidebar: #0b0f19; --msg-inbound: rgba(30, 41, 59, 0.8);
+            --msg-outbound: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
         }
         :root[data-theme="light"] {
             --bg-main: #f8fafc; --bg-glass: rgba(255, 255, 255, 0.8); --bg-glass-hover: rgba(241, 245, 249, 0.9);
             --border-glass: rgba(0, 0, 0, 0.08); --text-main: #0f172a; --text-muted: #64748b;
             --accent-purple: #8b5cf6; --accent-blue: #2563eb; --glow: rgba(139, 92, 246, 0.2);
-            --bg-sidebar: #f1f5f9; --msg-inbound: rgba(241, 245, 249, 0.9); --msg-outbound: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%);
+            --bg-sidebar: #f1f5f9; --msg-inbound: rgba(241, 245, 249, 0.9);
+            --msg-outbound: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; user-select: none; }
         body { background: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%); }
@@ -74,31 +76,33 @@
         .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
         .admin-badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; background: #a855f7; color: white; font-size: 9px; font-weight: bold; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); vertical-align: middle; }
         .btn-attach { width: 45px; height: 45px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 14px; color: var(--text-main); font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        .btn-call { width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; font-size: 18px; display: none; justify-content: center; align-items: center; cursor: pointer; }
+        
+        /* Кнопка звонка в шапке чата */
+        .btn-call { width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 16px; transition: all 0.2s; }
+        .btn-call:hover { background: #10b981; color: white; }
     </style>
 </head>
 <body>
     <div class="toast-container" id="toast-box"></div>
-    <audio id="remote-audio" autoplay style="display:none;"></audio>
 
-    <div class="modal-overlay" id="call-modal">
+    <!-- Модалка удаления -->
+    <div class="modal-overlay" id="delete-modal">
         <div class="modal-card">
-            <h3 id="call-modal-title" style="margin-bottom:15px;">Звонок...</h3>
-            <p id="call-modal-text" style="color:var(--text-muted); margin-bottom:20px;">Ожидание ответа</p>
-            <div id="call-accept-box" style="display:none; margin-bottom:15px;">
-                <button class="btn btn-primary" style="background:#10b981;" onclick="acceptIncomingCall()">Ответить</button>
+            <h3 style="margin-bottom: 10px;">Удалить сообщение?</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">Оно сотрется для всех участников чата.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" style="background:#ef4444;" onclick="confirmDeleteMessage()">Удалить</button>
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Отмена</button>
             </div>
-            <button class="btn btn-primary" style="background:#ef4444; width:100%;" onclick="endCall()">Сбросить</button>
         </div>
     </div>
 
-    <div class="modal-overlay" id="delete-modal">
+    <!-- Модалка звонка -->
+    <div class="modal-overlay" id="call-modal">
         <div class="modal-card">
-            <h3 style="margin-bottom:15px;">Удалить сообщение?</h3>
-            <p style="color:var(--text-muted); margin-bottom:20px;">Оно удалится у всех участников диалога.</p>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" style="background:#ef4444; padding:10px;" id="confirm-delete-btn">Удалить</button>
-                <button class="btn btn-secondary" style="padding:10px;" onclick="closeDeleteModal()">Отмена</button>
+            <h3 id="call-modal-title" style="margin-bottom: 15px;">Вызов...</h3>
+            <div id="call-modal-buttons" class="modal-buttons">
+                <button class="btn btn-primary" style="background:#ef4444; width:100%;" onclick="endCall()">Сбросить</button>
             </div>
         </div>
     </div>
@@ -106,10 +110,7 @@
     <div class="modal-overlay" id="group-modal">
         <div class="modal-card">
             <h3 style="margin-bottom:15px;">Новая группа</h3>
-            <div class="input-wrap">
-                <label>Название сообщества</label>
-                <input type="text" id="new-group-name" placeholder="Введите имя группы...">
-            </div>
+            <div class="input-wrap"><label>Название сообщества</label><input type="text" id="new-group-name" placeholder="Введите имя группы..."></div>
             <label style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-muted); display:block; text-align:left; margin-bottom:8px;">Добавить участников:</label>
             <div id="modal-members-list" style="max-height:140px; overflow-y:auto; text-align:left; background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; margin-bottom:15px; border:1px solid var(--border-glass);"></div>
             <div class="modal-buttons">
@@ -146,7 +147,7 @@
                 <div class="welcome-view" id="welcome-view"><span>💬</span><h2 id="welcome-title">Добро пожаловать в DanuMes</h2><p>Вы успешно зашли в сеть. Откройте чат слева.</p></div>
                 <div class="chat-view" id="chat-view">
                     <div class="chat-header">
-                        <div style="display:flex; align-items:center;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
                             <div class="avatar-fallback" id="chat-avatar">?</div>
                             <div>
                                 <h3 id="chat-title" style="font-size:16px; font-weight:600; display:inline-block;">Чат</h3>
@@ -154,7 +155,8 @@
                                 <p id="chat-status" style="font-size:12px; color:var(--text-muted);">Статус</p>
                             </div>
                         </div>
-                        <button class="btn-call" id="call-btn" onclick="startVoiceCall()">📞</button>
+                        <!-- Кнопка звонка добавлена в интерфейс шапки -->
+                        <button id="call-btn-ui" class="btn-call" onclick="startAudioCall()">📞</button>
                     </div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-bar">
@@ -168,13 +170,17 @@
         </div>
     </div>
 
+    <!-- Библиотека Socket.io добавлена для WebRTC-звонков -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SERVER_URL = window.location.origin;
+        let socket = io(SERVER_URL); // Инициализация сокетов звонков
         let currentUser = localStorage.getItem('danumes_user') || null;
-        let activeChat = null, isGroupChat = false, lastMessageCount = 0, socket = null;
-        let serverData = { users: {}, messages: [], groups: [] }, targetDeleteId = null;
-        let localStream = null, peerConnection = null, pendingOffer = null;
+        let activeChat = null, isGroupChat = false, selectedMsgId = null;
+        let serverData = { users: {}, messages: [], groups: [] }, lastMessageCount = 0;
+        
+        let localStream, peerConnection;
+        const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
         if (currentUser) showMessenger();
 
@@ -182,12 +188,12 @@
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator(), gain = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
                 osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); osc.stop(ctx.currentTime + 0.3);
+                osc.start(); osc.stop(ctx.currentTime + 0.25);
             } catch(e){}
         }
 
@@ -204,14 +210,15 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЙ ОРИГИНАЛЬНЫЙ ТЕСТОВЫЙ ВХОД С СЕРВЕРА ---
+        // --- ВЕРНУЛ ТВОЙ ОРИГИНАЛЬНЫЙ ТЕСТОВЫЙ ПУТЬ fetch ВХОДА (СТРОГО БЕЗ AUTH) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
             if(!u || !p) return showNotification('Заполните поля');
             try {
                 const r = await fetch(`${SERVER_URL}/api/${endpoint}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user: u, pass: p })
                 });
                 const d = await r.json();
@@ -227,7 +234,8 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
-            initSocketLogic(); startSync();
+            socket.emit('register-socket', currentUser); // Привязываем звонки к твоему нику
+            startSync();
         }
         function startSync() { syncData(); setInterval(syncData, 2500); }
 
@@ -235,11 +243,12 @@
             if(!currentUser) return;
             try {
                 const r = await fetch(`${SERVER_URL}/api/sync`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user: currentUser })
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user: currentUser })
                 });
                 serverData = await r.json();
                 if(serverData.messages && serverData.messages.length > lastMessageCount) {
-                    if(serverData.messages[serverData.messages.length - 1].from !== currentUser && lastMessageCount > 0) playNotifySound();
+                    if(serverData.messages[serverData.messages.length-1].from !== currentUser && lastMessageCount > 0) playNotifySound();
                     lastMessageCount = serverData.messages.length;
                 }
                 renderSidebar(); renderMessages();
@@ -279,7 +288,9 @@
             document.getElementById('chat-avatar').innerText = isGroup ? '#' : name.substr(0,2).toUpperCase();
             document.getElementById('chat-status').innerText = isGroup ? 'Групповой чат' : 'Приватный диалог';
             document.getElementById('chat-header-badge').innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
-            document.getElementById('call-btn').style.display = isGroup ? 'none' : 'flex'; // Показываем 📞 только в ЛС
+            
+            // Прячем кнопку звонка, если это групповой чат или новостной канал
+            document.getElementById('call-btn-ui').style.display = isGroup ? 'none' : 'flex';
             renderMessages();
         }
 
@@ -299,23 +310,21 @@
             if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
-        // --- УДАЛЕНИЕ СООБЩЕНИЙ НА САЙТЕ БЕЗ АЛЕРТОВ БРАУЗЕРА ---
+        // --- КРАСИВОЕ ОКНО УДАЛЕНИЯ СООБЩЕНИЙ ПРЯМО НА САЙТЕ ---
         function openDeleteModal(id, from) {
             if(from !== currentUser && currentUser !== 'Danumala') return;
-            targetDeleteId = id;
+            selectedMsgId = id;
             document.getElementById('delete-modal').classList.add('active');
-            document.getElementById('confirm-delete-btn').onclick = executeDeleteMessage;
         }
-        function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('active'); targetDeleteId = null; }
-
-        async function executeDeleteMessage() {
-            if(!targetDeleteId) return;
+        function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('active'); selectedMsgId = null; }
+        async function confirmDeleteMessage() {
+            if(!selectedMsgId) return;
             try {
                 await fetch(`${SERVER_URL}/api/messages/delete`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: targetDeleteId, username: currentUser })
+                    body: JSON.stringify({ id: selectedMsgId, username: currentUser })
                 });
-                closeDeleteModal(); syncData(); showNotification('Сообщение удалено!', true);
+                closeDeleteModal(); syncData(); showNotification('Сообщение удалено', true);
             } catch(e){}
         }
 
@@ -333,11 +342,4 @@
                 });
                 syncData();
             } catch(e){}
-        }
-
-        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        function triggerFileInput() { document.getElementById('image-file-input').click(); }
-
-        function handleImageUpload(event) {
-            const files = event.target.files; if (!files || files.length === 0) return;
-            const file = files[0]; if (!file.type.startsWith('image
+        
