@@ -15,7 +15,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ЖЕСТКИЙ ФИКС: Принудительно приводим переменные окружения Render к типу String
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim();
 const SUPABASE_KEY = String(process.env.SUPABASE_KEY || '').trim();
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26,7 +25,26 @@ app.use(express.static(__dirname));
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
+// ЖЕСТКИЙ ТЕСТ СВЯЗИ ПРИ СТАРТЕ СЕРВЕРА
+async function testSupabaseConnection() {
+    console.log("--- ЗАПУСК ТЕСТА СВЯЗИ С SUPABASE ---");
+    console.log("Проверяем URL:", SUPABASE_URL);
+    try {
+        const { data, error } = await supabase.from('users').select('username').limit(1);
+        if (error) {
+            console.error("❌ СУПАБЕЙЗ ВЕРНУЛ ОШИБКУ:", error.message);
+            console.error("Полный объект ошибки:", JSON.stringify(error));
+        } else {
+            console.log("✅ УСПЕШНОЕ ПОДКЛЮЧЕНИЕ К SUPABASE! База ответила, данные читаются.");
+        }
+    } catch (err) {
+        console.error("Критический сбой сети при вызове Supabase:", err.message);
+    }
+    console.log("-------------------------------------");
+}
+testSupabaseConnection();
+
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Неприкосновенный оригинал)
 app.post('/api/register', async (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -229,13 +247,6 @@ io.on('connection', (socket) => {
             io.emit('msg_deleted', data.messageId);
         } catch(e) { console.error(e); }
     });
-
-    socket.on('call_init', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_incoming', { from: data.from }); });
-    socket.on('call_accepted', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('start_handshake', { from: data.from }); });
-    socket.on('rtc_offer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_offer', { offer: data.offer, from: sessionUser }); });
-    socket.on('rtc_answer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_answer', { answer: data.answer }); });
-    socket.on('ice_candidate', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_ice', { candidate: data.candidate }); });
-    socket.on('call_rejected', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_ended'); });
 
     socket.on('disconnect', () => { if (sessionUser && usersOnline[sessionUser] === socket.id) { delete usersOnline[sessionUser]; broadcastUsersList(); } });
 });
