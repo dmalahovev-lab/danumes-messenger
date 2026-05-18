@@ -7,9 +7,10 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
+// Восстанавливаем дефолтные транспорты, чтобы сокеты не вешали весь браузер
 const io = new Server(server, {
     cors: { origin: "*" },
-    transports: ['websocket']
+    maxHttpBufferSize: 1e7 // Увеличиваем лимит пакета до 10МБ на всякий случай
 });
 
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
+// Автономная ОЗУ-база данных с жесткой защитой от undefined объектов
 let db = { users: {}, messages: [] };
 
 if (fs.existsSync(DB_FILE)) {
@@ -43,11 +45,12 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, роуты и переменные user/pass)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     if (db.users[user]) return res.status(400).json({ message: 'Пользователь уже существует' });
+    
     db.users[user] = { password: pass };
     saveDB();
     res.json({ success: true });
@@ -56,10 +59,12 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
+    
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka' };
         saveDB();
     }
+
     const account = db.users[user];
     if (!account || account.password !== pass) {
         return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
@@ -123,7 +128,7 @@ io.on('connection', (socket) => {
             text: data.text || '',
             image: data.image || null,
             time: new Date().toISOString(),
-            read: false // Новое поле для фичи галочек прочтения
+            read: false
         };
 
         db.messages.push(newMsg);
@@ -138,7 +143,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Новая фича: Перехват статуса прочтения чата
     socket.on('mark_as_read', (data) => {
         let changed = false;
         db.messages.forEach(m => {
@@ -154,7 +158,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Новая фича: Трансляция статуса "Печатает..."
     socket.on('typing_status', (data) => {
         const targetSocket = usersOnline[data.to];
         if (targetSocket) {
@@ -174,7 +177,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Сигналинг звонков WebRTC
     socket.on('call_init', (data) => {
         const targetId = usersOnline[data.to];
         if (targetId) io.to(targetId).emit('call_incoming', { from: data.from });
