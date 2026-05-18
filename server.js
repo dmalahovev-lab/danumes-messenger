@@ -7,15 +7,18 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
+// ЖЕСТКИЙ ФИКС ЛИМИТОВ: Разрешаем Socket.io принимать большие Base64 пакеты до 100МБ
 const io = new Server(server, {
     cors: { origin: "*" },
-    transports: ['websocket']
+    transports: ['websocket'],
+    maxHttpBufferSize: 1e8
 });
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
 
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
 
 let db = { users: {}, messages: [], groups: {} };
@@ -44,7 +47,7 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не тронут ни один символ)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -94,11 +97,9 @@ io.on('connection', (socket) => {
         sessionUser = username;
         usersOnline[username] = socket.id;
         
-        // При входе отправляем пользователю его текущую аватарку из базы данных
         const userAvatar = db.users[username] ? db.users[username].avatar : null;
         socket.emit('auth_success_data', { avatar: userAvatar });
 
-        // Рассылаем обновленный список пользователей вместе с их аватарками
         sendUpdatedUsersList();
     });
 
@@ -110,8 +111,6 @@ io.on('connection', (socket) => {
             };
         });
         io.emit('update_users', usersData);
-        
-        // Также отправляем список доступных групп для текущего пользователя
         sendGroupsList(socket);
     }
 
@@ -131,20 +130,17 @@ io.on('connection', (socket) => {
         sendUpdatedUsersList();
     });
 
-    // Фича профиля: Сохранение кастомной аватарки
     socket.on('update_profile_avatar', (data) => {
         if (sessionUser && db.users[sessionUser]) {
             db.users[sessionUser].avatar = data.avatar;
             saveDB();
-            sendUpdatedUsersList(); // Обновляем аватарку у всех в реальном времени
+            sendUpdatedUsersList(); 
         }
     });
 
-    // Фича групп: Создание приватной группы
     socket.on('create_private_group', (data) => {
         if (!sessionUser) return;
         const groupId = 'group_' + Date.now();
-        // Включаем создателя и выбранных участников
         const members = data.members;
         if (!members.includes(sessionUser)) members.push(sessionUser);
 
@@ -155,7 +151,6 @@ io.on('connection', (socket) => {
         };
         saveDB();
 
-        // Оповещаем всех участников группы онлайн, чтобы у них появился новый чат
         members.forEach(member => {
             const targetSocketId = usersOnline[member];
             if (targetSocketId) {
@@ -170,7 +165,6 @@ io.on('connection', (socket) => {
         if (query.type === 'news') {
             history = db.messages.filter(m => m.type === 'news');
         } else if (query.type === 'group') {
-            // Загрузка сообщений группы, если пользователь в ней состоит
             const group = db.groups[query.id];
             if (group && group.members.includes(sessionUser)) {
                 history = db.messages.filter(m => m.type === 'group' && m.to === query.id);
@@ -186,8 +180,6 @@ io.on('connection', (socket) => {
 
     socket.on('send_msg', (data) => {
         if (data.type === 'news' && sessionUser !== 'Danumala') return;
-        
-        // Защита: проверка на участие в группе перед отправкой
         if (data.type === 'group') {
             const group = db.groups[data.to];
             if (!group || !group.members.includes(sessionUser)) return;
@@ -210,7 +202,6 @@ io.on('connection', (socket) => {
         if (data.type === 'news') {
             io.emit('new_msg', newMsg);
         } else if (data.type === 'group') {
-            // Рассылаем сообщение всем онлайн участникам группы
             const group = db.groups[data.to];
             group.members.forEach(member => {
                 const targetSocket = usersOnline[member];
