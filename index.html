@@ -55,6 +55,10 @@
         .message.outgoing { background: #3c1e6d; align-self: flex-end; border-bottom-right-radius: 2px; }
         .message img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
         
+        /* Стили под галочки прочтения */
+        .msg-meta { font-size: 11px; color: var(--text-gray); text-align: right; margin-top: 4px; display: flex; justify-content: flex-end; gap: 4px; }
+        .tick { color: var(--accent-purple); font-weight: bold; }
+
         .input-panel { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 60px; background: #141220; border-radius: 30px; padding: 0 10px 0 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--panel-border); z-index: 10; }
         .img-btn-wrapper { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(179,136,255,0.1); cursor: pointer; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); }
@@ -147,7 +151,7 @@
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
-        let isMuted = false;
+        let isMuted = false, typingTimeout = null;
         const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
         function showToast(text) {
@@ -207,15 +211,38 @@
                 buildSidebarStructure();
             });
             socket.on('update_users', (users) => { cachedUsersList = users; renderSidebarList(users); });
+            
             socket.on('messages_history', (messages) => {
                 const box = document.getElementById('chat-messages'); box.innerHTML = '';
                 messages.forEach(renderSingleMessage); box.scrollTop = box.scrollHeight;
+                // При загрузке истории отправляем сигнал, что чат прочитан
+                if(activeChat.type === 'private') socket.emit('mark_as_read', { chatWith: activeChat.id });
             });
+
             socket.on('new_msg', (msg) => {
                 if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
                     renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+                    if(activeChat.type === 'private' && msg.author === activeChat.id) {
+                        socket.emit('mark_as_read', { chatWith: activeChat.id });
+                    }
                 }
             });
+
+            // Слушатель обновления галочек (для отправителя)
+            socket.on('chat_read_by_recipient', (data) => {
+                if(activeChat.type === 'private' && activeChat.id === data.readBy) {
+                    document.querySelectorAll('.message.outgoing .tick').forEach(el => el.innerText = '✓✓');
+                }
+            });
+
+            // Слушатель трансляции "Печатает..."
+            socket.on('user_typing_broadcast', (data) => {
+                if(activeChat.type === 'private' && activeChat.id === data.from) {
+                    const statusEl = document.getElementById('header-status');
+                    statusEl.innerHTML = data.isTyping ? `<span style="color:#b388ff; animation: blink 1s infinite;">✍ печатает...</span>` : `● Онлайн`;
+                }
+            });
+
             socket.on('msg_deleted', (messageId) => {
                 const el = document.querySelector(`[data-id="${messageId}"]`); if (el) el.remove();
             });
@@ -302,9 +329,13 @@
             document.getElementById('current-chat-title').innerHTML = title + adminBadge;
             document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
             document.getElementById('header-status').style.display = type === 'private' ? 'block' : 'none';
+            document.getElementById('header-status').innerText = '● Онлайн';
             document.getElementById('chat-messages').innerHTML = '';
             document.getElementById('call-btn').style.display = (type === 'private' && id !== 'danumes_news') ? 'inline-block' : 'none';
-            if (socket) socket.emit('load_messages', { type, id });
+            if (socket) {
+                socket.emit('load_messages', { type, id });
+                if(type === 'private') socket.emit('mark_as_read', { chatWith: id });
+            }
         }
 
         function renderSingleMessage(msg) {
@@ -312,57 +343,58 @@
             const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
             div.dataset.id = msg.id; div.dataset.author = msg.author;
             let adminMark = msg.author === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
+            
             let content = `<strong>${msg.author}${adminMark}:</strong><br>`;
             if (msg.text) content += `<span>${msg.text}</span>`;
             if (msg.image) content += `<img src="${msg.image}">`;
+            
+            // Отрисовка галочки прочтения для исходящих сообщений
+            if (isOwn && msg.type !== 'news') {
+                let tickSymbol = msg.read ? '✓✓' : '✓';
+                content += `<div class="msg-meta"><span class="tick">${tickSymbol}</span></div>`;
+            }
+            
             div.innerHTML = content; box.appendChild(div);
         }
+
+        // Отслеживание ввода текста для статуса "Печатает..."
+        document.getElementById('msg-input').addEventListener('input', () => {
+            if (socket && activeChat.type === 'private') {
+                socket.emit('typing_status', { to: activeChat.id, isTyping: true });
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('typing_status', { to: activeChat.id, isTyping: false });
+                }, 2000);
+            }
+        });
 
         const sendMessage = () => {
             const input = document.getElementById('msg-input'); const text = input.value.trim();
             if (!text || !activeChat.id) return;
             if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') return showToast('Писать в этот канал может только админ.');
-            if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
+            if (socket) {
+                socket.emit('typing_status', { to: activeChat.id, isTyping: false });
+                socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
+            }
             input.value = '';
         };
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        // НАДЕЖНОЕ КЛИЕНТСКОЕ СЖАТИЕ КАРТИНОК ПЕРЕД ОТПРАВКОЙ ДЛЯ ПРОБИВАНИЯ ЛИМИТОВ RENDER
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file || !activeChat.id) return;
-
+            const file = e.target.files; if (!file || !activeChat.id) return;
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; // Ограничиваем разрешение картинки для экономии пакета
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Сжимаем картинку в качественный легковесный JPEG (коэффициент 0.7)
+                    const MAX_WIDTH = 800; let width = img.width, height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    if (socket) {
-                        socket.emit('send_msg', { 
-                            type: activeChat.type, 
-                            to: activeChat.id, 
-                            image: compressedBase64 
-                        });
-                    }
+                    if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: compressedBase64 });
                 };
                 img.src = event.target.result;
             };
@@ -407,30 +439,4 @@
         document.getElementById('mute-call-btn').addEventListener('click', () => {
             if (localStream) {
                 isMuted = !isMuted;
-                localStream.getAudioTracks()[0].enabled = !isMuted;
-                const muteBtn = document.getElementById('mute-call-btn');
-                if (isMuted) { muteBtn.classList.add('active'); muteBtn.innerText = "🔇"; } 
-                else { muteBtn.classList.remove('active'); muteBtn.innerText = "🎙"; }
-            }
-        });
-
-        const endCallUI = () => {
-            stopRingtone(); document.getElementById('call-modal').style.display = 'none';
-            if (peerConnection) { peerConnection.close(); peerConnection = null; }
-            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-            isMuted = false;
-            const muteBtn = document.getElementById('mute-call-btn');
-            muteBtn.classList.remove('active'); muteBtn.innerText = "🎙";
-            showToast('Звонок завершен');
-        };
-
-        document.getElementById('reject-call-btn').addEventListener('click', () => {
-            if (currentCallSession && socket) {
-                const target = currentCallSession.from === currentUser.username ? currentCallSession.to : currentCallSession.from;
-                socket.emit('call_rejected', { to: target });
-            }
-            endCallUI();
-        });
-    </script>
-</body>
-</html>
+                localStream.getAudioTracks()[0].
