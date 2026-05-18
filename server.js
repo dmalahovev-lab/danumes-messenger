@@ -15,8 +15,16 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-// Увеличиваем лимиты для обработки стандартных HTTP POST запросов
+// Автоматически создаем физическую папку для картинок на сервере, если её нет
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR);
+}
+
+// Раздаем сохраненные файлы как статические изображения
+app.use('/uploads', express.static(UPLOADS_DIR));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
@@ -47,7 +55,7 @@ function saveDB() {
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, без изменений)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не тронут ни один символ)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -75,12 +83,32 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true });
 });
 
-// НОВЫЙ АВТОНОМНЫЙ РОУТ ДЛЯ ЗАГРУЗКИ КАРТИНОК И АВАТАРОК (ОБХОД ЛИМИТОВ СОКЕТОВ)
+// МОЩНЫЙ ХЕНДЛЕР ЗАГРУЗКИ: Конвертирует base64 в бинарный файл и пишет на жесткий диск сервера
 app.post('/api/upload', (req, res) => {
     const { image } = req.body;
     if (!image) return res.status(400).json({ message: 'Файл не найден' });
-    // Возвращаем ту же base64 строку, но через стабильный HTTP-канал
-    res.json({ url: image });
+    
+    try {
+        // Отрезаем технический заголовок base64 данных (data:image/jpeg;base64,)
+        const matches = image.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+            return res.status(400).json({ message: 'Неверный формат изображения' });
+        }
+        
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        const fileName = `img_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
+        const filePath = path.join(UPLOADS_DIR, fileName);
+        
+        // Физически пишем картинку на диск
+        fs.writeFileSync(filePath, buffer);
+        
+        // Возвращаем клиенту короткую, чистую и легкую HTTP ссылку
+        res.json({ url: `/uploads/${fileName}` });
+    } catch(err) {
+        console.error("Ошибка сохранения медиафайла:", err);
+        res.status(500).json({ message: 'Ошибка сервера при сохранении файла' });
+    }
 });
 
 app.post('/api/messages/delete', (req, res) => {
