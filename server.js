@@ -7,13 +7,8 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// КРИТИЧЕСКИЙ ФИКС ДЛЯ RENDER: Полное разрешение CORS и принудительный WebSocket
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-        credentials: true
-    },
+    cors: { origin: "*", methods: ["GET", "POST"], credentials: true },
     transports: ['websocket'],
     allowUpgrades: false,
     maxHttpBufferSize: 1e8
@@ -50,10 +45,9 @@ function saveDB() {
     }
 }
 
-// Карта онлайн-пользователей
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, без изменений)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
@@ -66,7 +60,6 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
-    
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka', avatar: null };
         saveDB();
@@ -75,7 +68,6 @@ app.post('/api/login', (req, res) => {
         db.users['RunFly'] = { password: 'GGWWXXJJ2001', avatar: null };
         saveDB();
     }
-
     const account = db.users[user];
     if (!account || account.password !== pass) {
         return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
@@ -102,14 +94,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Функция отправки актуального списка пользователей
 function broadcastUsersList() {
-    const usersData = Object.keys(usersOnline).map(username => {
-        return {
-            username: username,
-            avatar: db.users[username] ? db.users[username].avatar : null
-        };
-    });
+    const usersData = Object.keys(usersOnline).map(username => ({
+        username: username,
+        avatar: db.users[username] ? db.users[username].avatar : null
+    }));
     io.emit('update_users', usersData);
 }
 
@@ -119,7 +108,7 @@ io.on('connection', (socket) => {
     socket.on('register_user', (username) => {
         if (!username) return;
         sessionUser = username;
-        usersOnline[username] = socket.id; // Перезаписываем актуальный ID сокета
+        usersOnline[username] = socket.id;
         
         const userAvatar = db.users[username] ? db.users[username].avatar : null;
         socket.emit('auth_success_data', { avatar: userAvatar });
@@ -140,12 +129,11 @@ io.on('connection', (socket) => {
         targetSocket.emit('update_groups', userGroups);
     }
 
-    socket.on('get_online_users', () => {
-        broadcastUsersList();
-    });
+    socket.on('get_online_users', () => { broadcastUsersList(); });
 
+    // Обработка бинарного буфера аватарки
     socket.on('update_profile_avatar', (data) => {
-        if (sessionUser && db.users[sessionUser]) {
+        if (sessionUser && db.users[sessionUser] && data.avatar) {
             db.users[sessionUser].avatar = data.avatar;
             saveDB();
             broadcastUsersList(); 
@@ -157,16 +145,11 @@ io.on('connection', (socket) => {
         const groupId = 'group_' + Date.now();
         const members = data.members;
         if (!members.includes(sessionUser)) members.push(sessionUser);
-
         db.groups[groupId] = { name: data.name, creator: sessionUser, members: members };
         saveDB();
-
         members.forEach(member => {
             const targetSocketId = usersOnline[member];
-            if (targetSocketId) {
-                const targetSocket = io.sockets.sockets.get(targetSocketId);
-                if (targetSocket) sendGroupsList(targetSocket);
-            }
+            if (targetSocketId) { const ts = io.sockets.sockets.get(targetSocketId); if (ts) sendGroupsList(ts); }
         });
     });
 
@@ -176,14 +159,9 @@ io.on('connection', (socket) => {
             history = db.messages.filter(m => m.type === 'news');
         } else if (query.type === 'group') {
             const group = db.groups[query.id];
-            if (group && group.members.includes(sessionUser)) {
-                history = db.messages.filter(m => m.type === 'group' && m.to === query.id);
-            }
+            if (group && group.members.includes(sessionUser)) history = db.messages.filter(m => m.type === 'group' && m.to === query.id);
         } else {
-            history = db.messages.filter(m => 
-                m.type === 'private' && 
-                ((m.to === query.id && m.author === sessionUser) || (m.to === sessionUser && m.author === query.id))
-            );
+            history = db.messages.filter(m => m.type === 'private' && ((m.to === query.id && m.author === sessionUser) || (m.to === sessionUser && m.author === query.id)));
         }
         socket.emit('messages_history', history);
     });
@@ -201,7 +179,7 @@ io.on('connection', (socket) => {
             to: data.to,
             author: sessionUser,
             text: data.text || '',
-            image: data.image || null,
+            image: data.image || null, // Принимаем оптимизированную строку изображения
             time: new Date().toISOString(),
             read: false
         };
@@ -213,84 +191,38 @@ io.on('connection', (socket) => {
             io.emit('new_msg', newMsg);
         } else if (data.type === 'group') {
             const group = db.groups[data.to];
-            group.members.forEach(member => {
-                const targetSocket = usersOnline[member];
-                if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
-            });
+            group.members.forEach(member => { const ts = usersOnline[member]; if (ts) io.to(ts).emit('new_msg', newMsg); });
         } else {
-            const targetSocket = usersOnline[data.to];
-            if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
+            const ts = usersOnline[data.to];
+            if (ts) io.to(ts).emit('new_msg', newMsg);
             socket.emit('new_msg', newMsg);
         }
     });
 
     socket.on('mark_as_read', (data) => {
         let changed = false;
-        db.messages.forEach(m => {
-            if (m.type === 'private' && m.author === data.chatWith && m.to === sessionUser && !m.read) {
-                m.read = true;
-                changed = true;
-            }
-        });
-        if (changed) {
-            saveDB();
-            const targetSocket = usersOnline[data.chatWith];
-            if (targetSocket) io.to(targetSocket).emit('chat_read_by_recipient', { readBy: sessionUser });
-        }
+        db.messages.forEach(m => { if (m.type === 'private' && m.author === data.chatWith && m.to === sessionUser && !m.read) { m.read = true; changed = true; } });
+        if (changed) { saveDB(); const ts = usersOnline[data.chatWith]; if (ts) io.to(ts).emit('chat_read_by_recipient', { readBy: sessionUser }); }
     });
 
-    socket.on('typing_status', (data) => {
-        if (data.type === 'private') {
-            const targetSocket = usersOnline[data.to];
-            if (targetSocket) io.to(targetSocket).emit('user_typing_broadcast', { from: sessionUser, isTyping: data.isTyping });
-        }
-    });
+    socket.on('typing_status', (data) => { if (data.type === 'private') { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('user_typing_broadcast', { from: sessionUser, isTyping: data.isTyping }); } });
 
     socket.on('req_delete_message', (data) => {
         const msgIndex = db.messages.findIndex(m => m.id === data.messageId);
         if (msgIndex !== -1) {
             const msg = db.messages[msgIndex];
-            if (data.user === 'Danumala' || msg.author === data.user) {
-                db.messages.splice(msgIndex, 1);
-                saveDB();
-                io.emit('msg_deleted', data.messageId);
-            }
+            if (data.user === 'Danumala' || msg.author === data.user) { db.messages.splice(msgIndex, 1); saveDB(); io.emit('msg_deleted', data.messageId); }
         }
     });
 
-    socket.on('call_init', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('call_incoming', { from: data.from });
-    });
-    socket.on('call_accepted', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('start_handshake', { from: data.from });
-    });
-    socket.on('rtc_offer', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('receive_offer', { offer: data.offer, from: sessionUser });
-    });
-    socket.on('rtc_answer', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('receive_answer', { answer: data.answer });
-    });
-    socket.on('ice_candidate', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('receive_ice', { candidate: data.candidate });
-    });
-    socket.on('call_rejected', (data) => {
-        const targetId = usersOnline[data.to];
-        if (targetId) io.to(targetId).emit('call_ended');
-    });
+    socket.on('call_init', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_incoming', { from: data.from }); });
+    socket.on('call_accepted', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('start_handshake', { from: data.from }); });
+    socket.on('rtc_offer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_offer', { offer: data.offer, from: sessionUser }); });
+    socket.on('rtc_answer', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_answer', { answer: data.answer }); });
+    socket.on('ice_candidate', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('receive_ice', { candidate: data.candidate }); });
+    socket.on('call_rejected', (data) => { const ts = usersOnline[data.to]; if (ts) io.to(ts).emit('call_ended'); });
 
-    socket.on('disconnect', () => {
-        if (sessionUser && usersOnline[sessionUser] === socket.id) {
-            delete usersOnline[sessionUser];
-            broadcastUsersList();
-        }
-    });
+    socket.on('disconnect', () => { if (sessionUser && usersOnline[sessionUser] === socket.id) { delete usersOnline[sessionUser]; broadcastUsersList(); } });
 });
 
-server.listen(PORT, () => {
-    console.log(`Сервер DanuMes успешно запущен на порту ${PORT}`);
-});
+server.listen(PORT, () => { console.log(`Сервер DanuMes успешно запущен на порту ${PORT}`); });
