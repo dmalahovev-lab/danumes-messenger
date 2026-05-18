@@ -5,274 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Danumes Messenger</title>
     <style>
-        /* БАЗОВЫЕ НАСТРОЙКИ ПАЛИТРЫ FIGMA */
         :root {
             --bg-main: #080610;
-            --panel-bg: rgba(30, 27, 46, 0.4);
-            --panel-border: rgba(179, 136, 255, 0.1);
+            --panel-bg: rgba(30, 27, 46, 0.55);
+            --panel-border: rgba(179, 136, 255, 0.15);
             --text-white: #ffffff;
             --text-gray: #aaaaaa;
             --accent-purple: #b388ff;
-            --grad-btn: linear-gradient(135deg, #4a154b, #371e5c);
             --input-bg: rgba(42, 42, 60, 0.5);
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-white); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .brand-logo { position: absolute; top: 40px; left: 40px; font-size: 28px; font-weight: bold; color: var(--text-white); }
         
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-white);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
+        /* АВТОРКА И ВХОД (СТРОГО FIGMA) */
+        #auth-container { background: linear-gradient(145deg, #131124, #1a1630); padding: 50px 40px; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--panel-border); z-index: 100; }
+        .auth-title { font-size: 26px; font-weight: 500; margin-bottom: 30px; }
+        .auth-input { width: 100%; padding: 16px 24px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.05); border-radius: 30px; background-color: var(--input-bg); color: #fff; font-size: 16px; outline: none; }
+        .auth-input:focus { border-color: var(--accent-purple); }
+        .auth-btn { width: 100%; padding: 16px; background: linear-gradient(90deg, #32105c, #51167a); border: none; border-radius: 30px; color: var(--text-white); font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; margin-bottom: 20px; }
+        .auth-switch { color: var(--text-gray); font-size: 14px; cursor: pointer; text-decoration: underline; }
 
-        /* 1. ЭКРАНЫ АВТОРИЗАЦИИ / РЕГИСТРАЦИИ (100% ПО МАКЕТУ) */
-        .brand-logo {
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            font-size: 28px;
-            font-weight: bold;
-            color: var(--text-white);
-            letter-spacing: 0.5px;
-        }
-
-        #auth-container {
-            background: linear-gradient(145deg, #131124, #1a1630);
-            padding: 50px 40px;
-            border-radius: 24px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid var(--panel-border);
-            z-index: 100;
-        }
-
-        .auth-title {
-            font-size: 26px;
-            font-weight: 500;
-            color: var(--text-white);
-            margin-bottom: 30px;
-        }
-
-        .auth-input {
-            width: 100%;
-            padding: 16px 24px;
-            margin: 12px 0;
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 30px;
-            background-color: var(--input-bg);
-            color: #fff;
-            font-size: 16px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .auth-input:focus {
-            border-color: var(--accent-purple);
-        }
-
-        .auth-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(90deg, #32105c, #51167a);
-            border: none;
-            border-radius: 30px;
-            color: var(--text-white);
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            transition: opacity 0.2s;
-        }
-
-        .auth-btn:hover { opacity: 0.9; }
-
-        .auth-switch {
-            color: var(--text-gray);
-            font-size: 14px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .auth-switch:hover { color: var(--accent-purple); }
-
-        /* 2. ГЛАВНЫЙ ИНТЕРФЕЙС BENTO-МЕССЕНДЖЕРА */
-        #app-container {
-            display: none;
-            width: 100%;
-            height: 100vh;
-            padding: 24px;
-        }
-
-        .messenger-layout {
-            display: flex;
-            width: 100%;
-            height: 100%;
-            gap: 20px;
-        }
-
-        /* Сайдбар */
-        .sidebar {
-            width: 320px;
-            background: var(--panel-bg);
-            border-radius: 20px;
-            border: 1px solid var(--panel-border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
+        /* ИНТЕРФЕЙС ЧАТА */
+        #app-container { display: none; width: 100%; height: 100vh; padding: 24px; }
+        .messenger-layout { display: flex; width: 100%; height: 100%; gap: 20px; }
+        .sidebar { width: 320px; background: var(--panel-bg); border-radius: 20px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; overflow: hidden; }
         .sidebar-header { padding: 24px 20px 15px 20px; }
         .sidebar-header h2 { font-size: 22px; margin-bottom: 5px; }
         .sidebar-sub { font-size: 14px; color: var(--text-gray); margin-bottom: 15px; }
-
-        .chat-list { flex: 1; overflow-y: auto; padding: 0 10px; }
         
-        .chat-item {
-            padding: 16px 14px;
-            border-radius: 12px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-bottom: 6px;
-            transition: background 0.2s;
-        }
+        /* ИСПРАВЛЕННЫЙ ИНПУТ ПОИСКА */
+        .search-bar { width: 100%; padding: 12px 16px; background-color: var(--input-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: #fff; font-size: 14px; outline: none; }
+        .search-bar:focus { border-color: var(--accent-purple); }
+        
+        .chat-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .chat-item { padding: 16px 14px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
         .chat-item:hover, .chat-item.active { background: rgba(179, 136, 255, 0.1); }
         .chat-item-title { font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: space-between; }
-        .chat-item-sub { font-size: 13px; color: var(--text-gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item-sub { font-size: 13px; color: var(--text-gray); }
 
-        /* Окно чата */
-        .chat-window {
-            flex: 1;
-            background: var(--panel-bg);
-            border-radius: 20px;
-            border: 1px solid var(--panel-border);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .chat-header {
-            height: 75px;
-            padding: 0 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--panel-border);
-            background: rgba(20, 18, 32, 0.4);
-        }
-
+        .chat-window { flex: 1; background: var(--panel-bg); border-radius: 20px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        .chat-header { height: 75px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--panel-border); background: rgba(20, 18, 32, 0.4); }
         .user-info { display: flex; align-items: center; gap: 12px; }
-        .avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: #2a2544;
-            color: var(--accent-purple);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-            border: 1px solid rgba(179, 136, 255, 0.3);
-        }
-        
-        .status-dot { font-size: 12px; color: #2ecc71; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
-
-        .call-icon-btn {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: var(--text-white);
-            transition: transform 0.2s;
-        }
+        .avatar { width: 42px; height: 42px; border-radius: 50%; background: #2a2544; color: var(--accent-purple); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 1px solid rgba(179, 136, 255, 0.3); }
+        .status-dot { font-size: 13px; color: #2ecc71; margin-top: 2px; }
+        .call-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #ff457d; transition: transform 0.2s; }
         .call-icon-btn:hover { transform: scale(1.1); }
 
-        /* Сообщения колёсиком мыши */
-        .chat-messages {
-            flex: 1;
-            overflow-y: scroll;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding-bottom: 110px;
-        }
-
-        .message {
-            max-width: 45%;
-            padding: 12px 16px;
-            border-radius: 14px;
-            word-wrap: break-word;
-            font-size: 15px;
-            line-height: 1.4;
-            position: relative;
-        }
+        .chat-messages { flex: 1; overflow-y: scroll; padding: 24px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; scroll-behavior: smooth; }
+        .message { max-width: 45%; padding: 12px 16px; border-radius: 14px; word-wrap: break-word; font-size: 15px; line-height: 1.4; position: relative; }
         .message.incoming { background: #1c192e; align-self: flex-start; border-bottom-left-radius: 2px; }
         .message.outgoing { background: #3c1e6d; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .message img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; cursor: pointer; }
+        .message img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
+        
+        /* ИСПРАВЛЕННАЯ ПАНЕЛЬ ВВОДА И СКРЕПКА */
+        .input-panel { position: absolute; bottom: 20px; left: 20px; right: 20px; height: 60px; background: #141220; border-radius: 30px; padding: 0 10px 0 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--panel-border); z-index: 10; }
+        .img-btn-wrapper { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(179,136,255,0.1); cursor: pointer; transition: background 0.2s; }
+        .img-btn-wrapper:hover { background: rgba(179,136,255,0.2); }
+        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--accent-purple); display: block; line-height: 1; }
+        .message-input { flex: 1; background: none; border: none; color: #fff; outline: none; font-size: 15px; }
+        .submit-btn { background: linear-gradient(90deg, #46145e, #290b40); border: none; color: white; padding: 10px 24px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
-        /* Намертво зафиксированная панель ввода внизу */
-        .input-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            height: 60px;
-            background: #141220;
-            border-radius: 30px;
-            padding: 0 10px 0 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border: 1px solid var(--panel-border);
-            z-index: 10;
-        }
+        /* НЕОНОВАЯ КРАСИВАЯ ГАЛОЧКА АДМИНА */
+        .badge-admin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #a855f7; color: #fff; font-size: 11px; font-weight: bold; border-radius: 50%; margin-left: 6px; box-shadow: 0 0 8px #a855f7; vertical-align: middle; }
 
-        .message-input {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #fff;
-            outline: none;
-            font-size: 15px;
-            resize: none;
-            height: 24px;
-            line-height: 24px;
-        }
-
-        .submit-btn {
-            background: linear-gradient(90deg, #46145e, #290b40);
-            border: none;
-            color: white;
-            padding: 10px 28px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-            transition: opacity 0.2s;
-        }
-        .submit-btn:hover { opacity: 0.9; }
-
-        /* Контекстное меню, тосты и звонки */
-        #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #1c192e; border: 1px solid #3c1e6d; border-radius: 8px; padding: 4px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 160px; }
+        #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #1c192e; border: 1px solid #3c1e6d; border-radius: 8px; padding: 4px 0; min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
-        #ctx-delete-btn:hover { background: rgba(255, 77, 77, 0.1); }
         
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #1c192e; color: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; border-left: 4px solid var(--accent-purple); }
         
-        #call-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: #131124; padding: 30px; border-radius: 16px; width: 90%; max-width: 360px; text-align: center; border: 1px solid var(--panel-border); }
+        /* МОДАЛКА ЗВОНКА С МУТОМ И СБРОСОМ */
+        #call-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,3,10,0.85); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: #131124; padding: 35px 30px; border-radius: 24px; width: 90%; max-width: 360px; text-align: center; border: 1px solid var(--panel-border); box-shadow: 0 0 30px rgba(179,136,255,0.2); }
+        .call-actions-grid { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+        .call-btn-round { width: 55px; height: 55px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.1s; }
+        .call-btn-round:hover { transform: scale(1.05); }
+        .btn-accept { background: #2ecc71; color: white; }
+        .btn-reject { background: #e74c3c; color: white; }
+        .btn-mute { background: #34495e; color: white; }
+        .btn-mute.active { background: #e67e22; }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -280,7 +92,6 @@
 
     <div class="brand-logo">Danumes</div>
 
-    <!-- ФОРМА АВТОРИЗАЦИИ (100% СТРУКТУРА FIGMA, ПЕРЕМЕННЫЕ USER И PASS) -->
     <div id="auth-container">
         <div class="auth-title" id="auth-header-text">Вход</div>
         <input type="text" id="username" class="auth-input" placeholder="Логин">
@@ -289,7 +100,6 @@
         <div id="auth-toggle" class="auth-switch">Нет аккаунта? Зарегистрироваться</div>
     </div>
 
-    <!-- ГЛАВНЫЙ ИНТЕРФЕЙС BENTO-ЧАТА -->
     <div id="app-container">
         <div class="messenger-layout">
             <div class="sidebar">
@@ -305,15 +115,17 @@
                     <div class="user-info">
                         <div class="avatar" id="header-avatar">?</div>
                         <div>
-                            <h3 id="current-chat-title">Выберите чат</h3>
-                            <div class="status-dot" id="header-status" style="display:none;"><span style="color:#2ecc71;">●</span> Онлайн</div>
+                            <h3 id="current-chat-title" style="display: flex; align-items: center;">Выберите чат</h3>
+                            <div class="status-dot" id="header-status" style="display:none;">● Онлайн</div>
                         </div>
                     </div>
-                    <button id="call-btn" class="call-btn-mock call-icon-btn" style="display: none;" title="Позвонить">📞</button>
+                    <button id="call-btn" class="call-icon-btn" style="display: none;">📞</button>
                 </div>
                 <div class="chat-messages" id="chat-messages"></div>
                 <div class="input-panel">
-                    <button class="icon-btn" id="img-btn" title="Прикрепить изображение">📎</button>
+                    <div class="img-btn-wrapper" id="img-btn">
+                        <button class="icon-btn">📎</button>
+                    </div>
                     <input type="file" id="file-input" accept="image/*" style="display:none;">
                     <input type="text" class="message-input" id="msg-input" placeholder="Написать сообщение...">
                     <button class="submit-btn" id="send-btn">Отправить</button>
@@ -322,19 +134,20 @@
         </div>
     </div>
 
-    <div id="custom-context-menu">
-        <button id="ctx-delete-btn">🗑️ Удалить сообщение</button>
-    </div>
-
+    <div id="custom-context-menu"><button id="ctx-delete-btn">🗑️ Удалить</button></div>
     <div id="toast-container"></div>
 
+    <!-- УЛУЧШЕННОЕ ИСПРАВЛЕННОЕ ОКНО ЗВОНКА -->
     <div id="call-modal">
         <div class="modal-content">
-            <div style="font-size: 40px; margin-bottom: 15px;">📞</div>
-            <h3 id="caller-name" style="margin-bottom: 20px; font-size: 18px;">Вам звонят...</h3>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="accept-call-btn" style="background: #2ecc71; color: white; border: none; padding: 12px 24px; border-radius: 20px; cursor: pointer; font-weight: bold;">Принять</button>
-                <button id="reject-call-btn" style="background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 20px; cursor: pointer; font-weight: bold;">Сбросить</button>
+            <div style="font-size: 50px; margin-bottom: 15px; animation: pulse 1s infinite;">📞</div>
+            <h3 id="call-status-title" style="color: #fff; font-size: 20px; margin-bottom: 10px;">Входящий вызов</h3>
+            <p id="caller-name" style="color: var(--text-gray); font-size: 16px;"></p>
+            
+            <div class="call-actions-grid">
+                <button id="accept-call-btn" class="call-btn-round btn-accept" title="Принять">✔</button>
+                <button id="mute-call-btn" class="call-btn-round btn-mute" style="display: none;" title="Отключить микрофон">🎙</button>
+                <button id="reject-call-btn" class="call-btn-round btn-reject" title="Сбросить">✖</button>
             </div>
         </div>
     </div>
@@ -342,25 +155,32 @@
     <audio id="remote-audio" autoplay></audio>
 
     <script>
-        // Стабильное WebSocket-подключение
-        let socket = null;
-        let currentUser = null;
-        let activeChat = { type: null, id: null };
-        let isSelectionForRegister = false;
-        let selectedMessageId = null;
-        let cachedUsersList = [];
-        
+        let socket = null, currentUser = null, activeChat = { type: null, id: null };
+        let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
+        let isMuted = false;
         const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
         function showToast(text) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = text;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
+            toast.className = 'toast'; toast.innerText = text;
+            container.appendChild(toast); setTimeout(() => toast.remove(), 4000);
         }
+
+        function playRingtone() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                ringtoneInterval = setInterval(() => {
+                    let osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }, 1000);
+            } catch(e){}
+        }
+        function stopRingtone() { clearInterval(ringtoneInterval); }
 
         document.getElementById('auth-toggle').addEventListener('click', () => {
             isSelectionForRegister = !isSelectionForRegister;
@@ -369,72 +189,55 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
         });
 
-        // СВЯТОЙ КОД АВТОРИЗАЦИИ (переменные user и pass, fetch-урлы без изменений)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             if (!user || !pass) return showToast('Заполните все поля');
-
             const targetUrl = isSelectionForRegister ? '/api/register' : '/api/login';
-            
             try {
                 const response = await fetch(targetUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user, pass })
                 });
-                const data = await response.json();
-
                 if (response.ok) {
                     currentUser = { username: user };
                     document.getElementById('auth-container').style.display = 'none';
                     document.getElementById('app-container').style.display = 'flex';
-                    showToast(`Добро пожаловать, ${user}!`);
                     initSocketChannels();
                 } else {
-                    showToast(data.message || 'Ошибка авторизации');
+                    const d = await response.json(); showToast(d.message || 'Ошибка авторизации');
                 }
-            } catch (err) {
-                showToast('Сервер просыпается, подождите 10 секунд и повторите.');
-            }
+            } catch (err) { showToast('Сервер подключается, повторите через пару секунд.'); }
         });
 
         function initSocketChannels() {
             socket = io({ transports: ['websocket'], upgrade: false });
-
             socket.on('connect', () => {
                 socket.emit('register_user', currentUser.username);
                 buildSidebarStructure();
             });
-
-            socket.on('update_users', (users) => {
-                cachedUsersList = users;
-                renderSidebarList(users);
-            });
-
+            socket.on('update_users', (users) => { cachedUsersList = users; renderSidebarList(users); });
             socket.on('messages_history', (messages) => {
-                const box = document.getElementById('chat-messages');
-                box.innerHTML = '';
-                messages.forEach(renderSingleMessage);
-                box.scrollTop = box.scrollHeight;
+                const box = document.getElementById('chat-messages'); box.innerHTML = '';
+                messages.forEach(renderSingleMessage); box.scrollTop = box.scrollHeight;
             });
-
             socket.on('new_msg', (msg) => {
                 if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
-                    renderSingleMessage(msg);
-                    const box = document.getElementById('chat-messages');
-                    box.scrollTop = box.scrollHeight;
+                    renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
                 }
             });
-
             socket.on('msg_deleted', (messageId) => {
-                const el = document.querySelector(`[data-id="${messageId}"]`);
-                if (el) el.remove();
+                const el = document.querySelector(`[data-id="${messageId}"]`); if (el) el.remove();
             });
 
+            // ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ СИГНАЛИНГА ЗВОНКОВ
             socket.on('call_incoming', (data) => {
                 currentCallSession = data;
-                document.getElementById('caller-name').innerText = `Вам звонит ${data.from}`;
+                document.getElementById('call-status-title').innerText = "Входящий вызов";
+                document.getElementById('caller-name').innerText = `Звонит ${data.from}`;
+                document.getElementById('accept-call-btn').style.display = 'flex';
+                document.getElementById('mute-call-btn').style.display = 'none';
                 document.getElementById('call-modal').style.display = 'flex';
                 playRingtone();
             });
@@ -442,7 +245,7 @@
             socket.on('start_handshake', async (data) => {
                 peerConnection = new RTCPeerConnection(rtcConfig);
                 localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-                peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
+                peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams[0]; };
                 peerConnection.onicecandidate = (e) => {
                     if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate });
                 };
@@ -452,6 +255,14 @@
             });
 
             socket.on('receive_offer', async (data) => {
+                if(!peerConnection) {
+                    peerConnection = new RTCPeerConnection(rtcConfig);
+                    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+                    peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams[0]; };
+                    peerConnection.onicecandidate = (e) => {
+                        if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate });
+                    };
+                }
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                 const ans = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(ans);
@@ -459,34 +270,26 @@
             });
 
             socket.on('receive_answer', async (data) => {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                if(peerConnection) await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
             });
-
             socket.on('receive_ice', async (data) => {
                 if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
-
             socket.on('call_ended', endCallUI);
         }
 
         function buildSidebarStructure() {
-            const chatsContainer = document.getElementById('chats');
-            chatsContainer.innerHTML = '';
-            
-            const newsDiv = document.createElement('div');
-            newsDiv.className = 'chat-item';
+            const chatsContainer = document.getElementById('chats'); chatsContainer.innerHTML = '';
+            const newsDiv = document.createElement('div'); newsDiv.className = 'chat-item';
             newsDiv.innerHTML = `<div class="chat-item-title">📢 Danumes News</div><div class="chat-item-sub">Последнее сообщение канала</div>`;
             newsDiv.onclick = () => selectChat('news', 'danumes_news', 'Danumes News');
             chatsContainer.appendChild(newsDiv);
-            
             if (socket) socket.emit('get_online_users');
         }
 
         function renderSidebarList(users) {
             const chatsContainer = document.getElementById('chats');
-            const items = chatsContainer.querySelectorAll('.chat-item');
-            items.forEach((item, index) => { if(index > 0) item.remove(); });
-
+            chatsContainer.querySelectorAll('.chat-item').forEach((item, index) => { if(index > 0) item.remove(); });
             users.forEach(u => {
                 if (u !== currentUser.username) {
                     const div = document.createElement('div');
@@ -499,106 +302,117 @@
             });
         }
 
+        // ЖИВОЙ ИСПРАВЛЕННЫЙ ПОИСК ПОЛЬЗОВАТЕЛЕЙ
+        document.getElementById('search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const filtered = cachedUsersList.filter(u => u.toLowerCase().includes(query));
+            renderSidebarList(filtered);
+        });
+
         function selectChat(type, id, title) {
             activeChat = { type, id };
-            document.getElementById('current-chat-title').innerText = title;
+            let adminBadge = id === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
+            document.getElementById('current-chat-title').innerHTML = title + adminBadge;
             document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
-            document.getElementById('header-status').style.display = type === 'private' ? 'flex' : 'none';
+            document.getElementById('header-status').style.display = type === 'private' ? 'block' : 'none';
             document.getElementById('chat-messages').innerHTML = '';
-            
-            const callBtn = document.getElementById('call-btn');
-            callBtn.style.display = (type === 'private' && id !== 'danumes_news') ? 'inline-block' : 'none';
-            
+            document.getElementById('call-btn').style.display = (type === 'private' && id !== 'danumes_news') ? 'inline-block' : 'none';
             if (socket) socket.emit('load_messages', { type, id });
         }
 
         function renderSingleMessage(msg) {
-            const box = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            const isOwn = msg.author === currentUser.username;
-            div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
-            div.dataset.id = msg.id;
-            div.dataset.author = msg.author;
-            
-            let adminMark = msg.author === 'Danumala' ? '<span style="color:#b388ff;">✓</span>' : '';
+            const box = document.getElementById('chat-messages'); const div = document.createElement('div');
+            const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
+            div.dataset.id = msg.id; div.dataset.author = msg.author;
+            let adminMark = msg.author === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
             let content = `<strong>${msg.author}${adminMark}:</strong><br>`;
             if (msg.text) content += `<span>${msg.text}</span>`;
             if (msg.image) content += `<img src="${msg.image}">`;
-            
-            div.innerHTML = content;
-            box.appendChild(div);
+            div.innerHTML = content; box.appendChild(div);
         }
 
-        // ЖЕСТКИЙ ФИКС ОТПРАВКИ КАРТИНОК И ТЕКСТА
         const sendMessage = () => {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
+            const input = document.getElementById('msg-input'); const text = input.value.trim();
             if (!text || !activeChat.id) return;
-
-            if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') {
-                return showToast('Писать в этот канал может только администратор.');
-            }
-
+            if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') return showToast('Писать в этот канал может только админ.');
             if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
             input.value = '';
         };
-
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        // ИСПРАВЛЕННЫЙ РОУТ КАРТИНОК (Сжатие и отправка без сбоев)
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file || !activeChat.id) return;
-
+            const file = e.target.files[0]; if (!file || !activeChat.id) return;
             const reader = new FileReader();
-            reader.onload = () => {
-                // Отправляем строго оптимизированную base64 строку
-                if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: reader.result });
-            };
+            reader.onload = () => { if (socket) socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: reader.result }); };
             reader.readAsDataURL(file);
         });
 
-        // Удаление (Контекстное меню)
         document.getElementById('chat-messages').addEventListener('contextmenu', (e) => {
-            const msgEl = e.target.closest('.message');
-            if (!msgEl) return;
-            const author = msgEl.dataset.author;
-            if (currentUser.username === 'Danumala' || currentUser.username === author) {
-                e.preventDefault();
-                selectedMessageId = msgEl.dataset.id;
+            const msgEl = e.target.closest('.message'); if (!msgEl) return;
+            if (currentUser.username === 'Danumala' || currentUser.username === msgEl.dataset.author) {
+                e.preventDefault(); selectedMessageId = msgEl.dataset.id;
                 const menu = document.getElementById('custom-context-menu');
-                menu.style.left = `${e.pageX}px`;
-                menu.style.top = `${e.pageY}px`;
-                menu.style.display = 'block';
+                menu.style.left = `${e.pageX}px`; menu.style.top = `${e.pageY}px`; menu.style.display = 'block';
             }
         });
-
         document.addEventListener('click', () => document.getElementById('custom-context-menu').style.display = 'none');
         document.getElementById('ctx-delete-btn').addEventListener('click', () => {
             if (selectedMessageId && socket) socket.emit('req_delete_message', { messageId: selectedMessageId, user: currentUser.username });
         });
 
-        // WebRTC логика трубки звонка
+        // ИСПРАВЛЕННАЯ ЛОГИКА ДЛЯ ИСХОДЯЩЕГО И ВХОДЯЩЕГО ЗВOНКА
         document.getElementById('call-btn').addEventListener('click', async () => {
-            showToast(`Звоним пользователю...`);
+            document.getElementById('call-status-title').innerText = "Исходящий вызов";
+            document.getElementById('caller-name').innerText = `Звоним ${activeChat.id}...`;
+            document.getElementById('accept-call-btn').style.display = 'none';
+            document.getElementById('mute-call-btn').style.display = 'flex';
+            document.getElementById('call-modal').style.display = 'flex';
+            
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            currentCallSession = { from: currentUser.username, to: activeChat.id };
             if (socket) socket.emit('call_init', { to: activeChat.id, from: currentUser.username });
         });
 
         document.getElementById('accept-call-btn').addEventListener('click', async () => {
             stopRingtone();
-            document.getElementById('call-modal').style.display = 'none';
+            document.getElementById('call-status-title').innerText = "Разговор...";
+            document.getElementById('accept-call-btn').style.display = 'none';
+            document.getElementById('mute-call-btn').style.display = 'flex';
+            
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-            peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
             if (socket) socket.emit('call_accepted', { to: currentCallSession.from, from: currentUser.username });
         });
 
-        const endCallUI = () => { stopRingtone(); document.getElementById('call-modal').style.display = 'none'; };
-        document.getElementById('reject-call-btn').addEventListener('click', endCallUI);
+        // КНОПКА ОТКЛЮЧЕНИЯ МИКРОФОНА (МУТ)
+        document.getElementById('mute-call-btn').addEventListener('click', () => {
+            if (localStream) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks()[0].enabled = !isMuted;
+                const muteBtn = document.getElementById('mute-call-btn');
+                if (isMuted) { muteBtn.classList.add('active'); muteBtn.innerText = "🔇"; } 
+                else { muteBtn.classList.remove('active'); muteBtn.innerText = "🎙"; }
+            }
+        });
+
+        const endCallUI = () => {
+            stopRingtone(); document.getElementById('call-modal').style.display = 'none';
+            if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+            isMuted = false;
+            const muteBtn = document.getElementById('mute-call-btn');
+            muteBtn.classList.remove('active'); muteBtn.innerText = "🎙";
+            showToast('Звонок завершен');
+        };
+
+        document.getElementById('reject-call-btn').addEventListener('click', () => {
+            if (currentCallSession && socket) {
+                const target = currentCallSession.from === currentUser.username ? currentCallSession.to : currentCallSession.from;
+                socket.emit('call_rejected', { to: target });
+            }
+            endCallUI();
+        });
     </script>
 </body>
 </html>
