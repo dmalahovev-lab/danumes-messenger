@@ -6,7 +6,12 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// ФИКС ДЛЯ RENDER: Явно разрешаем только транспорт websocket для стабильного апгрейда протокола
+const io = new Server(server, {
+    cors: { origin: "*" },
+    transports: ['websocket']
+});
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -14,7 +19,6 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
-// Инициализация локальной автономной БД в ОЗУ
 let db = { users: {}, messages: [] };
 if (fs.existsSync(DB_FILE)) {
     try {
@@ -28,25 +32,24 @@ function saveDB() {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-// Глобальная карта для WebRTC-сигналинга (связка: ник пользователя -> id сокета)
+// Защищенный глобальный объект онлайн-пользователей
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (Строго роуты, структуры user и pass — без изменений!)
-app.post('/api/register', (expressReq, expressRes) => {
-    const { user, pass } = expressReq.body;
-    if (!user || !pass) return expressRes.status(400).json({ message: 'Заполните все поля' });
-    if (db.users[user]) return expressRes.status(400).json({ message: 'Пользователь уже существует' });
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (Роуты и деструктуризация user/pass строго без изменений)
+app.post('/api/register', (req, res) => {
+    const { user, pass } = req.body;
+    if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
+    if (db.users[user]) return res.status(400).json({ message: 'Пользователь уже существует' });
     
     db.users[user] = { password: pass };
     saveDB();
-    expressRes.json({ success: true });
+    res.json({ success: true });
 });
 
-app.post('/api/login', (expressReq, expressRes) => {
-    const { user, pass } = expressReq.body;
-    if (!user || !pass) return expressRes.status(400).json({ message: 'Заполните все поля' });
+app.post('/api/login', (req, res) => {
+    const { user, pass } = req.body;
+    if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
-    // Специальный ручной бэкап главного админа, если БД пустая
     if (user === 'Danumala' && !db.users['Danumala']) {
         db.users['Danumala'] = { password: 'danyajukovka' };
         saveDB();
@@ -54,14 +57,13 @@ app.post('/api/login', (expressReq, expressRes) => {
 
     const account = db.users[user];
     if (!account || account.password !== pass) {
-        return expressRes.status(400).json({ message: 'Неверное имя пользователя или пароль' });
+        return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
     }
-    expressRes.json({ success: true });
+    res.json({ success: true });
 });
 
-// Существующий обязательный роут удаления сообщений
-app.post('/api/messages/delete', (expressReq, expressRes) => {
-    const { messageId, user } = expressReq.body;
+app.post('/api/messages/delete', (req, res) => {
+    const { messageId, user } = req.body;
     const msgIndex = db.messages.findIndex(m => m.id === messageId);
     
     if (msgIndex !== -1) {
@@ -69,25 +71,23 @@ app.post('/api/messages/delete', (expressReq, expressRes) => {
         if (user === 'Danumala' || msg.author === user) {
             db.messages.splice(msgIndex, 1);
             saveDB();
-            io.emit('msg_deleted', messageId); // Мгновенно стираем у всех из UI
-            return expressRes.json({ success: true });
+            io.emit('msg_deleted', messageId);
+            return res.json({ success: true });
         }
     }
-    expressRes.status(400).json({ message: 'Нет прав или сообщение не найдено' });
+    res.status(400).json({ message: 'Нет прав или сообщение не найдено' });
 });
 
-// Главный роут для фронтенда
-app.get('/', (expressReq, expressRes) => {
-    expressRes.sendFile(path.join(__dirname, 'index.html'));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Socket.io Архитектура и сигналинг звонков
 io.on('connection', (socket) => {
     let sessionUser = null;
 
     socket.on('register_user', (username) => {
         sessionUser = username;
-        usersOnline[username] = socket.id; // Регистрируем активный сокет
+        usersOnline[username] = socket.id;
         io.emit('update_users', Object.keys(usersOnline));
     });
 
@@ -96,7 +96,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('load_messages', (query) => {
-        // Загрузка приватных сообщений или общего канала новостей
         let history = [];
         if (query.type === 'news') {
             history = db.messages.filter(m => m.type === 'news');
@@ -110,7 +109,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_msg', (data) => {
-        if (data.type === 'news' && sessionUser !== 'Danumala') return; // Защита новостного канала
+        if (data.type === 'news' && sessionUser !== 'Danumala') return;
 
         const newMsg = {
             id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -125,17 +124,16 @@ io.on('connection', (socket) => {
         db.messages.push(newMsg);
         saveDB();
 
-        // Отправка сообщений целевым клиентам
         if (data.type === 'news') {
             io.emit('new_msg', newMsg);
         } else {
             const targetSocket = usersOnline[data.to];
             if (targetSocket) io.to(targetSocket).emit('new_msg', newMsg);
-            socket.emit('new_msg', newMsg); // Возвращаем автору
+            socket.emit('new_msg', newMsg);
         }
     });
 
-    // Фича А: Быстрое сокет-удаление сообщений
+    // Удаление сообщений через сокеты
     socket.on('req_delete_message', (data) => {
         const msgIndex = db.messages.findIndex(m => m.id === data.messageId);
         if (msgIndex !== -1) {
@@ -148,47 +146,35 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Фича Б: Сигналинг для приватных аудиозвонков WebRTC
+    // WebRTC Сигналинг звонков
     socket.on('call_init', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('call_incoming', { from: data.from });
-        }
+        if (targetId) io.to(targetId).emit('call_incoming', { from: data.from });
     });
 
     socket.on('call_accepted', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('start_handshake', { from: data.from });
-        }
+        if (targetId) io.to(targetId).emit('start_handshake', { from: data.from });
     });
 
     socket.on('rtc_offer', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('receive_offer', { offer: data.offer, from: sessionUser });
-        }
+        if (targetId) io.to(targetId).emit('receive_offer', { offer: data.offer, from: sessionUser });
     });
 
     socket.on('rtc_answer', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('receive_answer', { answer: data.answer });
-        }
+        if (targetId) io.to(targetId).emit('receive_answer', { answer: data.answer });
     });
 
     socket.on('ice_candidate', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('receive_ice', { candidate: data.candidate });
-        }
+        if (targetId) io.to(targetId).emit('receive_ice', { candidate: data.candidate });
     });
 
     socket.on('call_rejected', (data) => {
         const targetId = usersOnline[data.to];
-        if (targetId) {
-            io.to(targetId).emit('call_ended');
-        }
+        if (targetId) io.to(targetId).emit('call_ended');
     });
 
     socket.on('disconnect', () => {
@@ -200,5 +186,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Сервер DanuMes успешно запущен на порту ${PORT}`);
+    console.log(`Сервер мессенджера запущен на порту ${PORT}`);
 });
