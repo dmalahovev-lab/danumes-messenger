@@ -139,7 +139,7 @@
         </div>
     </div>
     <audio id="remote-audio" autoplay></audio>
-    <script>
+        <script>
         let socket = null, currentUser = null, activeChat = { type: null, id: null };
         let isSelectionForRegister = false, selectedMessageId = null, cachedUsersList = [];
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
@@ -182,14 +182,25 @@
         });
 
         function initSocketChannels() {
-            socket = io({ transports: ['websocket'], upgrade: false });
-            socket.on('connect', () => { socket.emit('register_user', currentUser.username); buildSidebarStructure(); });
+            // Включаем принудительный WebSocket и добавляем авто-реконнект для стабильности на Render
+            socket = io({ 
+                transports: ['websocket'], 
+                upgrade: false,
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 2000
+            });
+            
+            socket.on('connect', () => { 
+                socket.emit('register_user', currentUser.username); 
+                buildSidebarStructure(); 
+            });
             
             socket.on('auth_success_data', (data) => {
                 if (data && data.avatar) document.getElementById('profile-preview').src = data.avatar;
             });
 
-            let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+            socket.on('update_users', (users) => { cachedUsersList = users; renderSidebarList(); });
             
             socket.on('update_groups', (groups) => {
                 const c = document.getElementById('chats');
@@ -211,7 +222,7 @@
 
             socket.on('new_msg', (msg) => {
                 if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
-                    let b = (msg.author === 'Danumala' || msg.author === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+                    renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
                     if (activeChat.type === 'private' && msg.author !== currentUser.username) socket.emit('mark_as_read', { chatWith: activeChat.id });
                 }
             });
@@ -263,7 +274,8 @@
                 if (u && u.username && u.username !== currentUser.username) {
                     const d = document.createElement('div');
                     d.className = 'chat-item'; d.setAttribute('data-type', 'user');
-                    let b = u.username === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
+                    // ВШИТАЯ ГАЛОЧКА ДЛЯ ВАС И ДЛЯ ВАШЕГО ДРУГА RUNFLY [3]
+                    let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
                     let a = u.avatar ? `<img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : `<div class="avatar" style="width:30px;height:30px;font-size:12px;">👤</div>`;
                     d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${a}<div class="chat-item-title">${u.username}${b}</div></div><div class="chat-item-sub">Нажмите для диалога</div>`;
                     d.onclick = () => selectChat('private', u.username, u.username);
@@ -285,6 +297,7 @@
 
         function selectChat(type, id, title) {
             activeChat = { type, id };
+            // ГАЛОЧКА В ШАПКЕ ЧАТА ДЛЯ ВАС И ДРУГА
             let b = (id === 'Danumala' || id === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             document.getElementById('current-chat-title').innerHTML = title + b;
             document.getElementById('header-avatar').innerText = title.charAt(0).toUpperCase();
@@ -299,7 +312,8 @@
             const box = document.getElementById('chat-messages'); const div = document.createElement('div');
             const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
             div.dataset.id = msg.id; div.dataset.author = msg.author;
-            let b = msg.author === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
+            // ГАЛОЧКА НАД СООБЩЕНИЕМ ДЛЯ ВАС И ДРУГА
+            let b = (msg.author === 'Danumala' || msg.author === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
             let t = isOwn ? `<span class="tick">${msg.read ? '✓✓' : '✓'}</span>` : '';
             let c = `<strong>${msg.author}${b}:</strong><br>`; if (msg.text) c += `<span>${msg.text}</span>`; if (msg.image) c += `<img src="${msg.image}">`; c += t; div.innerHTML = c; box.appendChild(div);
         }
@@ -316,7 +330,7 @@
 
         document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file || !activeChat.id) return;
+            const file = e.target.files; if (!file || !activeChat.id) return;
             const r = new FileReader(); r.onload = (event) => {
                 const img = new Image(); img.onload = () => {
                     const canvas = document.createElement('canvas'); const MAX = 800; let w = img.width, h = img.height;
@@ -333,7 +347,7 @@
         document.getElementById('close-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').style.display = 'none'; });
 
         document.getElementById('profile-avatar-input').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file) return;
+            const file = e.target.files; if (!file) return;
             const r = new FileReader(); r.onload = (event) => {
                 const img = new Image(); img.onload = () => {
                     const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 100;
@@ -375,4 +389,5 @@
     </script>
 </body>
 </html>
+
 
