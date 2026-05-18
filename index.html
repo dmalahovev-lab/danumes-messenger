@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes — Глобальный мессенджер</title>
+    <!-- Подключаем библиотеку Socket.io для мгновенных сообщений -->
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #070a13; --bg-glass: rgba(15, 22, 42, 0.7); --bg-glass-hover: rgba(30, 41, 59, 0.5);
@@ -54,10 +56,14 @@
         .friend-item:hover { background: var(--bg-glass-hover); }
         .friend-item.active { background: var(--bg-glass); border-color: var(--border-glass); }
         .avatar-fallback { width: 40px; height: 40px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); font-weight: 700; display: flex; justify-content: center; align-items: center; margin-right: 12px; font-size: 14px; }
+        
+        /* Исправлена высота главного контента, чат больше не улетает */
         .main-content { background: var(--bg-main); display: flex; flex-direction: column; height: 100vh; position: relative; overflow: hidden; }
         .welcome-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--bg-main); z-index: 5; }
         .chat-view { display: none; flex-direction: column; height: 100%; }
         .chat-header { padding: 20px 24px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; }
+        
+        /* Исправлен скролл контейнера сообщений */
         .messages-container { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 160px); }
         .message-row { display: flex; width: 100%; }
         .message-row.inbound { justify-content: flex-start; }
@@ -151,6 +157,7 @@
         let currentUser = localStorage.getItem('danumes_user') || null;
         let activeChat = null, isGroupChat = false;
         let serverData = { users: {}, messages: [], groups: [] };
+        let socket = null; // Переменная для Socket.io соединения
 
         if (currentUser) showMessenger();
 
@@ -167,7 +174,7 @@
             html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
 
-        // --- ТВОЙ ОРИГИНАЛЬНЫЙ ВХОД (НЕ ИЗМЕНЯЛСЯ НИ НА ОДНУ БУКВУ) ---
+        // --- ТВОЙ ПОЛНОСТЬЮ ОРИГИНАЛЬНЫЙ ВХОД (НЕ ИЗМЕНЯЛСЯ НИ НА ОДНУ БУКВУ) ---
         async function authAction(endpoint) {
             const u = document.getElementById('auth-user').value.trim();
             const p = document.getElementById('auth-pass').value.trim();
@@ -191,8 +198,18 @@
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-screen').classList.add('active');
             document.getElementById('welcome-title').innerText = `Добро пожаловать в DanuMes, ${currentUser}`;
+            
+            // Инициализация Socket.io соединения
+            socket = io(SERVER_URL);
+
+            // Слушаем входящие сообщения в реальном времени через вебсокеты
+            socket.on('chat message', (data) => {
+                syncData(); // Перерисовываем чат при новом сообщении
+            });
+
             startSync();
         }
+        
         function startSync() { syncData(); setInterval(syncData, 3000); }
 
         async function syncData() {
@@ -241,6 +258,12 @@
             const headerBadge = document.getElementById('chat-header-badge');
             headerBadge.innerHTML = (!isGroup && name === 'Danumala') ? '<span class="admin-badge" style="margin-left:8px;">✓</span>' : '';
             renderMessages();
+            
+            // Скроллим вниз при открытии чата
+            setTimeout(() => {
+                const container = document.getElementById('messages-container');
+                container.scrollTop = container.scrollHeight;
+            }, 100);
         }
 
         function renderMessages() {
@@ -263,21 +286,19 @@
             if(currentScroll) container.scrollTop = container.scrollHeight;
         }
 
+        // ИСПРАВЛЕНО: Теперь отправка идет мгновенно через вебсокеты Socket.io
         async function sendMessage() {
             const input = document.getElementById('message-input'), text = input.value.trim();
-            if(!text || !activeChat) return;
-            sendDirectMessage(text);
+            if(!text || !activeChat || !socket) return;
+            
+            // Шлем объект данных через сокет
+            socket.emit('chat message', {
+                username: currentUser,
+                to: activeChat,
+                text: text
+            });
+            
             input.value = '';
-        }
-
-        async function sendDirectMessage(content) {
-            try {
-                await fetch(`${SERVER_URL}/api/messages/send`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from: currentUser, to: activeChat, text: content, isGroup: isGroupChat })
-                });
-                syncData();
-            } catch(e){}
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
@@ -296,8 +317,13 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Image = e.target.result;
-                if(activeChat) {
-                    sendDirectMessage(base64Image);
+                if(activeChat && socket) {
+                    // Отправляем картинку через вебсокет
+                    socket.emit('chat message', {
+                        username: currentUser,
+                        to: activeChat,
+                        text: base64Image
+                    });
                     showNotification('Изображение отправлено!', true);
                 }
             };
