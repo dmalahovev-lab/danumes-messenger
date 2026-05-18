@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DanuMes Messenger</title>
     <style>
+        /* СТРОГО ТВОЙ ОРИГИНАЛЬНЫЙ ДИЗАЙН ИЗ REPO TEST */
         body {
             background-color: #121212;
             color: #ffffff;
@@ -80,7 +81,7 @@
             color: #b388ff;
         }
 
-        /* Дополнительные стили интерфейса приложения с ограничением ширины сообщений до 45% */
+        /* Настройки рабочего интерфейса (Сообщения 45%, ввод намертво внизу) */
         #app-container { display: none; width: 100%; height: 100vh; }
         .messenger-layout { display: flex; width: 100%; height: 100%; }
         .sidebar { width: 300px; background: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; }
@@ -100,20 +101,21 @@
         .input-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #1e1e1e; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; align-items: center; z-index: 10; }
         .message-input { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #333; border-radius: 5px; color: #fff; outline: none; resize: none; height: 40px; }
         .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #b388ff; }
+        
+        /* Дополнительные плашки под новые фичи */
         #custom-context-menu { display: none; position: absolute; z-index: 1000; background: #252525; border: 1px solid #444; border-radius: 5px; padding: 5px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 160px; }
         #ctx-delete-btn { width: 100%; text-align: left; background: none; border: none; color: #ff4d4d; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; }
         #ctx-delete-btn:hover { background: rgba(255, 77, 77, 0.1); }
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: #2a2a2a; color: #fff; padding: 12px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; animation: slideIn 0.2s ease forwards; border-left: 4px solid #b388ff; }
+        .toast { background: #2a2a2a; color: #fff; padding: 12px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; border-left: 4px solid #b388ff; }
         #call-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 90%; max-width: 360px; text-align: center; border: 1px solid #333; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <!-- СТРОГО ОРИГИНАЛЬНАЯ РАЗМЕТКА ИЗ ВАШЕГО РЕПОЗИТОРИЯ TEST -->
+    <!-- СТРОГО ОРИГИНАЛЬНАЯ ВЕРСТКА ФОРМЫ ИЗ REPO TEST -->
     <div id="auth-container">
         <div class="auth-title" id="auth-header-text">Вход в DanuMes</div>
         <input type="text" id="username" class="auth-input" placeholder="Имя пользователя">
@@ -122,7 +124,7 @@
         <div id="auth-toggle" class="auth-switch">Нет аккаунта? Создать</div>
     </div>
 
-    <!-- Основное пространство мессенджера -->
+    <!-- Чат-клиент -->
     <div id="app-container">
         <div class="messenger-layout">
             <div class="sidebar">
@@ -146,7 +148,6 @@
         </div>
     </div>
 
-    <!-- Функциональные элементы новых фич -->
     <div id="custom-context-menu">
         <button id="ctx-delete-btn">🗑️ Удалить сообщение</button>
     </div>
@@ -167,8 +168,8 @@
     <audio id="remote-audio" autoplay></audio>
 
     <script>
-        // Инициализируем сокеты строго по WebSocket протоколу для стабильной работы на Render
-        const socket = io({ transports: ['websocket'] });
+        // Чистый WebSocket транспорт, чтобы пробиться через файрволы Render
+        const socket = io({ transports: ['websocket'], upgrade: false });
         
         let currentUser = null;
         let activeChat = { type: null, id: null };
@@ -179,45 +180,16 @@
         let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
         const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
-        function showToast(text, type = 'info') {
+        function showToast(text) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast';
-            if(type === 'error') toast.style.borderLeftColor = '#ff4d4d';
             toast.innerText = text;
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 4000);
         }
 
-        socket.on('connect', () => console.log('Подключение к DanuMes установлено.'));
-        socket.on('connect_error', () => showToast('Ошибка подключения к серверу. Убедитесь, что сервер на Render запущен.', 'error'));
-
-        function playNotifySound() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                let osc = ctx.createOscillator(), gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                osc.start(); osc.stop(ctx.currentTime + 0.15);
-            } catch(e){}
-        }
-
-        function playRingtone() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                ringtoneInterval = setInterval(() => {
-                    let osc = ctx.createOscillator(), gain = ctx.createGain();
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.frequency.setValueAtTime(440, ctx.currentTime);
-                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                    osc.start(); osc.stop(ctx.currentTime + 0.3);
-                }, 1000);
-            } catch(e){}
-        }
-        function stopRingtone() { clearInterval(ringtoneInterval); }
-
-        // СВЯТОЙ КОД ПЕРЕКЛЮЧЕНИЯ ИЗ REPO TEST
+        // Переключение режимов
         document.getElementById('auth-toggle').addEventListener('click', () => {
             isSelectionForRegister = !isSelectionForRegister;
             document.getElementById('auth-header-text').innerText = isSelectionForRegister ? 'Регистрация в DanuMes' : 'Вход в DanuMes';
@@ -225,11 +197,11 @@
             document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
         });
 
-        // СВЯТОЙ КОД АВТОРИЗАЦИИ (Строго оригинальные переменные user, pass и роуты)
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ (строго переменные user и pass)
         document.getElementById('main-auth-btn').addEventListener('click', async () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
-            if (!user || !pass) return showToast('Заполните поля', 'error');
+            if (!user || !pass) return showToast('Заполните поля');
 
             const targetUrl = isSelectionForRegister ? '/api/register' : '/api/login';
             
@@ -249,23 +221,21 @@
                     socket.emit('register_user', user);
                     buildSidebarStructure();
                 } else {
-                    showToast(data.message || 'Ошибка авторизации', 'error');
+                    showToast(data.message || 'Ошибка авторизации');
                 }
             } catch (err) {
-                showToast('Ошибка подключения к серверу. Убедитесь, что сервер на Render запущен.', 'error');
+                showToast('Ошибка подключения к серверу.');
             }
         });
 
         function buildSidebarStructure() {
             const chatsContainer = document.getElementById('chats');
             chatsContainer.innerHTML = '';
-            
             const newsDiv = document.createElement('div');
             newsDiv.className = 'chat-item';
             newsDiv.innerHTML = `<span>📢 DanuMes news</span>`;
             newsDiv.onclick = () => selectChat('news', 'danumes_news', 'DanuMes news');
             chatsContainer.appendChild(newsDiv);
-
             socket.emit('get_online_users');
         }
 
@@ -326,17 +296,13 @@
             const box = document.getElementById('chat-messages');
             const div = document.createElement('div');
             const isOwn = msg.author === currentUser.username;
-            
             div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
             div.dataset.id = msg.id;
             div.dataset.author = msg.author;
-            
             let adminMark = msg.author === 'Danumala' ? '<span class="badge-admin">✓</span>' : '';
             let content = `<strong>${msg.author}${adminMark}:</strong><br>`;
-            
             if (msg.text) content += `<span>${msg.text}</span>`;
             if (msg.image) content += `<img src="${msg.image}">`;
-            
             div.innerHTML = content;
             box.appendChild(div);
         }
@@ -346,13 +312,11 @@
                 e.preventDefault();
                 const text = e.target.value.trim();
                 if (!text || !activeChat.id) return;
-                
                 if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') {
-                    showToast('Писать в этот канал может только админ Danumala', 'error');
+                    showToast('Писать в этот канал может только админ Danumala');
                     e.target.value = '';
                     return;
                 }
-
                 socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text });
                 e.target.value = '';
             }
@@ -378,12 +342,11 @@
             if (msg.author !== currentUser.username) playNotifySound();
         });
 
-        // Контекстное меню удаления сообщений у всех участников
+        // Удаление сообщений у всех участников
         const ctxMenu = document.getElementById('custom-context-menu');
         document.getElementById('chat-messages').addEventListener('contextmenu', (e) => {
             const msgEl = e.target.closest('.message');
             if (!msgEl) return;
-
             const author = msgEl.dataset.author;
             if (currentUser.username === 'Danumala' || currentUser.username === author) {
                 e.preventDefault();
@@ -406,7 +369,7 @@
             if (el) el.remove();
         });
 
-        // Приватные аудиозвонки (WebRTC сигналинг)
+        // Аудиозвонки (WebRTC)
         document.getElementById('call-btn').addEventListener('click', async () => {
             showToast(`Вызов ${activeChat.id}...`);
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -424,10 +387,8 @@
             stopRingtone();
             document.getElementById('call-modal').style.display = 'none';
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            
             peerConnection = new RTCPeerConnection(rtcConfig);
             localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-            
             peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
             peerConnection.onicecandidate = (e) => {
                 if (e.candidate) socket.emit('ice_candidate', { to: currentCallSession.from, candidate: e.candidate });
@@ -438,12 +399,10 @@
         socket.on('start_handshake', async (data) => {
             peerConnection = new RTCPeerConnection(rtcConfig);
             localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-            
             peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
             peerConnection.onicecandidate = (e) => {
                 if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate });
             };
-
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             socket.emit('rtc_offer', { to: data.from, offer: offer });
