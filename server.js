@@ -15,7 +15,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ЖЕСТКИЙ И НАДЕЖНЫЙ ВВОД КЛЮЧЕЙ НАПРЯМУЮ (БЕЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ)
 const SUPABASE_URL = 'https://supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10eGJpbXp0bWdpbWZ6cWxkZWtlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTExNzEzMywiZXhwIjoyMDk0NjkzMTMzfQ.AawhNSwRsTo0bc1ukUmXEUzfSGOmul9WozHacprlkLY';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26,19 +25,22 @@ app.use(express.static(__dirname));
 
 const usersOnline = {}; 
 
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
+// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Сохранение логики и переменных)
 app.post('/api/register', async (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     
     try {
-        const { data: existingUser } = await supabase.from('users').select('username').eq('username', user).maybeSingle();
-        if (existingUser) return res.status(400).json({ message: 'Пользователь уже существует' });
+        const { data: existingUsers, error: checkError } = await supabase.from('users').select('username').eq('username', user);
+        if (checkError) return res.status(500).json({ message: 'Ошибка базы данных при проверке' });
+        if (existingUsers && existingUsers.length > 0) return res.status(400).json({ message: 'Пользователь уже существует' });
         
-        await supabase.from('users').insert([{ username: user, password: pass }]);
+        const { error: insertError } = await supabase.from('users').insert([{ username: user, password: pass }]);
+        if (insertError) return res.status(500).json({ message: 'Ошибка записи пользователя' });
+        
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ message: 'Ошибка базы данных' });
+        res.status(500).json({ message: 'Критическая ошибка сервера' });
     }
 });
 
@@ -48,16 +50,21 @@ app.post('/api/login', async (req, res) => {
     
     try {
         if (user === 'Danumala') {
-            const { data: d } = await supabase.from('users').select('username').eq('username', 'Danumala').maybeSingle();
-            if (!d) await supabase.from('users').insert([{ username: 'Danumala', password: 'danyajukovka' }]);
+            const { data: d } = await supabase.from('users').select('username').eq('username', 'Danumala');
+            if (!d || d.length === 0) await supabase.from('users').insert([{ username: 'Danumala', password: 'danyajukovka' }]);
         }
         if (user === 'RunFly') {
-            const { data: r } = await supabase.from('users').select('username').eq('username', 'RunFly').maybeSingle();
+            const { data: r } = await supabase.from('users').select('username').eq('username', 'RunFly');
             if (!r) await supabase.from('users').insert([{ username: 'RunFly', password: 'GGWWXXJJ2001' }]);
         }
 
-        const { data: account } = await supabase.from('users').select('*').eq('username', user).maybeSingle();
-        if (!account || account.password !== pass) {
+        const { data: accounts, error: loginError } = await supabase.from('users').select('*').eq('username', user);
+        if (loginError || !accounts || accounts.length === 0) {
+            return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
+        }
+        
+        const account = accounts[0];
+        if (account.password !== pass) {
             return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
         }
         res.json({ success: true });
@@ -75,11 +82,14 @@ app.post('/api/upload', (req, res) => {
 app.post('/api/messages/delete', async (req, res) => {
     const { messageId, user } = req.body;
     try {
-        const { data: msg } = await supabase.from('messages').select('author').eq('id', messageId).maybeSingle();
-        if (msg && (user === 'Danumala' || msg.author === user)) {
-            await supabase.from('messages').delete().eq('id', messageId);
-            io.emit('msg_deleted', messageId);
-            return res.json({ success: true });
+        const { data: msgs } = await supabase.from('messages').select('author').eq('id', messageId);
+        if (msgs && msgs.length > 0) {
+            const msg = msgs[0];
+            if (user === 'Danumala' || msg.author === user) {
+                await supabase.from('messages').delete().eq('id', messageId);
+                io.emit('msg_deleted', messageId);
+                return res.json({ success: true });
+            }
         }
         res.status(400).json({ message: 'Нет прав или сообщение не найдено' });
     } catch(err) {
@@ -114,8 +124,9 @@ io.on('connection', (socket) => {
         usersOnline[username] = socket.id;
         
         try {
-            const { data: u } = await supabase.from('users').select('avatar').eq('username', username).maybeSingle();
-            socket.emit('auth_success_data', { avatar: u ? u.avatar : null });
+            const { data: u } = await supabase.from('users').select('avatar').eq('username', username);
+            const avatar = (u && u.length > 0) ? u[0].avatar : null;
+            socket.emit('auth_success_data', { avatar: avatar });
             broadcastUsersList();
             sendGroupsList(socket);
         } catch(e) { console.error(e); }
@@ -201,9 +212,9 @@ io.on('connection', (socket) => {
             if (data.type === 'news') {
                 io.emit('new_msg', newMsg);
             } else if (data.type === 'group') {
-                const { data: g } = await supabase.from('groups').select('members').eq('id', data.to).maybeSingle();
-                if (g && g.members) {
-                    g.members.forEach(member => { const ts = usersOnline[member]; if (ts) io.to(ts).emit('new_msg', newMsg); });
+                const { data: gList } = await supabase.from('groups').select('members').eq('id', data.to);
+                if (gList && gList.length > 0 && gList[0].members) {
+                    gList[0].members.forEach(member => { const ts = usersOnline[member]; if (ts) io.to(ts).emit('new_msg', newMsg); });
                 }
             } else {
                 const ts = usersOnline[data.to];
