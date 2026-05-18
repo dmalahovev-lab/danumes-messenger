@@ -13,7 +13,6 @@ const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Увеличиваем лимиты, чтобы огромные картинки Base64 не блокировались сервером
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -23,7 +22,6 @@ const DB_FILE = path.join(__dirname, 'database.json');
 const ADMIN_USERNAME = 'Danumala';
 const NEWS_GROUP_NAME = 'DanuMes news';
 
-// Функция для безопасного считывания базы данных из файла
 function loadLocalDatabase() {
     try {
         if (fs.existsSync(DB_FILE)) {
@@ -46,13 +44,11 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Принудительная инициализация суперадмина и канала новостей
 function initLocalSystem() {
     if (!globalState.users) globalState.users = {};
     if (!globalState.groups) globalState.groups = [];
     if (!globalState.messages) globalState.messages = [];
 
-    // Твой вечный админ-профиль
     if (!globalState.users[ADMIN_USERNAME]) {
         globalState.users[ADMIN_USERNAME] = {
             password: hashPassword('danyajukovka'),
@@ -65,7 +61,6 @@ function initLocalSystem() {
         globalState.groups.push({ name: NEWS_GROUP_NAME, creator: ADMIN_USERNAME, members: [ADMIN_USERNAME] });
     }
 
-    // Автоматически добавляем абсолютно ВСЕХ людей в новостной канал
     globalState.groups.forEach(g => {
         if (g.name === NEWS_GROUP_NAME) {
             Object.keys(globalState.users).forEach(u => {
@@ -79,7 +74,6 @@ initLocalSystem();
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// --- СВЕРХСТАБИЛЬНАЯ АВТОНОМНАЯ РЕГИСТРАЦИЯ ---
 app.post('/api/register', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -97,7 +91,6 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true });
 });
 
-// --- СВЕРХСТАБИЛЬНЫЙ АВТОНОМНЫЙ ВХОД ДЛЯ ВСЕХ ---
 app.post('/api/login', (req, res) => {
     const username = (req.body.user || '').trim();
     const password = (req.body.pass || '').trim();
@@ -116,26 +109,39 @@ app.post('/api/login', (req, res) => {
 app.post('/api/auth/register', (req, res) => { res.redirect(307, '/api/register'); });
 app.post('/api/auth/login', (req, res) => { res.redirect(307, '/api/login'); });
 
-// --- СИНХРОНИЗАЦИЯ ЧАТОВ, ПОЛЬЗОВАТЕЛЕЙ И ГРУПП ---
+// --- ИСПРАВЛЕННАЯ СИНХРОНИЗАЦИЯ: ТЕПЕРЬ ВСЕ ВИДЯТ ДРУГ ДРУГА И КАНАЛ НОВОСТЕЙ НА 100% ---
 app.post('/api/sync', (req, res) => {
     const username = (req.body.user || '').trim();
-    if (username && globalState.users[username]) globalState.users[username].last_seen = Date.now();
+    if (username && globalState.users[username]) {
+        globalState.users[username].last_seen = Date.now();
+    }
+
+    // Жесткая проверка: если пользователя почему-то нет в списке новостей — принудительно вшиваем его туда
+    globalState.groups.forEach(g => {
+        if (g.name === NEWS_GROUP_NAME && username && !g.members.includes(username)) {
+            g.members.push(username);
+            saveLocalDatabase();
+        }
+    });
 
     const activeUsers = {};
     const now = Date.now();
     
+    // Считываем абсолютно всех зарегистрированных людей из файла базы данных
     Object.keys(globalState.users).forEach(u => {
-        activeUsers[u] = { online: (now - globalState.users[u].last_seen) < 10000, avatar: null };
+        activeUsers[u] = { online: (now - globalState.users[u].last_seen) < 12000, avatar: null };
     });
+
+    // Фильтруем группы, в которых состоит текущий пользователь
+    const myGroups = globalState.groups.filter(g => g.members && g.members.includes(username));
 
     res.json({
         users: activeUsers,
         messages: globalState.messages || [],
-        groups: globalState.groups.filter(g => g.members && g.members.includes(username))
+        groups: myGroups
     });
 });
 
-// --- ПРИЕМ, СОХРАНЕНИЕ И СВЯЗЬ ТЕКСТА / ИЗОБРАЖЕНИЙ ПО ВСЕМ КАНАЛАМ ---
 app.post('/api/messages/send', (req, res) => {
     const { from, to, text, isGroup } = req.body;
     if (!from || !text || !to) return res.status(400).json({ success: false, error: 'Неполные данные' });
@@ -146,14 +152,14 @@ app.post('/api/messages/send', (req, res) => {
         from, to, text, isGroup: !!isGroup, timestamp: Date.now()
     };
 
+    if (!globalState.messages) globalState.messages = [];
     globalState.messages.push(newMessage);
     saveLocalDatabase();
     
-    io.emit('chat message', newMessage); // Дублируем сокетам для живого обновления окон
+    io.emit('chat message', newMessage); 
     res.json({ success: true, message: newMessage });
 });
 
-// --- УДАЛЕНИЕ СООБЩЕНИЙ ---
 app.post('/api/messages/delete', (req, res) => {
     const { id, username } = req.body;
     if (!id || !username) return res.status(400).json({ success: false });
@@ -183,7 +189,6 @@ app.post('/api/groups/create', (req, res) => {
     res.json({ success: true });
 });
 
-// --- ПОДСТРАХОВКА ЧЕРЕЗ ЖИВЫЕ СОКЕТЫ ---
 io.on('connection', (socket) => {
     socket.on('chat message', (data) => {
         if (!data.username || !data.text || !data.to) return;
