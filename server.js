@@ -1,172 +1,148 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+const PORT = process.env.PORT || 3000;
+
+// Папки для хранения
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+// Инициализация папок и файлов
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+
+// Вспомогательные функции
+function readUsers() {
+    const data = fs.readFileSync(USERS_FILE);
+    return JSON.parse(data);
+}
+function writeUsers(users) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+function readMessages() {
+    const data = fs.readFileSync(MESSAGES_FILE);
+    return JSON.parse(data);
+}
+function writeMessages(messages) {
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+}
+
+// Multer для файлов
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, unique + path.extname(file.originalname));
+    }
 });
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.json());
+app.use(express.static(__dirname)); // для отдачи index.html и файлов
 
-// --- ЛОКАЛЬНАЯ НАДЁЖНАЯ БАЗА ДАННЫХ НА ФАЙЛАХ ---
-const MESSAGES_FILE = path.join(__dirname, 'db_messages.json');
-const USERS_FILE = path.join(__dirname, 'db_users.json');
-
-// Системные нестрогие аккаунты, которые всегда активны
-const permanentUsers = [
-  { username: 'Danumala', password: 'danyajukovka', hasVerifiedBadge: true, hasNewsAccess: true },
-  { username: 'RunFly', password: 'GGWWXXJJ2001', hasVerifiedBadge: true, hasNewsAccess: false }
+// ========== СИСТЕМНЫЕ АККАУНТЫ (как в твоём основном репозитории) ==========
+const SYSTEM_USERS = [
+    { username: 'Danumala', password: 'danumala123', avatar: '👑' },
+    { username: 'RunFly', password: 'runfly123', avatar: '🚀' }
 ];
 
-let globalMessages = [];
-let registeredUsers = [];
-
-// Хелперы чтения/записи файлов базы данных
-function loadDatabase() {
-  try {
-    if (fs.existsSync(MESSAGES_FILE)) {
-      globalMessages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+// При старте добавляем системных пользователей, если их нет
+let users = readUsers();
+SYSTEM_USERS.forEach(sysUser => {
+    if (!users.find(u => u.username === sysUser.username)) {
+        users.push(sysUser);
     }
-    if (fs.existsSync(USERS_FILE)) {
-      registeredUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+});
+writeUsers(users);
+
+// ========== API ==========
+
+// Регистрация
+app.post('/register-attempt', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.json({ success: false, error: 'Заполните все поля' });
     }
-  } catch (err) {
-    console.error('Ошибка инициализации локальной БД:', err.message);
-  }
-}
-
-function saveMessages() {
-  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(globalMessages, null, 2), 'utf8');
-}
-
-function saveUsers() {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(registeredUsers, null, 2), 'utf8');
-}
-
-// Загружаем сохраненные данные при старте сервера
-loadDatabase();
-
-// --- СВЯЗЬ И ЛОГИКА СОКЕТОВ ---
-io.on('connection', (socket) => {
-  console.log('Подключился клиент:', socket.id);
-
-  // Сразу отправляем историю глобального чата новому клиенту
-  socket.emit('init-messages', globalMessages);
-
-  // 1. ПОЛНОЦЕННАЯ РАБОТАЮЩАЯ ОБРАБОТКА ВХОДА
-  socket.on('login-attempt', (data) => {
-    const { username, password } = data;
-    if (!username || !password) return socket.emit('login-failure', { message: 'Заполните поля!' });
-
-    // Проверяем админов
-    let foundUser = permanentUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-    
-    // Если не админ, ищем в зарегистрированных обычных пользователях
-    if (!foundUser) {
-      foundUser = registeredUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+    let users = readUsers();
+    if (users.find(u => u.username === username)) {
+        return res.json({ success: false, error: 'Пользователь уже существует' });
     }
+    users.push({ username, password, avatar: '👤' });
+    writeUsers(users);
+    res.json({ success: true });
+});
 
-    if (foundUser) {
-      socket.emit('login-success', {
-        username: foundUser.username,
-        hasVerifiedBadge: foundUser.hasVerifiedBadge || false,
-        hasNewsAccess: foundUser.hasNewsAccess || false
-      });
+// Вход
+app.post('/login-attempt', (req, res) => {
+    const { username, password } = req.body;
+    let users = readUsers();
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+        res.json({ success: true, username: user.username, avatar: user.avatar });
     } else {
-      socket.emit('login-failure', { message: 'Неверное имя или пароль!' });
+        res.json({ success: false, error: 'Неверные имя или пароль' });
     }
-  });
-
-  // 2. ПОЛНОЦЕННАЯ РАБОТАЮЩАЯ ОБРАБОТКА РЕГИСТРАЦИИ
-  socket.on('register-attempt', (data) => {
-    const { username, password } = data;
-    if (!username || !password) return socket.emit('register-failure', { message: 'Заполните поля!' });
-
-    const existsInPerm = permanentUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
-    const existsInReg = registeredUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
-
-    if (existsInPerm || existsInReg) {
-      return socket.emit('register-failure', { message: 'Этот никнейм уже занят!' });
-    }
-
-    const newUser = {
-      username: username,
-      password: password,
-      hasVerifiedBadge: false,
-      hasNewsAccess: false
-    };
-
-    registeredUsers.push(newUser);
-    saveUsers(); // Сохраняем в db_users.json навсегда
-
-    socket.emit('register-success', {
-      username: newUser.username,
-      hasVerifiedBadge: false,
-      hasNewsAccess: false
-    });
-  });
-
-  // 3. ПОИСК ПОЛЬЗОВАТЕЛЕЙ ПО БАЗЕ ДАННЫХ
-  socket.on('search-users', (query) => {
-    const searchStr = query.toLowerCase().trim();
-    if (!searchStr) return socket.emit('search-results', []);
-
-    // Собираем всех существующих пользователей для поиска
-    const allUsers = [...permanentUsers, ...registeredUsers].map(u => ({
-      username: u.username,
-      hasVerifiedBadge: u.hasVerifiedBadge || false
-    }));
-
-    const filtered = allUsers.filter(u => u.username.toLowerCase().includes(searchStr));
-    socket.emit('search-results', filtered);
-  });
-
-  // 4. ПОЛУЧЕНИЕ СПИСКА ВСЕХ ЗАРЕГИСТРИРОВАННЫХ ДЛЯ АДМИН ПАНЕЛИ
-  socket.on('get-all-users', () => {
-    const list = [...permanentUsers, ...registeredUsers].map(u => ({
-      username: u.username,
-      isPermanent: permanentUsers.some(p => p.username === u.username)
-    }));
-    socket.emit('all-users-list', list);
-  });
-
-  // 5. ОТПРАВКА И СОХРАНЕНИЕ СООБЩЕНИЙ ЧАТА
-  socket.on('send-message', (data) => {
-    const checkUser = permanentUsers.find(u => u.username === data.username);
-    
-    const newMessage = {
-      username: data.username,
-      text: data.text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isVerified: checkUser ? checkUser.hasVerifiedBadge : false,
-      newsAccess: checkUser ? checkUser.hasNewsAccess : false,
-      isNews: data.isNews || false
-    };
-
-    globalMessages.push(newMessage);
-    saveMessages(); // Сохраняем в db_messages.json навсегда
-
-    io.emit('new-message', newMessage);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Клиент отключился:', socket.id);
-  });
 });
 
-// Роут для ручного просмотра базы пользователей через браузер (опционально)
-app.get('/api/admin/users-list', (req, res) => {
-  res.json({ permanent: permanentUsers, registered: registeredUsers });
+// Отправка сообщения (текст/файл)
+app.post('/send-message', (req, res) => {
+    const { username, text, fileUrl, fileName } = req.body;
+    if (!username || (!text && !fileUrl)) {
+        return res.status(400).json({ error: 'Неверные данные' });
+    }
+    const messages = readMessages();
+    const newMsg = {
+        id: Date.now(),
+        username,
+        text: text || '',
+        timestamp: new Date().toISOString(),
+        fileUrl: fileUrl || null,
+        fileName: fileName || null
+    };
+    messages.push(newMsg);
+    writeMessages(messages);
+    res.json({ success: true, message: newMsg });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[OK] Сервер Danumes запущен на порту ${PORT}`);
+// Получить все сообщения
+app.get('/get-messages', (req, res) => {
+    const messages = readMessages();
+    res.json(messages);
+});
+
+// Получить историю для нового пользователя
+app.get('/init-messages', (req, res) => {
+    const messages = readMessages();
+    res.json({ messages });
+});
+
+// Загрузка файла
+app.post('/upload-file', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Файл не загружен' });
+    }
+    const fileUrl = `/file/${req.file.filename}`;
+    res.json({ success: true, fileUrl, fileName: req.file.originalname });
+});
+
+// Отдача файлов
+app.get('/file/:filename', (req, res) => {
+    const filePath = path.join(UPLOADS_DIR, req.params.filename);
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).send('Файл не найден');
+    }
+});
+
+// Старт сервера
+app.listen(PORT, () => {
+    console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
