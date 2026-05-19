@@ -2,8 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const https = require('https'); // Встроенный модуль Node.js, не требует установки
 
-const app = express(); // ТУТ ИСПРАВЛЕНО!
+const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -19,27 +20,46 @@ const CLOUDFLARE_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc';
 const CLOUDFLARE_NAMESPACE_ID = '1b46ee655188445ca7b277fb8634dca0';
 const CLOUDFLARE_API_TOKEN = 'cfut_SS1xHLjBmPurWiP1cwYW1WckTJC4q3ukFbM7zyW49d264d59'; 
 
-// Безопасная функция для работы с Cloudflare API
-async function cloudflareRequest(method, body = null) {
-  const url = `https://cloudflare.com{CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/danumes_chat_history`;
-  
-  try {
-    const myFetch = typeof fetch !== 'undefined' ? fetch : require('node-fetch');
+// Функция отправки запросов через чистый HTTPS (чтобы сервер никогда не падал)
+function cloudflareRequest(method, bodyData = null) {
+  return new Promise((resolve) => {
+    const url = `/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/danumes_chat_history`;
+    
+    const payload = bodyData ? (typeof bodyData === 'object' ? JSON.stringify(bodyData) : String(bodyData)) : null;
+
     const options = {
+      hostname: '://cloudflare.com',
+      port: 443,
+      path: url,
       method: method,
       headers: {
         'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
         'Content-Type': 'text/plain'
       }
     };
-    if (body) {
-      options.body = typeof body === 'object' ? JSON.stringify(body) : String(body);
+
+    if (payload) {
+      options.headers['Content-Length'] = Buffer.byteLength(payload);
     }
-    return await myFetch(url, options);
-  } catch (err) {
-    console.error(`[KV] Ошибка сети (${method}):`, err.message);
-    return null;
-  }
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        resolve({ status: res.statusCode, body: data });
+      });
+    });
+
+    req.on('error', (err) => {
+      console.error(`[KV Error] Ошибка запроса (${method}):`, err.message);
+      resolve(null);
+    });
+
+    if (payload) {
+      req.write(payload);
+    }
+    req.end();
+  });
 }
 
 async function saveMessagesToKV(messagesArray) {
@@ -50,10 +70,9 @@ async function loadMessagesFromKV() {
   const res = await cloudflareRequest('GET');
   if (res && res.status === 200) {
     try {
-      const text = await res.text();
-      return JSON.parse(text);
+      return JSON.parse(res.body);
     } catch (e) {
-      console.error('[KV] Ошибка парсинга JSON:', e.message);
+      console.error('[KV] Не удалось распарсить сохраненный JSON истории');
     }
   }
   return [];
@@ -78,20 +97,19 @@ const permanentUsers = [
 
 let messages = [];
 
+// Безопасный запуск без падений
 loadMessagesFromKV().then(savedMessages => {
   messages = savedMessages || [];
-  console.log(`[Бэкенд] Успешно загружено сообщений из Cloudflare KV: ${messages.length}`);
+  console.log(`[Бэкенд] Чат готов. Сообщений в базе: ${messages.length}`);
 }).catch(err => {
-  console.error('[Бэкенд] Ошибка старта:', err.message);
+  console.error('[Бэкенд] Ошибка при старте базы:', err.message);
 });
 
 io.on('connection', (socket) => {
   console.log('Пользователь подключился:', socket.id);
 
-  // Отдаем историю чата при подключении
   socket.emit('init-messages', messages);
 
-  // Обработка авторизации (если используется на фронте)
   socket.on('login-attempt', (data) => {
     const user = permanentUsers.find(u => u.username === data.username && u.password === data.password);
     if (user) {
@@ -101,11 +119,10 @@ io.on('connection', (socket) => {
         hasNewsAccess: user.hasNewsAccess
       });
     } else {
-      socket.emit('login-failure', { message: 'Неверные данные или обычный аккаунт' });
+      socket.emit('login-failure', { message: 'Неверные данные' });
     }
   });
 
-  // Отправка сообщений
   socket.on('send-message', async (data) => {
     const checkUser = permanentUsers.find(u => u.username === data.username);
     
@@ -120,7 +137,6 @@ io.on('connection', (socket) => {
     messages.push(newMessage);
     io.emit('new-message', newMessage);
 
-    // Сохраняем обновленный массив в Cloudflare KV
     saveMessagesToKV(messages);
   });
 
@@ -131,5 +147,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Сервер Danumes запущен на порту ${PORT}`);
+  console.log(`Сервер Danumes успешно запущен на порту ${PORT}`);
 });
