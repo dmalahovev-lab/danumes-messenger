@@ -2,146 +2,145 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const https = require('https');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"], credentials: true },
-  allowEIO3: true
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 app.use(express.static(path.join(__dirname)));
 
-// --- НАСТРОЙКИ CLOUDFLARE KV ---
-const CLOUDFLARE_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc';
-const CLOUDFLARE_NAMESPACE_ID = '1b46ee655188445ca7b277fb8634dca0';
-const CLOUDFLARE_API_TOKEN = 'cfut_SS1xHLjBmPurWiP1cwYW1WckTJC4q3ukFbM7zyW49d264d59'; 
+// Пути к файлам базы данных на сервере Render
+const USERS_FILE = path.join(__dirname, 'users.json');
+const MESSAGES_FILE = path.join(__dirname, 'messages.json');
+const GROUPS_FILE = path.join(__dirname, 'groups.json');
 
-function cloudflareRequest(key, method, bodyData = null) {
-  return new Promise((resolve) => {
-    const pathUrl = `/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/${key}`;
-    const payload = bodyData ? (typeof bodyData === 'object' ? JSON.stringify(bodyData) : String(bodyData)) : null;
-
-    const options = {
-      hostname: '://cloudflare.com',
-      port: 443,
-      path: pathUrl,
-      method: method,
-      headers: {
-        'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-        'Content-Type': 'text/plain; charset=utf-8'
-      }
-    };
-
-    if (payload) {
-      options.headers['Content-Length'] = Buffer.byteLength(payload, 'utf8');
-    }
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
-    });
-
-    req.on('error', (err) => { resolve(null); });
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
-// --------------------------------
-
-// Постоянные админские аккаунты
+// Жестко прописанные админы
 const permanentUsers = [
-  { username: 'Danumala', password: 'danyajukovka', hasVerifiedBadge: true, hasNewsAccess: true },
-  { username: 'RunFly', password: 'GGWWXXJJ2001', hasVerifiedBadge: true, hasNewsAccess: false }
+  { username: 'Danumala', password: 'danyajukovka', isVerified: true, newsAccess: true },
+  { username: 'RunFly', password: 'GGWWXXJJ2001', isVerified: true, newsAccess: false }
 ];
 
-let messages = [];
-let registeredUsers = []; // Тут будут храниться все зарегистрированные пользователи
+// Инициализация файлов БД
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+if (!fs.existsSync(GROUPS_FILE)) fs.writeFileSync(GROUPS_FILE, JSON.stringify([]));
 
-// Загружаем сообщения и пользователей из Cloudflare при старте
-async function initData() {
-  const msgRes = await cloudflareRequest('danumes_chat_history', 'GET');
-  if (msgRes && msgRes.status === 200) {
-    try { messages = JSON.parse(msgRes.body); } catch (e) {}
-  }
-
-  const userRes = await cloudflareRequest('danumes_users_list', 'GET');
-  if (userRes && userRes.status === 200) {
-    try { registeredUsers = JSON.parse(userRes.body); } catch (e) {}
-  }
-  console.log(`[Бэкенд] База готова. Сообщений: ${messages.length}, Пользователей: ${registeredUsers.length}`);
-}
-initData();
+// Загрузка данных в память сервера
+let registeredUsers = JSON.parse(fs.readFileSync(USERS_FILE));
+let messages = JSON.parse(fs.readFileSync(MESSAGES_FILE));
+let groups = JSON.parse(fs.readFileSync(GROUPS_FILE));
 
 io.on('connection', (socket) => {
-  socket.emit('init-messages', messages);
+  console.log('Подключился клиент:', socket.id);
 
-  // Обработка Входа
+  // При коннекте отдаем историю глобального чата и каналов
+  socket.emit('init-messages', messages);
+  socket.emit('init-groups', groups);
+
+  // Поиск пользователей (Реальное время)
+  socket.on('search-users', (query) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return socket.emit('search-results', []);
+
+    // Собираем всех вместе для поиска
+    const allUsers = [...permanentUsers, ...registeredUsers];
+    const filtered = allUsers
+      .filter(u => u.username.toLowerCase().includes(q))
+      .map(u => ({ username: u.username, isVerified: u.isVerified || false }));
+
+    socket.emit('search-results', filtered);
+  });
+
+  // Логика Входа
   socket.on('login-attempt', (data) => {
-    // 1. Ищем сначала среди админов
-    let user = permanentUsers.find(u => u.username === data.username && u.password === data.password);
+    // Проверяем админов
+    let found = permanentUsers.find(u => u.username === data.username && u.password === data.password);
     
-    // 2. Если не админ, ищем в списке зарегистрированных в Cloudflare
-    if (!user) {
-      user = registeredUsers.find(u => u.username === data.username && u.password === data.password);
+    // Проверяем обычную базу
+    if (!found) {
+      found = registeredUsers.find(u => u.username === data.username && u.password === data.password);
     }
 
-    if (user) {
+    if (found) {
       socket.emit('login-success', {
-        username: user.username,
-        hasVerifiedBadge: user.hasVerifiedBadge || false,
-        hasNewsAccess: user.hasNewsAccess || false
+        username: found.username,
+        isVerified: found.isVerified || false,
+        newsAccess: found.newsAccess || false
       });
     } else {
-      socket.emit('login-failure');
+      socket.emit('login-failure', 'Неверный логин или пароль');
     }
   });
 
-  // Обработка новой Регистрации (сохраняем навсегда)
-  socket.on('register-attempt', async (data) => {
-    const userExists = registeredUsers.some(u => u.username === data.username) || permanentUsers.some(u => u.username === data.username);
+  // Логика Регистрации
+  socket.on('register-attempt', (data) => {
+    const exists = [...permanentUsers, ...registeredUsers].some(u => u.username.toLowerCase() === data.username.toLowerCase());
     
-    if (userExists) {
-      socket.emit('register-failure', { message: 'Имя уже занято!' });
+    if (exists) {
+      socket.emit('register-failure', 'Этот никнейм уже занят');
     } else {
       const newUser = {
         username: data.username,
         password: data.password,
-        hasVerifiedBadge: false,
-        hasNewsAccess: false
+        isVerified: false,
+        newsAccess: false
       };
-      
       registeredUsers.push(newUser);
-      socket.emit('register-success', newUser);
+      fs.writeFileSync(USERS_FILE, JSON.stringify(registeredUsers, null, 2));
 
-      // Сохраняем обновленный список пользователей в Cloudflare KV
-      await cloudflareRequest('danumes_users_list', 'PUT', registeredUsers);
+      socket.emit('register-success', {
+        username: newUser.username,
+        isVerified: false,
+        newsAccess: false
+      });
     }
   });
 
-  socket.on('send-message', async (data) => {
-    const isVerifiedUser = permanentUsers.some(u => u.username === data.username);
-    const isDanumala = data.username === 'Danumala';
+  // Создание новой группы
+  socket.on('create-group', (groupName) => {
+    if (!groupName.trim()) return;
+    
+    const newGroup = {
+      id: 'group_' + Date.now(),
+      name: groupName.trim(),
+      type: 'group'
+    };
+    
+    groups.push(newGroup);
+    fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
+    
+    io.emit('group-created', newGroup);
+  });
+
+  // Отправка сообщений
+  socket.on('send-message', (data) => {
+    const sender = [...permanentUsers, ...registeredUsers].find(u => u.username === data.username);
     
     const newMessage = {
+      chatId: data.chatId || 'global', // 'global', 'news', или ID группы/ЛС
       username: data.username,
       text: data.text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isVerified: isVerifiedUser,
-      newsAccess: isDanumala
+      isVerified: sender ? (sender.isVerified || false) : false
     };
 
     messages.push(newMessage);
-    io.emit('new-message', newMessage);
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
 
-    await cloudflareRequest('danumes_chat_history', 'PUT', messages);
+    io.emit('new-message', newMessage);
+  });
+
+  // Запрос списка всех созданных пользователей (для администратора)
+  socket.on('get-all-users', () => {
+    const list = registeredUsers.map(u => u.username);
+    socket.emit('all-users-list', list);
   });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Сервер Danumes активен на порту ${PORT}`);
+  console.log(`Сервер мессенджера Danumes запущен на порту ${PORT}`);
 });
