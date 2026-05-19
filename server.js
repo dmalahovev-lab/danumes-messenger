@@ -33,23 +33,37 @@ const CF_KV_ID = '1b46ee655788445ca7b277fb8634dca0';
 let db = { users: {}, messages: [], groups: {} };
 
 // Универсальная функция для железных HTTPS-запросов к Cloudflare KV
+// Железная функция запросов к Cloudflare KV с расчётом Content-Length
 function cfRequest(method, payload, callback) {
+    const bodyData = payload ? String(payload) : '';
     const options = {
         hostname: '://cloudflare.com',
         path: `/client/v4/accounts/${CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`,
         method: method,
         headers: {
             'Authorization': `Bearer ${CF_API_TOKEN}`,
-            'Content-Type': 'text/plain'
+            'Content-Type': 'text/plain; charset=utf-8'
         }
     };
+
+    // Обязательный заголовок для PUT запросов, иначе Cloudflare KV сбросит пакет
+    if (method === 'PUT') {
+        options.headers['Content-Length'] = Buffer.byteLength(bodyData, 'utf8');
+    }
+
     const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => { callback(null, res.statusCode, data); });
+        let chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => {
+            const resBody = Buffer.concat(chunks).toString('utf8');
+            callback(null, res.statusCode, resBody);
+        });
     });
+
     req.on('error', (e) => callback(e, 0, null));
-    if (payload) req.write(payload);
+    if (method === 'PUT' && bodyData) {
+        req.write(bodyData, 'utf8');
+    }
     req.end();
 }
 
@@ -62,7 +76,7 @@ async function loadDBFromCloudflare() {
                 fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
                 console.log("✅ База Cloudflare успешно синхронизирована!");
             } catch (e) { console.error("Ошибка парсинга KV:", e); }
-        } else { console.log("База пуста или ошибка, создаем структуру."); }
+        } else { console.log("База в облаке пуста или недоступна, создаем структуру."); }
         if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
         if (!db.users) db.users = {};
         if (!db.messages) db.messages = [];
@@ -75,11 +89,18 @@ async function saveDB() {
     try {
         const contentString = JSON.stringify(db, null, 2);
         fs.writeFileSync(DB_FILE, contentString);
-        cfRequest('PUT', contentString, (err, status) => {
-            if (!err && status === 200) { console.log("☁️ Бэкап сохранен в Cloudflare KV!"); }
+        cfRequest('PUT', contentString, (err, status, responseText) => {
+            if (!err && status === 200) { 
+                console.log("☁️ Бэкап успешно сохранен в Cloudflare KV!"); 
+            } else if (err) {
+                console.error("Ошибка сети с Cloudflare:", err.message);
+            } else {
+                console.error(`Cloudflare вернул статус ${status}:`, responseText);
+            }
         });
     } catch (e) { console.error("Ошибка записи бэкапа:", e); }
 }
+
 const usersOnline = {};
 
 app.post('/api/register', (req, res) => {
