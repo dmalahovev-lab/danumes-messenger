@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DanuMes — как Telegram</title>
+    <title>DanuMes — мессенджер</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #0e1621;
+            background: #0a0f1e;
             height: 100vh;
             overflow: hidden;
         }
@@ -23,14 +23,14 @@
             display: flex;
             height: 100vh;
             width: 100%;
-            background: #17212b;
+            background: #111827;
         }
 
-        /* Боковая панель — ширина как в Telegram */
+        /* Боковая панель — ширина как в Telegram, чуть шире */
         .sidebar {
-            width: 280px;
-            background: #1e293b;
-            border-right: 1px solid #2d3a4a;
+            width: 300px;
+            background: #1f2937;
+            border-right: 1px solid #374151;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
@@ -38,16 +38,16 @@
 
         /* Шапка панели */
         .sidebar-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid #2d3a4a;
+            padding: 16px 20px;
+            border-bottom: 1px solid #374151;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 56px;
+            height: 70px;
         }
         .logo {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.6rem;
+            font-weight: 700;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
             background-clip: text;
@@ -56,33 +56,33 @@
         .profile-btn {
             background: none;
             border: none;
-            font-size: 28px;
+            font-size: 34px;
             cursor: pointer;
             transition: 0.1s;
             line-height: 1;
-            padding: 4px;
+            padding: 6px;
             border-radius: 50%;
         }
-        .profile-btn:hover { background: #2d3a4a; }
+        .profile-btn:hover { background: #374151; }
 
         /* Поиск */
         .search-box {
-            padding: 8px 12px;
-            border-bottom: 1px solid #2d3a4a;
+            padding: 12px 16px;
+            border-bottom: 1px solid #374151;
         }
         .search-box input {
             width: 100%;
-            background: #0f172a;
+            background: #111827;
             border: none;
-            padding: 8px 12px;
-            border-radius: 20px;
-            color: #e5e7eb;
-            font-size: 13px;
+            padding: 10px 16px;
+            border-radius: 30px;
+            color: #f3f4f6;
+            font-size: 14px;
             outline: none;
         }
         .search-box input::placeholder { color: #6b7280; }
 
-        /* Список чатов — компактный */
+        /* Список чатов */
         .chats-list {
             flex: 1;
             overflow-y: auto;
@@ -90,22 +90,22 @@
         .chat-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 8px 12px;
+            gap: 14px;
+            padding: 12px 16px;
             cursor: pointer;
             transition: background 0.1s;
         }
-        .chat-item:hover { background: #2d3a4a; }
-        .chat-item.active { background: #2d3a4a; }
+        .chat-item:hover { background: #374151; }
+        .chat-item.active { background: #374151; }
         .chat-avatar {
-            width: 42px;
-            height: 42px;
-            background: #334155;
+            width: 52px;
+            height: 52px;
+            background: #4b5563;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 30px;
             flex-shrink: 0;
         }
         .chat-info {
@@ -113,27 +113,28 @@
             min-width: 0;
         }
         .chat-name {
-            font-weight: 500;
-            color: #e5e7eb;
-            font-size: 14px;
+            font-weight: 600;
+            color: #f3f4f6;
+            font-size: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .chat-lastmsg {
-            font-size: 12px;
+            font-size: 13px;
             color: #9ca3af;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-top: 4px;
         }
         .online-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             background: #22c55e;
             border-radius: 50%;
             display: inline-block;
-            margin-left: 6px;
+            margin-left: 8px;
         }
 
         /* Основной чат */
@@ -141,97 +142,98 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #17212b;
+            background: #111827;
             min-width: 0;
         }
         /* Шапка чата */
         .chat-header {
-            height: 56px;
-            padding: 0 16px;
-            background: #1e293b;
-            border-bottom: 1px solid #2d3a4a;
+            height: 70px;
+            padding: 0 20px;
+            background: #1f2937;
+            border-bottom: 1px solid #374151;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
         .chat-header-avatar {
-            font-size: 32px;
+            font-size: 42px;
         }
         .chat-header-info h3 {
             color: white;
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 600;
         }
         .chat-header-info p {
-            font-size: 12px;
+            font-size: 13px;
             color: #9ca3af;
+            margin-top: 2px;
         }
         /* Область сообщений */
         .messages-area {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
         }
         .message {
             display: flex;
-            max-width: 70%;
+            max-width: 75%;
         }
         .message-own {
             align-self: flex-end;
             flex-direction: row-reverse;
         }
         .message-bubble {
-            background: #2d3a4a;
-            padding: 6px 12px;
-            border-radius: 14px;
+            background: #1f2937;
+            padding: 10px 16px;
+            border-radius: 20px;
             border-bottom-left-radius: 4px;
-            color: #e5e7eb;
-            font-size: 14px;
-            line-height: 1.4;
+            color: #f3f4f6;
+            font-size: 15px;
+            line-height: 1.45;
         }
         .message-own .message-bubble {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             border-bottom-right-radius: 4px;
-            border-bottom-left-radius: 14px;
+            border-bottom-left-radius: 20px;
         }
         .message-text {
             word-wrap: break-word;
         }
         .message-time {
-            font-size: 10px;
+            font-size: 11px;
             color: #9ca3af;
             text-align: right;
-            margin-top: 2px;
+            margin-top: 6px;
         }
         .file-attach {
             display: inline-block;
-            margin-top: 4px;
+            margin-top: 6px;
             background: rgba(255,255,255,0.1);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
             text-decoration: none;
             color: #93c5fd;
         }
         /* Панель ввода */
         .input-area {
-            padding: 12px 16px;
-            background: #1e293b;
+            padding: 16px 20px;
+            background: #1f2937;
             display: flex;
-            gap: 12px;
+            gap: 14px;
             align-items: center;
-            border-top: 1px solid #2d3a4a;
+            border-top: 1px solid #374151;
         }
         .input-wrapper {
             flex: 1;
-            background: #0f172a;
-            border-radius: 24px;
-            padding: 6px 12px;
+            background: #111827;
+            border-radius: 30px;
+            padding: 10px 16px;
             display: flex;
-            gap: 8px;
+            gap: 12px;
             align-items: center;
         }
         #messageInput {
@@ -239,14 +241,14 @@
             background: none;
             border: none;
             color: white;
-            font-size: 14px;
+            font-size: 15px;
             outline: none;
-            padding: 6px 0;
+            padding: 4px 0;
         }
         .file-btn, .emoji-btn {
             background: none;
             border: none;
-            font-size: 20px;
+            font-size: 24px;
             cursor: pointer;
             color: #9ca3af;
             padding: 4px;
@@ -255,10 +257,10 @@
         .send-btn {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             border: none;
-            width: 38px;
-            height: 38px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
-            font-size: 18px;
+            font-size: 22px;
             cursor: pointer;
             color: white;
             display: flex;
@@ -278,25 +280,25 @@
             z-index: 1000;
         }
         .modal-content {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 24px;
-            width: 280px;
+            background: #1f2937;
+            padding: 24px;
+            border-radius: 32px;
+            width: 320px;
             text-align: center;
         }
         .modal-content h3 {
             color: white;
-            font-size: 16px;
-            margin-bottom: 12px;
+            font-size: 18px;
+            margin-bottom: 16px;
         }
         .emoji-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 12px;
-            margin: 16px 0;
+            gap: 14px;
+            margin: 20px 0;
         }
         .emoji-option {
-            font-size: 28px;
+            font-size: 34px;
             cursor: pointer;
             transition: 0.05s;
         }
@@ -304,64 +306,64 @@
         .close-modal {
             background: #3b82f6;
             border: none;
-            padding: 6px;
-            border-radius: 20px;
+            padding: 10px;
+            border-radius: 28px;
             color: white;
             width: 100%;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
         }
 
-        /* Формы входа/регистрации — компактные, но красивые */
+        /* Формы входа/регистрации — красивые, как было */
         .auth-container {
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #0e1621;
+            background: #0a0f1e;
         }
         .auth-card {
-            background: #1e293b;
-            padding: 32px;
-            border-radius: 28px;
-            width: 380px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            background: #1f2937;
+            padding: 40px;
+            border-radius: 36px;
+            width: 420px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.4);
         }
         .auth-card h2 {
             color: white;
-            font-size: 24px;
-            margin-bottom: 24px;
+            font-size: 28px;
+            margin-bottom: 28px;
             text-align: center;
         }
         .tabs {
             display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 16px;
+            margin-bottom: 28px;
         }
         .tab {
             flex: 1;
             text-align: center;
-            padding: 8px;
-            background: #334155;
-            border-radius: 24px;
+            padding: 10px;
+            background: #374151;
+            border-radius: 40px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 500;
             color: #e5e7eb;
         }
         .tab.active {
-            background: #3b82f6;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
         }
         .auth-form input {
             width: 100%;
-            background: #0f172a;
-            border: 1px solid #2d3a4a;
-            padding: 10px 14px;
-            border-radius: 24px;
+            background: #111827;
+            border: 1px solid #374151;
+            padding: 14px 18px;
+            border-radius: 30px;
             color: white;
-            font-size: 14px;
-            margin-bottom: 16px;
+            font-size: 16px;
+            margin-bottom: 20px;
             outline: none;
         }
         .auth-form input:focus {
@@ -371,28 +373,29 @@
             width: 100%;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             border: none;
-            padding: 10px;
-            border-radius: 28px;
+            padding: 14px;
+            border-radius: 40px;
             color: white;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            margin-top: 8px;
+            margin-top: 12px;
         }
         .error-text {
             color: #f87171;
-            font-size: 12px;
+            font-size: 13px;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
 
         /* Адаптив для узких экранов */
-        @media (max-width: 640px) {
-            .sidebar { width: 70px; }
+        @media (max-width: 680px) {
+            .sidebar { width: 80px; }
             .chat-info, .logo { display: none; }
-            .chat-avatar { width: 40px; height: 40px; font-size: 22px; }
-            .chat-item { justify-content: center; padding: 8px 0; }
-            .profile-btn { font-size: 24px; }
+            .chat-avatar { width: 48px; height: 48px; font-size: 28px; }
+            .chat-item { justify-content: center; padding: 12px 0; }
+            .profile-btn { font-size: 28px; }
+            .auth-card { width: 90%; padding: 24px; }
         }
     </style>
 </head>
@@ -407,7 +410,6 @@
     let searchQuery = '';
     let pollInterval = null;
 
-    // API helper
     async function api(method, url, data = null) {
         const opts = { method, headers: {} };
         if (data) {
@@ -504,12 +506,10 @@
             });
         });
         const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                searchQuery = e.target.value;
-                renderSidebar();
-            });
-        }
+        if (searchInput) searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderSidebar();
+        });
         const profileBtn = document.getElementById('profileBtn');
         if (profileBtn) profileBtn.addEventListener('click', () => {
             document.getElementById('avatarModal').style.display = 'flex';
@@ -520,7 +520,7 @@
         const mainDiv = document.getElementById('chatMain');
         if (!mainDiv) return;
         if (!currentChat) {
-            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; color:#6b7280;">Выберите чат</div>`;
+            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:16px;">Выберите чат</div>`;
             return;
         }
         const chatUser = chats.find(c => c.username === currentChat) || { username: currentChat, avatar: '👤', online: false };
@@ -594,7 +594,6 @@
         }, 100);
     }
 
-    // Авторизация
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
