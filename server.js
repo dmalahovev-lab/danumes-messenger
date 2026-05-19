@@ -3,7 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,77 +18,33 @@ const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'database.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR);
-}
+if (!fs.existsSync(UPLOADS_DIR)) { fs.mkdirSync(UPLOADS_DIR); }
 
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
 
-// НАСТРОЙКИ ВЕЧНОЙ БАЗЫ CLOUDFLARE KV
 const CF_API_TOKEN = 'cfut_nRdMko8VGb1R6yP645vkggXNTbNX203tFTXhGMqk9f4c21c9';
-const CF_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc'; // Взято с твоего скриншота
+const CF_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc';
 const CF_KV_ID = '1b46ee655788445ca7b277fb8634dca0';
 
 let db = { users: {}, messages: [], groups: {} };
 
-
-function githubRequest(method, urlPath, payload, callback) {
-    const options = {
-        hostname: '://github.com',
-        path: urlPath,
-        method: method,
-        headers: {
-            'User-Agent': 'Danumes-Messenger-Server',
-            'Authorization': `token ${GH_TOKEN}`,
-            'Content-Type': 'application/json'
-        }
-    };
-
-    const req = https.request(options, (res) => {
-        let body = '';
-        res.on('data', (chunk) => body += chunk);
-        res.on('end', () => {
-            try {
-                const json = body ? JSON.parse(body) : {};
-                if (callback) callback(null, res.statusCode, json);
-            } catch (e) {
-                if (callback) callback(e, res.statusCode, null);
-            }
-        });
-    });
-
-    req.on('error', (e) => {
-        if (callback) callback(e, 0, null);
-    });
-
-    if (payload) {
-        req.write(JSON.stringify(payload));
-    }
-    req.end();
-}
-
-// Функция скачивания базы из Cloudflare KV при старте
 async function loadDBFromCloudflare() {
-    console.log("Загрузка вечной базы данных из Cloudflare KV...");
+    console.log("Загрузка базы из Cloudflare KV...");
     const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${CF_API_TOKEN}` }
-        });
+        const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${CF_API_TOKEN}` } });
         if (response.ok) {
             const text = await response.text();
             if (text) {
                 db = JSON.parse(text);
                 fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-                console.log("✅ База данных Cloudflare успешно синхронизирована!");
+                console.log("✅ База Cloudflare успешно синхронизирована!");
             }
-        } else { console.log("База в облаке пуста, создаем локальный слепок."); }
+        } else { console.log("База пуста, создаем структуру."); }
     } catch (e) { console.error("Ошибка загрузки Cloudflare KV:", e); }
-    
     if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
     if (!db.users) db.users = {};
     if (!db.messages) db.messages = [];
@@ -97,51 +52,23 @@ async function loadDBFromCloudflare() {
 }
 loadDBFromCloudflare();
 
-// Функция сохранения бэкапа в Cloudflare KV
 async function saveDB() {
     try {
         const contentString = JSON.stringify(db, null, 2);
         fs.writeFileSync(DB_FILE, contentString);
-        
         const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
-        await fetch(url, {
-            method: 'PUT',
-            headers: { 
-                'Authorization': `Bearer ${CF_API_TOKEN}`,
-                'Content-Type': 'text/plain'
-            },
-            body: contentString
-        });
-        console.log("☁️ Облачный бэкап сохранен в Cloudflare KV!");
+        await fetch(url, { method: 'PUT', headers: { 'Authorization': `Bearer ${CF_API_TOKEN}`, 'Content-Type': 'text/plain' }, body: contentString });
+        console.log("☁️ Бэкап сохранен в Cloudflare KV!");
     } catch (e) { console.error("Ошибка записи бэкапа:", e); }
 }
 
-        githubRequest('PUT', `/repos/${GH_REPO}/contents/database.json`, payload, (err, status, data) => {
-            if (!err && (status === 200 || status === 201) && data.content) {
-                dbSha = data.content.sha; 
-                console.log("☁️ Облачный бэкап успешно отправлен на GitHub!");
-            } else if (status === 409) {
-                githubRequest('GET', `/repos/${GH_REPO}/contents/database.json`, null, (gErr, gStatus, gData) => {
-                    if (!gErr && gStatus === 200 && gData.sha) {
-                        dbSha = gData.sha;
-                        saveDB();
-                    }
-                });
-            }
-        });
-    } catch (e) {
-        console.error("Ошибка локальной записи файла БД:", e);
-    }
-}
+const usersOnline = {};
 
-const usersOnline = {}; 
-
-// СВЯТОЙ КОД АВТОРИЗАЦИИ (100% Оригинал, не изменен ни один символ)
 app.post('/api/register', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
     if (db.users[user]) return res.status(400).json({ message: 'Пользователь уже существует' });
-    db.users[user] = { password: pass, avatar: null, friends: [] }; // Инициализируем массив друзей
+    db.users[user] = { password: pass, avatar: null, friends: [] };
     saveDB();
     res.json({ success: true });
 });
@@ -149,39 +76,25 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
     if (!user || !pass) return res.status(400).json({ message: 'Заполните все поля' });
-    
-    if (user === 'Danumala' && !db.users['Danumala']) {
-        db.users['Danumala'] = { password: 'danyajukovka', avatar: null, friends: [] };
-        saveDB();
-    }
-    if (user === 'RunFly' && !db.users['RunFly']) {
-        db.users['RunFly'] = { password: 'GGWWXXJJ2001', avatar: null, friends: [] };
-        saveDB();
-    }
-
+    if (user === 'Danumala' && !db.users['Danumala']) { db.users['Danumala'] = { password: 'danyajukovka', avatar: null, friends: [] }; saveDB(); }
+    if (user === 'RunFly' && !db.users['RunFly']) { db.users['RunFly'] = { password: 'GGWWXXJJ2001', avatar: null, friends: [] }; saveDB(); }
     const account = db.users[user];
-    if (!account || account.password !== pass) {
-        return res.status(400).json({ message: 'Неверное имя пользователя или пароль' });
-    }
+    if (!account || account.password !== pass) { return res.status(400).json({ message: 'Неверное имя пользователя или пароль' }); }
     res.json({ success: true });
 });
 
 app.post('/api/upload', (req, res) => {
     const { rawData, fileName, isImage } = req.body;
     if (!rawData || !fileName) return res.status(400).json({ message: 'Данные файла не переданы' });
-    
     try {
         const base64Data = rawData.replace(/^data:.*;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
         const ext = path.extname(fileName);
         const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 5)}${ext}`;
         const filePath = path.join(UPLOADS_DIR, safeName);
-        
         fs.writeFileSync(filePath, buffer);
         res.json({ url: `/uploads/${safeName}`, name: fileName, isImage: isImage });
-    } catch(err) {
-        res.status(500).json({ message: 'Ошибка сервера при записи файла' });
-    }
+    } catch(err) { res.status(500).json({ message: 'Ошибка записи файла' }); }
 });
 
 app.post('/api/messages/delete', (req, res) => {
@@ -199,18 +112,11 @@ app.post('/api/messages/delete', (req, res) => {
     res.status(400).json({ message: 'Нет прав или сообщение не найдено' });
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// Отправка списков только тех людей, с кем есть активные диалоги (Приватность)
 function sendActiveChatsAndFriends(socket, username) {
     if (!username || !db.users[username]) return;
-
-    // Убеждаемся, что массив друзей существует
     if (!db.users[username].friends) db.users[username].friends = [];
-
-    // Находим всех людей, от кого или кому были отправлены сообщения
     const activeInteractions = new Set();
     db.messages.forEach(m => {
         if (m.type === 'private') {
@@ -218,21 +124,16 @@ function sendActiveChatsAndFriends(socket, username) {
             if (m.to === username) activeInteractions.add(m.author);
         }
     });
-
-    // Формируем массив данных для списка чатов
     const activeChatsData = Array.from(activeInteractions).map(user => ({
         username: user,
         avatar: db.users[user] ? db.users[user].avatar : null,
         isOnline: !!usersOnline[user]
     }));
-
-    // Формируем массив данных для вкладки Друзья
     const friendsData = db.users[username].friends.map(friend => ({
         username: friend,
         avatar: db.users[friend] ? db.users[friend].avatar : null,
         isOnline: !!usersOnline[friend]
     }));
-
     socket.emit('active_chats_list', activeChatsData);
     socket.emit('friends_list_data', friendsData);
 }
@@ -244,19 +145,13 @@ io.on('connection', (socket) => {
         if (!username) return;
         sessionUser = username;
         usersOnline[username] = socket.id;
-        
         const userAvatar = db.users[username] ? db.users[username].avatar : null;
         socket.emit('auth_success_data', { avatar: userAvatar });
-
-        // Рассылаем списки
         sendActiveChatsAndFriends(socket, username);
-        
-        // Оповещаем остальных об изменении онлайна (но списки обновятся только у друзей/активных)
         Object.keys(usersOnline).forEach(u => {
-            const targetSocket = io.sockets.sockets.get(usersOnline[u]);
-            if (targetSocket) sendActiveChatsAndFriends(targetSocket, u);
+            const ts = io.sockets.sockets.get(usersOnline[u]);
+            if (ts) sendActiveChatsAndFriends(ts, u);
         });
-
         sendGroupsList(socket);
     });
 
@@ -272,11 +167,11 @@ io.on('connection', (socket) => {
         targetSocket.emit('update_groups', userGroups);
     }
 
-    // Живой глобальный поиск по всей базе пользователей (для скрытых аккаунтов)
+    socket.on('get_online_users', () => { if (sessionUser) sendActiveChatsAndFriends(socket, sessionUser); });
+
     socket.on('global_search_user', (query) => {
         if (!sessionUser || !query) return;
         const q = query.toLowerCase().trim();
-        
         const results = Object.keys(db.users)
             .filter(username => username !== sessionUser && username.toLowerCase().includes(q))
             .map(username => ({
@@ -284,37 +179,24 @@ io.on('connection', (socket) => {
                 avatar: db.users[username].avatar || null,
                 isFriend: db.users[sessionUser].friends ? db.users[sessionUser].friends.includes(username) : false
             }));
-            
         socket.emit('global_search_results', results);
     });
 
-    // Фича Друзей: Добавление/Удаление друга
     socket.on('toggle_friend', (targetUser) => {
         if (!sessionUser || !db.users[sessionUser] || !db.users[targetUser]) return;
         if (!db.users[sessionUser].friends) db.users[sessionUser].friends = [];
-
         const index = db.users[sessionUser].friends.indexOf(targetUser);
-        if (index === -1) {
-            db.users[sessionUser].friends.push(targetUser);
-        } else {
-            db.users[sessionUser].friends.splice(index, 1);
-        }
+        if (index === -1) { db.users[sessionUser].friends.push(targetUser); } else { db.users[sessionUser].friends.splice(index, 1); }
         saveDB();
         sendActiveChatsAndFriends(socket, sessionUser);
     });
 
-    // Фича Групп: Выход из приватной группы
     socket.on('leave_group', (groupId) => {
         if (!sessionUser || !db.groups[groupId]) return;
-        
         const index = db.groups[groupId].members.indexOf(sessionUser);
         if (index !== -1) {
             db.groups[groupId].members.splice(index, 1);
-            
-            // Если в группе вообще не осталось участников — полностью стираем её
-            if (db.groups[groupId].members.length === 0) {
-                delete db.groups[groupId];
-            }
+            if (db.groups[groupId].members.length === 0) { delete db.groups[groupId]; }
             saveDB();
             sendGroupsList(socket);
             socket.emit('group_left_success');
@@ -353,7 +235,6 @@ io.on('connection', (socket) => {
             const group = db.groups[data.to];
             if (!group || !group.members.includes(sessionUser)) return;
         }
-
         const newMsg = {
             id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             type: data.type,
@@ -366,10 +247,8 @@ io.on('connection', (socket) => {
             time: new Date().toISOString(),
             read: false
         };
-
         db.messages.push(newMsg);
         saveDB();
-
         if (data.type === 'news') {
             io.emit('new_msg', newMsg);
         } else if (data.type === 'group') {
@@ -379,7 +258,6 @@ io.on('connection', (socket) => {
             const ts = usersOnline[data.to];
             if (ts) {
                 io.to(ts).emit('new_msg', newMsg);
-                // Обновляем список активных диалогов у получателя в реальном времени
                 const targetSocket = io.sockets.sockets.get(ts);
                 if (targetSocket) sendActiveChatsAndFriends(targetSocket, data.to);
             }
@@ -415,4 +293,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => { console.log(`Сервер DanuMes успешно поднят на порту ${PORT}`); });
+server.listen(PORT, () => { console.log(`Сервер запущен на порту ${PORT}`); });
