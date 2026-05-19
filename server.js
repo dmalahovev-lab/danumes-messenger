@@ -2,63 +2,94 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// База данных в /tmp (Render) или локально
-const DB_PATH = process.env.RENDER ? '/tmp/danumes.db' : path.join(__dirname, 'danumes.db');
-const db = new sqlite3.Database(DB_PATH);
-
-// Создаём таблицы
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT NOT NULL,
-        avatar TEXT DEFAULT '👤',
-        online INTEGER DEFAULT 0,
-        verified INTEGER DEFAULT 0
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY,
-        from_user TEXT NOT NULL,
-        to_user TEXT NOT NULL,
-        text TEXT,
-        file_url TEXT,
-        file_name TEXT,
-        timestamp TEXT
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS channels (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        owner TEXT NOT NULL,
-        avatar TEXT DEFAULT '📢',
-        only_owner_can_post INTEGER DEFAULT 1
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS channel_messages (
-        id INTEGER PRIMARY KEY,
-        channel_id TEXT NOT NULL,
-        from_user TEXT NOT NULL,
-        text TEXT,
-        file_url TEXT,
-        file_name TEXT,
-        timestamp TEXT
-    )`);
-
-    // Вставляем системных пользователей, если их нет
-    const stmt = db.prepare(`INSERT OR IGNORE INTO users (username, password, avatar, verified) VALUES (?, ?, ?, ?)`);
-    stmt.run('Danumala', 'danyajukovka', '👑', 1);
-    stmt.run('RunFly', 'GGWWXXJJ2001', '🚀', 1);
-    stmt.finalize();
-
-    // Вставляем канал, если его нет
-    db.run(`INSERT OR IGNORE INTO channels (id, name, owner) VALUES ('news', 'Danumes News', 'Danumala')`);
-});
-
+// Используем /tmp на Render, иначе локальную папку
+const DATA_DIR = process.env.RENDER ? '/tmp/data' : path.join(__dirname, 'data');
 const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+const CHANNELS_FILE = path.join(DATA_DIR, 'channels.json');
+const CHANNEL_MSGS_FILE = path.join(DATA_DIR, 'channel_messages.json');
 
+console.log('DATA_DIR =', DATA_DIR);
+console.log('UPLOADS_DIR =', UPLOADS_DIR);
+
+// Создаём директории синхронно
+try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    console.log('✅ Папки созданы/проверены');
+} catch (err) {
+    console.error('❌ Ошибка создания папок:', err);
+    process.exit(1);
+}
+
+// Функции чтения/записи JSON с обработкой ошибок
+function readJSON(file, def = []) {
+    try {
+        if (fs.existsSync(file)) {
+            const data = fs.readFileSync(file, 'utf8');
+            return JSON.parse(data);
+        }
+        return def;
+    } catch (e) {
+        console.error(`Ошибка чтения ${file}:`, e.message);
+        return def;
+    }
+}
+
+function writeJSON(file, data) {
+    try {
+        fs.writeFileSync(file, JSON.stringify(data, null, 2));
+        console.log(`✅ Записано в ${file}: ${data.length || Object.keys(data).length} записей`);
+        return true;
+    } catch (e) {
+        console.error(`❌ Ошибка записи ${file}:`, e.message);
+        return false;
+    }
+}
+
+// Инициализация файлов, если их нет
+if (!fs.existsSync(USERS_FILE)) writeJSON(USERS_FILE, []);
+if (!fs.existsSync(MESSAGES_FILE)) writeJSON(MESSAGES_FILE, []);
+if (!fs.existsSync(CHANNELS_FILE)) writeJSON(CHANNELS_FILE, []);
+if (!fs.existsSync(CHANNEL_MSGS_FILE)) writeJSON(CHANNEL_MSGS_FILE, []);
+
+// Системные пользователи
+const SYSTEM_USERS = [
+    { username: 'Danumala', password: 'danyajukovka', avatar: '👑', online: false, verified: true },
+    { username: 'RunFly', password: 'GGWWXXJJ2001', avatar: '🚀', online: false, verified: true }
+];
+
+let users = readJSON(USERS_FILE, []);
+let changed = false;
+SYSTEM_USERS.forEach(sys => {
+    if (!users.find(u => u.username === sys.username)) {
+        users.push(sys);
+        changed = true;
+        console.log(`➕ Добавлен системный пользователь: ${sys.username}`);
+    }
+});
+if (changed) writeJSON(USERS_FILE, users);
+
+// Каналы
+let channels = readJSON(CHANNELS_FILE, []);
+if (!channels.find(c => c.id === 'news')) {
+    channels.push({
+        id: 'news',
+        name: 'Danumes News',
+        owner: 'Danumala',
+        avatar: '📢',
+        onlyOwnerCanPost: true
+    });
+    writeJSON(CHANNELS_FILE, channels);
+    console.log('➕ Создан канал Danumes News');
+}
+
+// Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -71,158 +102,178 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// ========== API ==========
+// === API ===
 
 // Регистрация
 app.post('/register-attempt', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
-    db.get(`SELECT username FROM users WHERE username = ?`, [username], (err, row) => {
-        if (row) return res.json({ success: false, error: 'Пользователь уже существует' });
-        db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, password], (err) => {
-            if (err) return res.json({ success: false, error: 'Ошибка БД' });
-            res.json({ success: true });
-        });
-    });
+    let users = readJSON(USERS_FILE, []);
+    if (users.find(u => u.username === username)) {
+        return res.json({ success: false, error: 'Пользователь уже существует' });
+    }
+    users.push({ username, password, avatar: '👤', online: false, verified: false });
+    if (writeJSON(USERS_FILE, users)) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ success: false, error: 'Ошибка сохранения пользователя' });
+    }
 });
 
 // Вход
 app.post('/login-attempt', (req, res) => {
     const { username, password } = req.body;
-    db.get(`SELECT username, avatar, verified FROM users WHERE username = ? AND password = ?`, [username, password], (err, row) => {
-        if (row) {
-            db.run(`UPDATE users SET online = 1 WHERE username = ?`, [username]);
-            res.json({ success: true, username: row.username, avatar: row.avatar, verified: row.verified });
-        } else {
-            res.json({ success: false, error: 'Неверные имя или пароль' });
-        }
-    });
+    let users = readJSON(USERS_FILE, []);
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+        user.online = true;
+        writeJSON(USERS_FILE, users);
+        res.json({ success: true, username: user.username, avatar: user.avatar, verified: user.verified });
+    } else {
+        res.json({ success: false, error: 'Неверные имя или пароль' });
+    }
 });
 
 // Выход
 app.post('/logout', (req, res) => {
     const { username } = req.body;
-    db.run(`UPDATE users SET online = 0 WHERE username = ?`, [username]);
+    let users = readJSON(USERS_FILE, []);
+    const user = users.find(u => u.username === username);
+    if (user) user.online = false;
+    writeJSON(USERS_FILE, users);
     res.json({ success: true });
 });
 
 // Получить всех пользователей
 app.get('/get-users', (req, res) => {
-    db.all(`SELECT username, avatar, online, verified FROM users`, [], (err, rows) => {
-        res.json(rows);
-    });
+    let users = readJSON(USERS_FILE, []);
+    res.json(users.map(({ username, avatar, online, verified }) => ({ username, avatar, online, verified })));
 });
 
 // Обновить аватар
 app.post('/update-avatar', (req, res) => {
     const { username, avatar } = req.body;
-    db.run(`UPDATE users SET avatar = ? WHERE username = ?`, [avatar, username]);
-    res.json({ success: true, avatar });
+    let users = readJSON(USERS_FILE, []);
+    const user = users.find(u => u.username === username);
+    if (user) {
+        user.avatar = avatar;
+        writeJSON(USERS_FILE, users);
+        res.json({ success: true, avatar });
+    } else {
+        res.json({ success: false, error: 'Пользователь не найден' });
+    }
 });
 
 // Отправить личное сообщение
 app.post('/send-message', (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    const id = Date.now();
-    const timestamp = new Date().toISOString();
-    db.run(`INSERT INTO messages (id, from_user, to_user, text, file_url, file_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, from, to, text || '', fileUrl || null, fileName || null, timestamp], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true, message: { id, from, to, text, timestamp, fileUrl, fileName } });
-        });
+    let messages = readJSON(MESSAGES_FILE, []);
+    const newMsg = {
+        id: Date.now(),
+        from,
+        to,
+        text: text || '',
+        timestamp: new Date().toISOString(),
+        fileUrl: fileUrl || null,
+        fileName: fileName || null
+    };
+    messages.push(newMsg);
+    if (writeJSON(MESSAGES_FILE, messages)) {
+        res.json({ success: true, message: newMsg });
+    } else {
+        res.status(500).json({ error: 'Ошибка сохранения сообщения' });
+    }
 });
 
 // Получить историю диалога
 app.get('/get-messages/:user1/:user2', (req, res) => {
     const { user1, user2 } = req.params;
-    db.all(`SELECT id, from_user as from, to_user as to, text, file_url as fileUrl, file_name as fileName, timestamp 
-            FROM messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY id ASC`,
-        [user1, user2, user2, user1], (err, rows) => {
-            res.json(rows);
-        });
+    let messages = readJSON(MESSAGES_FILE, []);
+    const dialog = messages.filter(m => 
+        (m.from === user1 && m.to === user2) || (m.from === user2 && m.to === user1)
+    ).sort((a,b) => a.id - b.id);
+    res.json(dialog);
 });
 
 // Получить список чатов
 app.get('/get-chats/:username', (req, res) => {
     const { username } = req.params;
-    db.all(`SELECT DISTINCT 
-                CASE WHEN from_user = ? THEN to_user ELSE from_user END as chatUser
-            FROM messages WHERE from_user = ? OR to_user = ?`, [username, username, username], (err, rows) => {
-        const chatSet = rows.map(r => r.chatUser);
-        db.all(`SELECT username, avatar, online, verified FROM users`, [], (err, users) => {
-            const allUsers = users.map(u => u.username).filter(u => u !== username);
-            const uniqueChats = [...new Set([...chatSet, ...allUsers])];
-            const chatList = uniqueChats.map(chatUsername => {
-                const user = users.find(u => u.username === chatUsername);
-                return {
-                    username: chatUsername,
-                    avatar: user ? user.avatar : '👤',
-                    online: user ? user.online : false,
-                    verified: user ? user.verified : false,
-                    lastMessage: 'Нет сообщений',
-                    lastTime: null
-                };
-            });
-            // Добавим получение последнего сообщения для каждого чата
-            const promises = chatList.map(chat => {
-                return new Promise((resolve) => {
-                    db.get(`SELECT text, file_url, timestamp FROM messages 
-                            WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) 
-                            ORDER BY id DESC LIMIT 1`,
-                        [username, chat.username, chat.username, username], (err, row) => {
-                            if (row) {
-                                chat.lastMessage = row.text || 'Файл';
-                                chat.lastTime = row.timestamp;
-                            }
-                            resolve();
-                        });
-                });
-            });
-            Promise.all(promises).then(() => {
-                chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
-                res.json(chatList);
-            });
-        });
+    let messages = readJSON(MESSAGES_FILE, []);
+    let users = readJSON(USERS_FILE, []);
+    const chatSet = new Set();
+    messages.forEach(m => {
+        if (m.from === username) chatSet.add(m.to);
+        if (m.to === username) chatSet.add(m.from);
     });
+    users.forEach(u => { if (u.username !== username) chatSet.add(u.username); });
+    const chatList = Array.from(chatSet).map(chatUsername => {
+        const user = users.find(u => u.username === chatUsername);
+        const lastMsg = messages.filter(m => 
+            (m.from === username && m.to === chatUsername) || (m.from === chatUsername && m.to === username)
+        ).sort((a,b) => b.id - a.id)[0];
+        return {
+            username: chatUsername,
+            avatar: user ? user.avatar : '👤',
+            online: user ? user.online : false,
+            verified: user ? user.verified : false,
+            lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
+            lastTime: lastMsg ? lastMsg.timestamp : null
+        };
+    });
+    chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
+    res.json(chatList);
 });
 
-// Каналы (упрощённо)
+// Каналы
 app.get('/get-channels', (req, res) => {
-    db.all(`SELECT id, name, owner, avatar FROM channels`, [], (err, rows) => {
-        res.json(rows.map(ch => ({ ...ch, lastMessage: 'Нет сообщений', lastTime: null })));
+    let channels = readJSON(CHANNELS_FILE, []);
+    let channelMsgs = readJSON(CHANNEL_MSGS_FILE, []);
+    const result = channels.map(ch => {
+        const lastMsg = channelMsgs.filter(m => m.channelId === ch.id).sort((a,b) => b.id - a.id)[0];
+        return { ...ch, lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений', lastTime: lastMsg ? lastMsg.timestamp : null };
     });
+    res.json(result);
 });
 
 app.get('/get-channel-messages/:channelId', (req, res) => {
     const { channelId } = req.params;
-    db.all(`SELECT id, from_user as from, text, file_url as fileUrl, file_name as fileName, timestamp 
-            FROM channel_messages WHERE channel_id = ? ORDER BY id ASC`, [channelId], (err, rows) => {
-        res.json(rows);
-    });
+    let messages = readJSON(CHANNEL_MSGS_FILE, []);
+    const channelMsgs = messages.filter(m => m.channelId === channelId).sort((a,b) => a.id - b.id);
+    res.json(channelMsgs);
 });
 
 app.post('/send-channel-message', (req, res) => {
     const { channelId, from, text, fileUrl, fileName } = req.body;
     if (!channelId || !from || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    db.get(`SELECT owner, only_owner_can_post FROM channels WHERE id = ?`, [channelId], (err, row) => {
-        if (row && row.only_owner_can_post && from !== row.owner) {
-            return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
-        }
-        const id = Date.now();
-        const timestamp = new Date().toISOString();
-        db.run(`INSERT INTO channel_messages (id, channel_id, from_user, text, file_url, file_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, channelId, from, text || '', fileUrl || null, fileName || null, timestamp], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, message: { id, channelId, from, text, timestamp, fileUrl, fileName } });
-            });
-    });
+    let channels = readJSON(CHANNELS_FILE, []);
+    const channel = channels.find(c => c.id === channelId);
+    if (channel.onlyOwnerCanPost && from !== channel.owner) {
+        return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
+    }
+    let messages = readJSON(CHANNEL_MSGS_FILE, []);
+    const newMsg = {
+        id: Date.now(),
+        channelId,
+        from,
+        text: text || '',
+        timestamp: new Date().toISOString(),
+        fileUrl: fileUrl || null,
+        fileName: fileName || null
+    };
+    messages.push(newMsg);
+    if (writeJSON(CHANNEL_MSGS_FILE, messages)) {
+        res.json({ success: true, message: newMsg });
+    } else {
+        res.status(500).json({ error: 'Ошибка сохранения сообщения канала' });
+    }
 });
 
 // Файлы
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
-    res.json({ success: true, fileUrl: `/file/${req.file.filename}`, fileName: req.file.originalname });
+    const fileUrl = `/file/${req.file.filename}`;
+    res.json({ success: true, fileUrl, fileName: req.file.originalname });
 });
 
 app.get('/file/:filename', (req, res) => {
@@ -234,28 +285,37 @@ app.get('/file/:filename', (req, res) => {
 // Удаление сообщений
 app.delete('/delete-message/:id', (req, res) => {
     const { id } = req.params;
-    db.get(`SELECT file_url FROM messages WHERE id = ?`, [id], (err, row) => {
-        if (row && row.file_url) {
-            const fileName = row.file_url.replace('/file/', '');
-            const filePath = path.join(UPLOADS_DIR, fileName);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-        db.run(`DELETE FROM messages WHERE id = ?`, [id]);
-        res.json({ success: true });
-    });
+    let messages = readJSON(MESSAGES_FILE, []);
+    const idx = messages.findIndex(m => m.id == id);
+    if (idx === -1) return res.status(404).json({ error: 'Сообщение не найдено' });
+    const msg = messages[idx];
+    if (msg.fileUrl) {
+        const fileName = msg.fileUrl.replace('/file/', '');
+        const filePath = path.join(UPLOADS_DIR, fileName);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    messages.splice(idx, 1);
+    writeJSON(MESSAGES_FILE, messages);
+    res.json({ success: true });
 });
 
 app.delete('/delete-channel-message/:id', (req, res) => {
     const { id } = req.params;
-    db.get(`SELECT file_url FROM channel_messages WHERE id = ?`, [id], (err, row) => {
-        if (row && row.file_url) {
-            const fileName = row.file_url.replace('/file/', '');
-            const filePath = path.join(UPLOADS_DIR, fileName);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-        db.run(`DELETE FROM channel_messages WHERE id = ?`, [id]);
-        res.json({ success: true });
-    });
+    let messages = readJSON(CHANNEL_MSGS_FILE, []);
+    const idx = messages.findIndex(m => m.id == id);
+    if (idx === -1) return res.status(404).json({ error: 'Сообщение не найдено' });
+    const msg = messages[idx];
+    if (msg.fileUrl) {
+        const fileName = msg.fileUrl.replace('/file/', '');
+        const filePath = path.join(UPLOADS_DIR, fileName);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    messages.splice(idx, 1);
+    writeJSON(CHANNEL_MSGS_FILE, messages);
+    res.json({ success: true });
 });
 
-app.listen(PORT, () => console.log(`🚀 Сервер на SQLite запущен на порту ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер на JSON запущен на порту ${PORT}`);
+    console.log(`📁 Данные хранятся в ${DATA_DIR}`);
+});
