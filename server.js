@@ -6,90 +6,18 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Используем /tmp на Render, иначе локальную папку
-const DATA_DIR = process.env.RENDER ? '/tmp/data' : path.join(__dirname, 'data');
-const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
-const CHANNELS_FILE = path.join(DATA_DIR, 'channels.json');
-const CHANNEL_MSGS_FILE = path.join(DATA_DIR, 'channel_messages.json');
-
-console.log('DATA_DIR =', DATA_DIR);
-console.log('UPLOADS_DIR =', UPLOADS_DIR);
-
-// Создаём директории синхронно
-try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-    console.log('✅ Папки созданы/проверены');
-} catch (err) {
-    console.error('❌ Ошибка создания папок:', err);
-    process.exit(1);
-}
-
-// Функции чтения/записи JSON с обработкой ошибок
-function readJSON(file, def = []) {
-    try {
-        if (fs.existsSync(file)) {
-            const data = fs.readFileSync(file, 'utf8');
-            return JSON.parse(data);
-        }
-        return def;
-    } catch (e) {
-        console.error(`Ошибка чтения ${file}:`, e.message);
-        return def;
-    }
-}
-
-function writeJSON(file, data) {
-    try {
-        fs.writeFileSync(file, JSON.stringify(data, null, 2));
-        console.log(`✅ Записано в ${file}: ${data.length || Object.keys(data).length} записей`);
-        return true;
-    } catch (e) {
-        console.error(`❌ Ошибка записи ${file}:`, e.message);
-        return false;
-    }
-}
-
-// Инициализация файлов, если их нет
-if (!fs.existsSync(USERS_FILE)) writeJSON(USERS_FILE, []);
-if (!fs.existsSync(MESSAGES_FILE)) writeJSON(MESSAGES_FILE, []);
-if (!fs.existsSync(CHANNELS_FILE)) writeJSON(CHANNELS_FILE, []);
-if (!fs.existsSync(CHANNEL_MSGS_FILE)) writeJSON(CHANNEL_MSGS_FILE, []);
-
-// Системные пользователи
-const SYSTEM_USERS = [
+// Хранилище в памяти (для теста, чтобы сервер точно запустился)
+let users = [
     { username: 'Danumala', password: 'danyajukovka', avatar: '👑', online: false, verified: true },
     { username: 'RunFly', password: 'GGWWXXJJ2001', avatar: '🚀', online: false, verified: true }
 ];
-
-let users = readJSON(USERS_FILE, []);
-let changed = false;
-SYSTEM_USERS.forEach(sys => {
-    if (!users.find(u => u.username === sys.username)) {
-        users.push(sys);
-        changed = true;
-        console.log(`➕ Добавлен системный пользователь: ${sys.username}`);
-    }
-});
-if (changed) writeJSON(USERS_FILE, users);
-
-// Каналы
-let channels = readJSON(CHANNELS_FILE, []);
-if (!channels.find(c => c.id === 'news')) {
-    channels.push({
-        id: 'news',
-        name: 'Danumes News',
-        owner: 'Danumala',
-        avatar: '📢',
-        onlyOwnerCanPost: true
-    });
-    writeJSON(CHANNELS_FILE, channels);
-    console.log('➕ Создан канал Danumes News');
-}
+let messages = [];
+let channels = [{ id: 'news', name: 'Danumes News', owner: 'Danumala', avatar: '📢', onlyOwnerCanPost: true }];
+let channelMessages = [];
 
 // Multer
+const UPLOADS_DIR = '/tmp/uploads';
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -104,71 +32,46 @@ app.use(express.static(__dirname));
 
 // === API ===
 
-// Регистрация
 app.post('/register-attempt', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
-    let users = readJSON(USERS_FILE, []);
-    if (users.find(u => u.username === username)) {
-        return res.json({ success: false, error: 'Пользователь уже существует' });
-    }
+    if (users.find(u => u.username === username)) return res.json({ success: false, error: 'Пользователь уже существует' });
     users.push({ username, password, avatar: '👤', online: false, verified: false });
-    if (writeJSON(USERS_FILE, users)) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ success: false, error: 'Ошибка сохранения пользователя' });
-    }
+    res.json({ success: true });
 });
 
-// Вход
 app.post('/login-attempt', (req, res) => {
     const { username, password } = req.body;
-    let users = readJSON(USERS_FILE, []);
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
         user.online = true;
-        writeJSON(USERS_FILE, users);
         res.json({ success: true, username: user.username, avatar: user.avatar, verified: user.verified });
     } else {
         res.json({ success: false, error: 'Неверные имя или пароль' });
     }
 });
 
-// Выход
 app.post('/logout', (req, res) => {
     const { username } = req.body;
-    let users = readJSON(USERS_FILE, []);
     const user = users.find(u => u.username === username);
     if (user) user.online = false;
-    writeJSON(USERS_FILE, users);
     res.json({ success: true });
 });
 
-// Получить всех пользователей
 app.get('/get-users', (req, res) => {
-    let users = readJSON(USERS_FILE, []);
     res.json(users.map(({ username, avatar, online, verified }) => ({ username, avatar, online, verified })));
 });
 
-// Обновить аватар
 app.post('/update-avatar', (req, res) => {
     const { username, avatar } = req.body;
-    let users = readJSON(USERS_FILE, []);
     const user = users.find(u => u.username === username);
-    if (user) {
-        user.avatar = avatar;
-        writeJSON(USERS_FILE, users);
-        res.json({ success: true, avatar });
-    } else {
-        res.json({ success: false, error: 'Пользователь не найден' });
-    }
+    if (user) user.avatar = avatar;
+    res.json({ success: true, avatar });
 });
 
-// Отправить личное сообщение
 app.post('/send-message', (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    let messages = readJSON(MESSAGES_FILE, []);
     const newMsg = {
         id: Date.now(),
         from,
@@ -179,28 +82,17 @@ app.post('/send-message', (req, res) => {
         fileName: fileName || null
     };
     messages.push(newMsg);
-    if (writeJSON(MESSAGES_FILE, messages)) {
-        res.json({ success: true, message: newMsg });
-    } else {
-        res.status(500).json({ error: 'Ошибка сохранения сообщения' });
-    }
+    res.json({ success: true, message: newMsg });
 });
 
-// Получить историю диалога
 app.get('/get-messages/:user1/:user2', (req, res) => {
     const { user1, user2 } = req.params;
-    let messages = readJSON(MESSAGES_FILE, []);
-    const dialog = messages.filter(m => 
-        (m.from === user1 && m.to === user2) || (m.from === user2 && m.to === user1)
-    ).sort((a,b) => a.id - b.id);
+    const dialog = messages.filter(m => (m.from === user1 && m.to === user2) || (m.from === user2 && m.to === user1)).sort((a,b) => a.id - b.id);
     res.json(dialog);
 });
 
-// Получить список чатов
 app.get('/get-chats/:username', (req, res) => {
     const { username } = req.params;
-    let messages = readJSON(MESSAGES_FILE, []);
-    let users = readJSON(USERS_FILE, []);
     const chatSet = new Set();
     messages.forEach(m => {
         if (m.from === username) chatSet.add(m.to);
@@ -209,9 +101,7 @@ app.get('/get-chats/:username', (req, res) => {
     users.forEach(u => { if (u.username !== username) chatSet.add(u.username); });
     const chatList = Array.from(chatSet).map(chatUsername => {
         const user = users.find(u => u.username === chatUsername);
-        const lastMsg = messages.filter(m => 
-            (m.from === username && m.to === chatUsername) || (m.from === chatUsername && m.to === username)
-        ).sort((a,b) => b.id - a.id)[0];
+        const lastMsg = messages.filter(m => (m.from === username && m.to === chatUsername) || (m.from === chatUsername && m.to === username)).sort((a,b) => b.id - a.id)[0];
         return {
             username: chatUsername,
             avatar: user ? user.avatar : '👤',
@@ -225,12 +115,9 @@ app.get('/get-chats/:username', (req, res) => {
     res.json(chatList);
 });
 
-// Каналы
 app.get('/get-channels', (req, res) => {
-    let channels = readJSON(CHANNELS_FILE, []);
-    let channelMsgs = readJSON(CHANNEL_MSGS_FILE, []);
     const result = channels.map(ch => {
-        const lastMsg = channelMsgs.filter(m => m.channelId === ch.id).sort((a,b) => b.id - a.id)[0];
+        const lastMsg = channelMessages.filter(m => m.channelId === ch.id).sort((a,b) => b.id - a.id)[0];
         return { ...ch, lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений', lastTime: lastMsg ? lastMsg.timestamp : null };
     });
     res.json(result);
@@ -238,20 +125,16 @@ app.get('/get-channels', (req, res) => {
 
 app.get('/get-channel-messages/:channelId', (req, res) => {
     const { channelId } = req.params;
-    let messages = readJSON(CHANNEL_MSGS_FILE, []);
-    const channelMsgs = messages.filter(m => m.channelId === channelId).sort((a,b) => a.id - b.id);
-    res.json(channelMsgs);
+    res.json(channelMessages.filter(m => m.channelId === channelId).sort((a,b) => a.id - b.id));
 });
 
 app.post('/send-channel-message', (req, res) => {
     const { channelId, from, text, fileUrl, fileName } = req.body;
     if (!channelId || !from || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    let channels = readJSON(CHANNELS_FILE, []);
     const channel = channels.find(c => c.id === channelId);
     if (channel.onlyOwnerCanPost && from !== channel.owner) {
         return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
     }
-    let messages = readJSON(CHANNEL_MSGS_FILE, []);
     const newMsg = {
         id: Date.now(),
         channelId,
@@ -261,19 +144,13 @@ app.post('/send-channel-message', (req, res) => {
         fileUrl: fileUrl || null,
         fileName: fileName || null
     };
-    messages.push(newMsg);
-    if (writeJSON(CHANNEL_MSGS_FILE, messages)) {
-        res.json({ success: true, message: newMsg });
-    } else {
-        res.status(500).json({ error: 'Ошибка сохранения сообщения канала' });
-    }
+    channelMessages.push(newMsg);
+    res.json({ success: true, message: newMsg });
 });
 
-// Файлы
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
-    const fileUrl = `/file/${req.file.filename}`;
-    res.json({ success: true, fileUrl, fileName: req.file.originalname });
+    res.json({ success: true, fileUrl: `/file/${req.file.filename}`, fileName: req.file.originalname });
 });
 
 app.get('/file/:filename', (req, res) => {
@@ -282,40 +159,20 @@ app.get('/file/:filename', (req, res) => {
     else res.status(404).send('Файл не найден');
 });
 
-// Удаление сообщений
 app.delete('/delete-message/:id', (req, res) => {
-    const { id } = req.params;
-    let messages = readJSON(MESSAGES_FILE, []);
-    const idx = messages.findIndex(m => m.id == id);
-    if (idx === -1) return res.status(404).json({ error: 'Сообщение не найдено' });
-    const msg = messages[idx];
-    if (msg.fileUrl) {
-        const fileName = msg.fileUrl.replace('/file/', '');
-        const filePath = path.join(UPLOADS_DIR, fileName);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
-    messages.splice(idx, 1);
-    writeJSON(MESSAGES_FILE, messages);
+    const id = parseInt(req.params.id);
+    const idx = messages.findIndex(m => m.id === id);
+    if (idx !== -1) messages.splice(idx, 1);
     res.json({ success: true });
 });
 
 app.delete('/delete-channel-message/:id', (req, res) => {
-    const { id } = req.params;
-    let messages = readJSON(CHANNEL_MSGS_FILE, []);
-    const idx = messages.findIndex(m => m.id == id);
-    if (idx === -1) return res.status(404).json({ error: 'Сообщение не найдено' });
-    const msg = messages[idx];
-    if (msg.fileUrl) {
-        const fileName = msg.fileUrl.replace('/file/', '');
-        const filePath = path.join(UPLOADS_DIR, fileName);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
-    messages.splice(idx, 1);
-    writeJSON(CHANNEL_MSGS_FILE, messages);
+    const id = parseInt(req.params.id);
+    const idx = channelMessages.findIndex(m => m.id === id);
+    if (idx !== -1) channelMessages.splice(idx, 1);
     res.json({ success: true });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Сервер на JSON запущен на порту ${PORT}`);
-    console.log(`📁 Данные хранятся в ${DATA_DIR}`);
+    console.log(`🚀 Тестовый сервер запущен на порту ${PORT}`);
 });
