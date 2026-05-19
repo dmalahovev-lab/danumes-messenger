@@ -1,67 +1,368 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const fs = require('fs');
-const path = require('path');
+    <script>
+        let socket = null, currentUser = null, activeChat = { type: null, id: null };
+        let isSelectionForRegister = false, selectedMessageId = null, selectedMessageFileUrl = null, selectedMessageFileName = null;
+        let cachedActiveChats = [], cachedFriendsList = [];
+        let localStream = null, peerConnection = null, currentCallSession = null, ringtoneInterval = null;
+        let isMuted = false, typingTimeout = null;
+        const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
-const app = express();
-const server = http.createServer(app);
+        function showToast(t) { const c = document.getElementById('toast-container'); const tr = document.createElement('div'); tr.className = 'toast'; tr.innerText = t; c.appendChild(tr); setTimeout(() => tr.remove(), 4000); }
+        function playRingtone() { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); ringtoneInterval = setInterval(() => { let o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.setValueAtTime(440, ctx.currentTime); g.gain.setValueAtTime(0.2, ctx.currentTime); o.start(); o.stop(ctx.currentTime + 0.3); }, 1000); } catch(e){} }
+        function stopRingtone() { clearInterval(ringtoneInterval); }
 
-const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"], credentials: true },
-    transports: ['websocket'],
-    allowUpgrades: false,
-    maxHttpBufferSize: 1e8
-});
+        // СВЯТОЙ КОД ПЕРЕКЛЮЧЕНИЯ ИЗ REPO TEST (100% ОРИГИНАЛ)
+        document.getElementById('auth-toggle').addEventListener('click', () => {
+            isSelectionForRegister = !isSelectionForRegister;
+            document.getElementById('auth-header-text').innerText = isSelectionForRegister ? 'Регистрация в DanuMes' : 'Вход в DanuMes';
+            document.getElementById('main-auth-btn').innerText = isSelectionForRegister ? 'Создать аккаунт' : 'Войти';
+            document.getElementById('auth-toggle').innerText = isSelectionForRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать';
+        });
 
-const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'database.json');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+        // СВЯТОЙ КОД АВТОРИЗАЦИИ ИЗ REPO TEST (ПЕРЕМЕННЫЕ USER И PASS)
+        document.getElementById('main-auth-btn').addEventListener('click', async () => {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            if (!user || !pass) return showToast('Заполните поля');
+            const targetUrl = isSelectionForRegister ? '/api/register' : '/api/login';
+            try {
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentUser = { username: user };
+                    document.getElementById('auth-container').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'flex';
+                    showToast(`Вы вошли под ником ${user}`);
+                    initSocketChannels();
+                } else { showToast(data.message || 'Ошибка авторизации'); }
+            } catch (err) { showToast('Ошибка подключения к серверу'); }
+        });
 
-if (!fs.existsSync(UPLOADS_DIR)) { fs.mkdirSync(UPLOADS_DIR); }
+        function initSocketChannels() {
+            socket = io({ 
+                transports: ['websocket'], 
+                upgrade: false,
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 2000
+            });
+            
+            socket.on('connect', () => { 
+                socket.emit('register_user', currentUser.username); 
+                buildSidebarStructure(); 
+            });
+            
+            socket.on('auth_success_data', (data) => {
+                if (data && data.avatar) document.getElementById('profile-preview-emoji').innerText = data.avatar;
+            });
 
-app.use('/uploads', express.static(UPLOADS_DIR));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(__dirname));
+            // Прием списков приватности от Cloudflare
+            socket.on('active_chats_list', (chats) => { cachedActiveChats = chats; renderSidebarList(); });
+            socket.on('friends_list_data', (friends) => { cachedFriendsList = friends; renderFriendsList(); });
+            
+            socket.on('global_search_results', (results) => { renderSearchResults(results); });
 
-const CF_API_TOKEN = 'cfut_nRdMko8VGb1R6yP645vkggXNTbNX203tFTXhGMqk9f4c21c9';
-const CF_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc';
-const CF_KV_ID = '1b46ee655788445ca7b277fb8634dca0';
+            socket.on('update_groups', (groups) => {
+                const c = document.getElementById('chats');
+                c.querySelectorAll('.chat-item[data-type="group"]').forEach(e => e.remove());
+                groups.forEach(g => {
+                    const d = document.createElement('div');
+                    d.className = 'chat-item'; d.setAttribute('data-type', 'group');
+                    d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;"><div class="avatar" style="width:30px;height:30px;font-size:14px;">👥</div><div class="chat-item-title">${g.name}</div></div><div class="chat-item-sub">Групповой чат</div>`;
+                    d.onclick = () => selectChat('group', g.id, g.name);
+                    c.appendChild(d);
+                });
+            });
 
-let db = { users: {}, messages: [], groups: {} };
+            socket.on('group_left_success', () => {
+                showToast("Вы вышли из группы");
+                activeChat = { type: null, id: null };
+                document.getElementById('current-chat-title').innerText = "Выберите чат";
+                document.getElementById('chat-messages').innerHTML = '';
+                document.getElementById('leave-group-btn').style.display = 'none';
+            });
 
-async function loadDBFromCloudflare() {
-    console.log("Загрузка базы из Cloudflare KV...");
-    const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
-    try {
-        const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${CF_API_TOKEN}` } });
-        if (response.ok) {
-            const text = await response.text();
-            if (text) {
-                db = JSON.parse(text);
-                fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-                console.log("✅ База Cloudflare успешно синхронизирована!");
+            socket.on('messages_history', (messages) => {
+                const box = document.getElementById('chat-messages'); box.innerHTML = '';
+                messages.forEach(renderSingleMessage); box.scrollTop = box.scrollHeight;
+                if (activeChat.type === 'private') socket.emit('mark_as_read', { chatWith: activeChat.id });
+            });
+
+            socket.on('new_msg', (msg) => {
+                if ((activeChat.type === msg.type && (activeChat.id === msg.to || activeChat.id === msg.author)) || (msg.type === 'news' && activeChat.id === 'danumes_news')) {
+                    renderSingleMessage(msg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+                    if (activeChat.type === 'private' && msg.author !== currentUser.username) socket.emit('mark_as_read', { chatWith: activeChat.id });
+                }
+            });
+
+            socket.on('msg_deleted', (messageId) => { const el = document.querySelector(`[data-id="${messageId}"]`); if (el) el.remove(); });
+            socket.on('chat_read_by_recipient', (data) => { if (activeChat.type === 'private' && activeChat.id === data.readBy) { document.querySelectorAll('.message.outgoing .tick').forEach(t => t.innerText = '✓✓'); } });
+            socket.on('user_typing_broadcast', (data) => { if (activeChat.type === 'private' && activeChat.id === data.from) { document.getElementById('typing-indicator').style.display = data.isTyping ? 'inline' : 'none'; } });
+            
+            socket.on('call_incoming', (data) => {
+                currentCallSession = data;
+                document.getElementById('call-status-title').innerText = "Входящий вызов";
+                document.getElementById('caller-name').innerText = `Звонит ${data.from}`;
+                document.getElementById('accept-call-btn').style.display = 'flex';
+                document.getElementById('mute-call-btn').style.display = 'none';
+                document.getElementById('call-modal').style.display = 'flex';
+                playRingtone();
+            });
+
+            socket.on('start_handshake', async (data) => {
+                peerConnection = new RTCPeerConnection(rtcConfig); localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+                peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; };
+                peerConnection.onicecandidate = (e) => { if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate }); };
+                const offer = await peerConnection.createOffer(); await peerConnection.setLocalDescription(offer); socket.emit('rtc_offer', { to: data.from, offer: offer });
+            });
+
+            socket.on('receive_offer', async (data) => {
+                if (!peerConnection) { peerConnection = new RTCPeerConnection(rtcConfig); localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream)); peerConnection.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams; }; peerConnection.onicecandidate = (e) => { if (e.candidate) socket.emit('ice_candidate', { to: data.from, candidate: e.candidate }); }; }
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer)); const ans = await peerConnection.createAnswer(); await peerConnection.setLocalDescription(ans); socket.emit('rtc_answer', { to: data.from, answer: ans });
+            });
+
+            socket.on('receive_answer', async (data) => { if (peerConnection) await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer)); });
+            socket.on('receive_ice', async (data) => { if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); });
+            socket.on('call_ended', endCallUI);
+        }
+
+        function buildSidebarStructure() {
+            const c = document.getElementById('chats'); c.innerHTML = '';
+            const n = document.createElement('div'); n.className = 'chat-item';
+            n.innerHTML = `<div style="display:flex;align-items:center;gap:10px;"><div class="avatar" style="width:30px;height:30px;font-size:14px;">📢</div><div class="chat-item-title">Danumes News</div></div><div class="chat-item-sub">Канал новостей</div>`;
+            n.onclick = () => selectChat('news', 'danumes_news', 'Danumes News');
+            c.appendChild(n);
+        }
+
+        // Вывод только активных диалогов (Скрытый режим)
+        function renderSidebarList() {
+            const c = document.getElementById('chats');
+            c.querySelectorAll('.chat-item[data-type="user"]').forEach(e => e.remove());
+            
+            // Если идет поиск, рендеринг сайдбара приостанавливается
+            if(document.getElementById('search').value.trim() !== '') return;
+
+            cachedActiveChats.forEach(u => {
+                const d = document.createElement('div');
+                d.className = 'chat-item'; d.setAttribute('data-type', 'user');
+                let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+                let a = u.avatar ? `<div class="avatar" style="width:30px;height:30px;font-size:16px;">${u.avatar}</div>` : `<div class="avatar" style="width:30px;height:30px;font-size:14px;">👤</div>`;
+                let s = u.isOnline ? '<span style="color:#2ecc71;">● В сети</span>' : '<span style="color:var(--gray);">Не в сети</span>';
+                d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${a}<div class="chat-item-title">${u.username}${b}</div></div><div class="chat-item-sub">${s}</div>`;
+                d.onclick = () => selectChat('private', u.username, u.username);
+                c.appendChild(d);
+            });
+        }
+
+        // Вывод списка вкладки Друзья
+        function renderFriendsList() {
+            const fBox = document.getElementById('friends'); fBox.innerHTML = '';
+            if (cachedFriendsList.length === 0) { fBox.innerHTML = '<div style="color:var(--gray);text-align:center;padding:20px;font-size:14px;">Список друзей пуст</div>'; return; }
+            
+            cachedFriendsList.forEach(u => {
+                const d = document.createElement('div');
+                d.className = 'chat-item';
+                let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+                let a = u.avatar ? `<div class="avatar" style="width:30px;height:30px;font-size:16px;">${u.avatar}</div>` : `<div class="avatar" style="width:30px;height:30px;font-size:14px;">👤</div>`;
+                let s = u.isOnline ? '<span style="color:#2ecc71;">● В сети</span>' : '<span style="color:var(--gray);">Не в сети</span>';
+                d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${a}<div class="chat-item-title">${u.username}${b}</div></div><div style="display:flex;flex-direction:column;align-items:end;gap:5px;"><div class="chat-item-sub">${s}</div><button class="add-friend-btn is-friend" onclick="event.stopPropagation(); toggleFriend('${u.username}')">Удалить</button></div>`;
+                d.onclick = () => { document.getElementById('tab-chats-btn').click(); selectChat('private', u.username, u.username); };
+                fBox.appendChild(d);
+            });
+        }
+
+        // Рендеринг результатов живого скрытого поиска по никам
+        function renderSearchResults(results) {
+            const c = document.getElementById('chats');
+            c.querySelectorAll('.chat-item[data-type="user"]').forEach(e => e.remove());
+            
+            const existingSection = c.querySelector('.search-section-title');
+            if(existingSection) existingSection.remove();
+
+            if(results.length > 0) {
+                const sTitle = document.createElement('div'); sTitle.className = 'search-section-title'; sTitle.innerText = "Найденные глобально:";
+                c.appendChild(sTitle);
             }
-        } else { console.log("База пуста, создаем структуру."); }
-    } catch (e) { console.error("Ошибка загрузки Cloudflare KV:", e); }
-    if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
-    if (!db.users) db.users = {};
-    if (!db.messages) db.messages = [];
-    if (!db.groups) db.groups = {};
-}
-loadDBFromCloudflare();
 
-async function saveDB() {
-    try {
-        const contentString = JSON.stringify(db, null, 2);
-        fs.writeFileSync(DB_FILE, contentString);
-        const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
-        await fetch(url, { method: 'PUT', headers: { 'Authorization': `Bearer ${CF_API_TOKEN}`, 'Content-Type': 'text/plain' }, body: contentString });
-        console.log("☁️ Бэкап сохранен в Cloudflare KV!");
-    } catch (e) { console.error("Ошибка записи бэкапа:", e); }
-}
+            results.forEach(u => {
+                const d = document.createElement('div');
+                d.className = 'chat-item'; d.setAttribute('data-type', 'user');
+                let b = (u.username === 'Danumala' || u.username === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+                let a = u.avatar ? `<div class="avatar" style="width:30px;height:30px;font-size:16px;">${u.avatar}</div>` : `<div class="avatar" style="width:30px;height:30px;font-size:14px;">👤</div>`;
+                let btnText = u.isFriend ? 'В друзьях' : 'Добавить';
+                let btnClass = u.isFriend ? 'add-friend-btn is-friend' : 'add-friend-btn';
+                
+                d.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${a}<div class="chat-item-title">${u.username}${b}</div></div><button class="${btnClass}" onclick="event.stopPropagation(); toggleFriend('${u.username}')">${btnText}</button>`;
+                d.onclick = () => selectChat('private', u.username, u.username);
+                c.appendChild(d);
+            });
+        }
 
+        // Перехват ввода поиска (Поиск по всей скрытой базе)
+        document.getElementById('search').addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            if (q === '') {
+                const title = document.getElementById('chats').querySelector('.search-section-title');
+                if(title) title.remove();
+                renderSidebarList();
+            } else if (socket) {
+                socket.emit('global_search_user', q);
+            }
+        });
+
+        function toggleFriend(name) { if (socket) socket.emit('toggle_friend', name); if(document.getElementById('search').value.trim() !== '') { socket.emit('global_search_user', document.getElementById('search').value.trim()); } }
+
+        // Переключение Bento-табов
+        document.getElementById('tab-chats-btn').addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.list-container').forEach(c => c.classList.remove('active'));
+            e.target.classList.add('active'); document.getElementById('chats-list-container').classList.add('active');
+        });
+        document.getElementById('tab-friends-btn').addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.list-container').forEach(c => c.classList.remove('active'));
+            e.target.classList.add('active'); document.getElementById('friends-list-container').classList.add('active');
+        });
+
+        function selectChat(type, id, title) {
+            activeChat = { type, id };
+            let b = (id === 'Danumala' || id === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+            document.getElementById('current-chat-title').innerHTML = title + b;
+            
+            // Кнопка выхода из групп: Показываем её, только если выбран тип 'group'
+            document.getElementById('leave-group-btn').style.display = type === 'group' ? 'block' : 'none';
+
+            if(type === 'private') {
+                const userObj = cachedActiveChats.find(u => u.username === id) || cachedFriendsList.find(u => u.username === id);
+                document.getElementById('header-avatar').innerText = (userObj && userObj.avatar) ? userObj.avatar : title.charAt(0).toUpperCase();
+            } else {
+                document.getElementById('header-avatar').innerText = type === 'group' ? '👥' : '📢';
+            }
+            
+            document.getElementById('header-status').style.display = type === 'private' ? 'block' : 'none';
+            document.getElementById('typing-indicator').style.display = 'none';
+            document.getElementById('chat-messages').innerHTML = '';
+            document.getElementById('call-btn').style.display = (type === 'private' && id !== 'danumes_news') ? 'inline-block' : 'none';
+            if (socket) { socket.emit('load_messages', { type, id }); if (type === 'private') socket.emit('mark_as_read', { chatWith: id }); }
+        }
+
+        // Логика кнопки «Выйти из группы» в шапке чата
+        document.getElementById('leave-group-btn').addEventListener('click', () => {
+            if (activeChat.type === 'group' && activeChat.id && socket) {
+                if(confirm(`Вы уверены, что хотите выйти из группы "${document.getElementById('current-chat-title').innerText.replace('✓', '')}"?`)) {
+                    socket.emit('leave_group', activeChat.id);
+                }
+            }
+        });
+
+        function renderSingleMessage(msg) {
+            const box = document.getElementById('chat-messages'); const div = document.createElement('div');
+            const isOwn = msg.author === currentUser.username; div.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
+            div.dataset.id = msg.id; div.dataset.author = msg.author;
+            if (msg.fileUrl) { div.dataset.fileurl = msg.fileUrl; div.dataset.filename = msg.fileName; }
+            if (msg.image) { div.dataset.fileurl = msg.image; div.dataset.filename = "image.jpg"; }
+            let b = (msg.author === 'Danumala' || msg.author === 'RunFly') ? '<span class="badge-admin">✓</span>' : '';
+            let t = isOwn ? `<span class="tick">${msg.read ? '✓✓' : '✓'}</span>` : '';
+            let c = `<strong>${msg.author}${b}:</strong><br>`; 
+            if (msg.text) c += `<span>${msg.text}</span>`;
+            if (msg.image) { c += `<img src="${msg.image}" onclick="zoomImage('${msg.image}')">`; }
+            if (msg.fileUrl && !msg.image) {
+                c += `<div class="file-box" onclick="downloadFileDirectly('${msg.fileUrl}', '${msg.fileName}')">
+                        <div class="file-icon">📄</div>
+                        <div class="file-info-text">
+                            <span class="file-name-span">${msg.fileName}</span>
+                            <span class="file-action-label">Нажмите, чтобы скачать</span>
+                        </div>
+                      </div>`;
+            }
+            c += t; div.innerHTML = c; box.appendChild(div);
+        }
+
+        const sendMessage = () => {
+            const input = document.getElementById('msg-input'); const text = input.value.trim(); if (!text || !activeChat.id) return;
+            if (activeChat.id === 'danumes_news' && currentUser.username !== 'Danumala') return showToast('Писать в этот канал может только админ.');
+            if (socket) { socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, text: text }); socket.emit('typing_status', { type: activeChat.type, to: activeChat.id, isTyping: false }); }
+            input.value = '';
+        };
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+        document.getElementById('msg-input').addEventListener('input', () => { if (activeChat.type === 'private' && socket) { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: true }); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { socket.emit('typing_status', { type: 'private', to: activeChat.id, isTyping: false }); }, 2000); } });
+
+        document.getElementById('img-btn').addEventListener('click', () => document.getElementById('file-input').click());
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files; if (!file || !activeChat.id) return;
+            const r = new FileReader(); r.onload = (event) => {
+                const isImage = file.type.startsWith('image/');
+                let payloadData = event.target.result;
+                if (isImage) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas'); const MAX = 400; let w = img.width, h = img.height;
+                        if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        sendUploadRequest(canvas.toDataURL('image/jpeg', 0.4), file.name, true);
+                    }; img.src = event.target.result;
+                } else { sendUploadRequest(payloadData, file.name, false); }
+            }; r.readAsDataURL(file);
+        });
+
+        async function sendUploadRequest(base64Data, originalName, isImage) {
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rawData: base64Data, fileName: originalName, isImage: isImage })
+                });
+                const data = await res.json();
+                if (res.ok && socket) {
+                    if (isImage) { socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, image: data.url }); } 
+                    else { socket.emit('send_msg', { type: activeChat.type, to: activeChat.id, fileUrl: data.url, fileName: data.name }); }
+                }
+            } catch(err) { showToast('Ошибка отправки файла.'); }
+        }
+
+        function zoomImage(src) { const overlay = document.getElementById('media-viewer-overlay'); const img = document.getElementById('viewer-img'); img.src = src; overlay.style.display = 'flex'; }
+        document.getElementById('media-viewer-overlay').addEventListener('click', () => { document.getElementById('media-viewer-overlay').style.display = 'none'; });
+        function downloadFileDirectly(url, name) { const link = document.createElement('a'); link.href = url; link.download = name; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+
+        document.getElementById('chat-messages').addEventListener('contextmenu', (e) => { 
+            const msgEl = e.target.closest('.message'); if (!msgEl) return;
+            e.preventDefault(); selectedMessageId = msgEl.dataset.id; selectedMessageFileUrl = msgEl.dataset.fileurl || null; selectedMessageFileName = msgEl.dataset.filename || null;
+            const menu = document.getElementById('custom-context-menu');
+            document.getElementById('ctx-download-btn').style.display = selectedMessageFileUrl ? 'block' : 'none';
+            if (currentUser.username === 'Danumala' || currentUser.username === msgEl.dataset.author) { document.getElementById('ctx-delete-btn').style.display = 'block'; } else { document.getElementById('ctx-delete-btn').style.display = 'none'; }
+            menu.style.left = `${e.pageX}px`; menu.style.top = `${e.pageY}px`; menu.style.display = 'block';
+        });
+
+        document.addEventListener('click', () => document.getElementById('custom-context-menu').style.display = 'none');
+        document.getElementById('ctx-download-btn').addEventListener('click', () => { if (selectedMessageFileUrl && selectedMessageFileName) downloadFileDirectly(selectedMessageFileUrl, selectedMessageFileName); });
+        document.getElementById('ctx-delete-btn').addEventListener('click', () => { if (selectedMessageId && socket) socket.emit('req_delete_message', { messageId: selectedMessageId, user: currentUser.username }); });
+
+        document.getElementById('open-settings-btn').addEventListener('click', () => { const p = document.getElementById('settings-panel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; });
+        document.getElementById('close-settings-btn').addEventListener('click', () => { document.getElementById('settings-panel').style.display = 'none'; });
+        document.getElementById('avatar-emoji-selector').addEventListener('click', (e) => { if (e.target.classList.contains('emoji-option')) { const sel = e.target.innerText; document.getElementById('profile-preview-emoji').innerText = sel; if (socket) socket.emit('update_profile_avatar', { avatar: sel }); showToast(`Аватар изменен на ${sel}!`); } });
+
+        document.getElementById('open-group-modal-btn').addEventListener('click', () => {
+            const list = document.getElementById('group-members-list'); list.innerHTML = '';
+            cachedFriendsList.forEach(u => {
+                list.innerHTML += `<label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;"><input type="checkbox" value="${u.username}" class="group-member-checkbox"> 👤 ${u.username}</label>`;
+            });
+            document.getElementById('group-modal').style.display = 'flex';
+        });
+        document.getElementById('close-group-btn').addEventListener('click', () => { document.getElementById('group-modal').style.display = 'none'; });
+        document.getElementById('submit-create-group').addEventListener('click', () => { const name = document.getElementById('group-name-input').value.trim(); if (!name) return showToast('Введите название группы'); const members = []; document.querySelectorAll('.group-member-checkbox:checked').forEach(cb => members.push(cb.value)); if (socket) socket.emit('create_private_group', { name: name, members: members }); document.getElementById('group-modal').style.display = 'none'; document.getElementById('group-name-input').value = ''; showToast(`Группа "${name}" создана!`); });
+
+        document.getElementById('call-btn').addEventListener('click', async () => { document.getElementById('call-status-title').innerText = "Исходящий вызов"; document.getElementById('caller-name').innerText = `Звоним ${activeChat.id}...`; document.getElementById('accept-call-btn').style.display = 'none'; document.getElementById('mute-call-btn').style.display = 'flex'; document.getElementById('call-modal').style.display = 'flex'; localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); currentCallSession = { from: currentUser.username, to: activeChat.id }; if (socket) socket.emit('call_init', { to: activeChat.id, from: currentUser.username }); });
+        document.getElementById('accept-call-btn').addEventListener('click', async () => { stopRingtone(); document.getElementById('call-status-title').innerText = "Разговор..."; document.getElementById('accept-call-btn').style.display = 'none'; document.getElementById('mute-call-btn').style.display = 'flex'; localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); if (socket) socket.emit('call_accepted', { to: currentCallSession.from, from: currentUser.username }); });
+        document.getElementById('mute-call-btn').addEventListener('click', () => { if (localStream) { isMuted = !isMuted; localStream.getAudioTracks().enabled = !isMuted; const m = document.getElementById('mute-call-btn'); if (isMuted) { m.classList.add('active'); m.innerText = "🔇"; } else { m.classList.remove('active'); m.innerText = "🎙"; } } });
+        const endCallUI = () => { stopRingtone(); document.getElementById('call-modal').style.display = 'none'; if (peerConnection) { peerConnection.close(); peerConnection = null; } if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } isMuted = false; const m = document.getElementById('mute-call-btn'); m.classList.remove('active'); m.innerText = "🎙"; showToast('Звонок завершен'); };
+        document.getElementById('reject-call-btn').addEventListener('click', () => { if (currentCallSession && socket) { const target = currentCallSession.from === currentUser.username ? currentCallSession.to : currentCallSession.from; socket.emit('call_rejected', { to: target }); } endCallUI(); });
+    </script>
+</body>
+</html>
 const usersOnline = {};
 
 app.post('/api/register', (req, res) => {
@@ -137,7 +438,6 @@ function sendActiveChatsAndFriends(socket, username) {
     socket.emit('active_chats_list', activeChatsData);
     socket.emit('friends_list_data', friendsData);
 }
-
 io.on('connection', (socket) => {
     let sessionUser = null;
 
