@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DanuMes — Messenger</title>
+    <title>DanuMes — Мессенджер</title>
     <style>
-        /* стили такие же, как в предыдущем исправленном варианте, без изменений */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-            transition: background 0.2s, color 0.2s;
+            transition: background 0.2s;
         }
         body.dark {
             background: radial-gradient(circle at 20% 30%, #1a2a3a, #0a0f1e);
@@ -51,7 +50,7 @@
             background-clip: text;
             color: transparent;
         }
-        .theme-toggle, .profile-btn, .admin-btn {
+        .theme-toggle, .profile-btn {
             background: rgba(0,0,0,0.2);
             border: none;
             cursor: pointer;
@@ -69,14 +68,6 @@
             width: 48px;
             height: 48px;
             font-size: 32px;
-        }
-        .admin-btn {
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
-            background: rgba(59,130,246,0.3);
-            color: #3b82f6;
-            margin-right: 5px;
         }
         .search-box {
             padding: 12px 16px;
@@ -370,7 +361,6 @@
             .chat-info, .logo { display: none; }
             .chat-avatar { width: 48px; height: 48px; font-size: 26px; }
             .auth-card { width: 90%; padding: 32px 24px; }
-            .admin-btn { display: none; }
         }
     </style>
 </head>
@@ -455,20 +445,16 @@
             });
         });
         all.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
-        const prevChatId = currentChat;
         chats = all;
         renderSidebar();
-        if (prevChatId && chats.find(c => c.id === prevChatId && c.type === currentChatType)) {
-            // already selected
-        } else if (chats.length > 0 && !currentChat) {
-            currentChat = chats[0].id;
-            currentChatType = chats[0].type;
-            loadMessages();
-        }
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) return;
+        if (!currentUser || !currentChat) {
+            console.log('Нет currentUser или currentChat');
+            return;
+        }
+        console.log('Загружаем сообщения для:', currentChatType, currentChat);
         if (currentChatType === 'user') {
             const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
             messages = res;
@@ -512,8 +498,6 @@
     async function updateAvatar(emoji) {
         await api('POST', '/update-avatar', { username: currentUser.username, avatar: emoji });
         currentUser.avatar = emoji;
-        const chatWithSelf = chats.find(c => c.type === 'user' && c.id === currentUser.username);
-        if (chatWithSelf) chatWithSelf.avatar = emoji;
         renderSidebar();
         showToast('Аватар обновлён');
     }
@@ -585,15 +569,10 @@
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
         let filtered = chats.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-        let adminButton = '';
-        if (currentUser && currentUser.username === 'Danumala') {
-            adminButton = `<button class="admin-btn" id="adminBtn" title="Админ-панель">👑</button>`;
-        }
         let html = `
             <div class="sidebar-header">
                 <div class="logo">DanuMes</div>
                 <div style="display:flex; gap:8px;">
-                    ${adminButton}
                     <button class="theme-toggle" id="themeToggle">🌓</button>
                     <button class="profile-btn" id="profileBtn">${currentUser.avatar}</button>
                 </div>
@@ -621,19 +600,24 @@
         html += `</div>`;
         sidebarDiv.innerHTML = html;
 
+        // ========== ГЛАВНОЕ: ОБРАБОТЧИК КЛИКА ПО ЧАТУ ==========
         document.querySelectorAll('.chat-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const newType = el.dataset.type;
                 const newId = el.dataset.id;
-                if (currentChat !== newId || currentChatType !== newType) {
-                    currentChatType = newType;
-                    currentChat = newId;
-                    loadMessages();
-                    renderSidebar();
-                }
+                console.log('Клик по чату:', newType, newId);
+                if (!newId) return;
+                // Обновляем текущий чат
+                currentChatType = newType;
+                currentChat = newId;
+                // Загружаем сообщения
+                loadMessages();
+                // Перерисовываем sidebar, чтобы подсветить активный чат
+                renderSidebar();
             });
         });
+
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -646,15 +630,10 @@
         }
         const profileBtn = document.getElementById('profileBtn');
         if (profileBtn) profileBtn.onclick = () => {
-            const modal = document.getElementById('avatarModal');
-            if (modal) modal.style.display = 'flex';
+            document.getElementById('avatarModal').style.display = 'flex';
         };
         const themeBtn = document.getElementById('themeToggle');
         if (themeBtn) themeBtn.onclick = toggleTheme;
-        const adminBtn = document.getElementById('adminBtn');
-        if (adminBtn) adminBtn.onclick = () => {
-            window.open('/admin', '_blank');
-        };
     }
 
     function renderChat() {
@@ -666,25 +645,29 @@
         }
         const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
         let messagesHtml = `<div class="messages-area" id="messagesList">`;
-        messages.forEach(msg => {
-            const isOwn = msg.from === currentUser.username;
-            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            let content = '';
-            if (msg.fileUrl && isImageFile(msg.fileName)) {
-                content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
-            } else if (msg.fileUrl) {
-                content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
-            }
-            if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-            messagesHtml += `
-                <div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
-                    <div class="message-bubble">
-                        ${content}
-                        <div class="message-time">${time}</div>
+        if (messages && messages.length > 0) {
+            messages.forEach(msg => {
+                const isOwn = msg.from === currentUser.username;
+                const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                let content = '';
+                if (msg.fileUrl && isImageFile(msg.fileName)) {
+                    content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
+                } else if (msg.fileUrl) {
+                    content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
+                }
+                if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+                messagesHtml += `
+                    <div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
+                        <div class="message-bubble">
+                            ${content}
+                            <div class="message-time">${time}</div>
+                        </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        } else {
+            messagesHtml += `<div style="text-align:center; opacity:0.5; padding:20px;">Нет сообщений. Напишите первое!</div>`;
+        }
         messagesHtml += `</div>`;
         mainDiv.innerHTML = `
             <div class="chat-header">
@@ -861,7 +844,6 @@
             </div>
         `;
         renderSidebar();
-        if (currentChat) loadMessages();
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(() => {
             if (currentChat) loadMessages();
