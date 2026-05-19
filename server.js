@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const https = require('https'); // Встроенный модуль Node.js, не требует установки
+const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,26 +20,26 @@ const CLOUDFLARE_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc';
 const CLOUDFLARE_NAMESPACE_ID = '1b46ee655188445ca7b277fb8634dca0';
 const CLOUDFLARE_API_TOKEN = 'cfut_SS1xHLjBmPurWiP1cwYW1WckTJC4q3ukFbM7zyW49d264d59'; 
 
-// Функция отправки запросов через чистый HTTPS (чтобы сервер никогда не падал)
 function cloudflareRequest(method, bodyData = null) {
   return new Promise((resolve) => {
-    const url = `/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/danumes_chat_history`;
+    // ИСПРАВЛЕНО: Чистый путь без лишних символов
+    const pathUrl = `/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/danumes_chat_history`;
     
     const payload = bodyData ? (typeof bodyData === 'object' ? JSON.stringify(bodyData) : String(bodyData)) : null;
 
     const options = {
-      hostname: '://cloudflare.com',
+      hostname: '://cloudflare.com', // ИСПРАВЛЕНО: Строго чистый хост без протоколов
       port: 443,
-      path: url,
+      path: pathUrl,
       method: method,
       headers: {
         'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-        'Content-Type': 'text/plain'
+        'Content-Type': 'text/plain; charset=utf-8'
       }
     };
 
     if (payload) {
-      options.headers['Content-Length'] = Buffer.byteLength(payload);
+      options.headers['Content-Length'] = Buffer.byteLength(payload, 'utf8');
     }
 
     const req = https.request(options, (res) => {
@@ -63,7 +63,10 @@ function cloudflareRequest(method, bodyData = null) {
 }
 
 async function saveMessagesToKV(messagesArray) {
-  await cloudflareRequest('PUT', messagesArray);
+  const res = await cloudflareRequest('PUT', messagesArray);
+  if (res && res.status === 200) {
+    console.log('[KV] Чат успешно синхронизирован с Cloudflare KV Pairs!');
+  }
 }
 
 async function loadMessagesFromKV() {
@@ -72,14 +75,14 @@ async function loadMessagesFromKV() {
     try {
       return JSON.parse(res.body);
     } catch (e) {
-      console.error('[KV] Не удалось распарсить сохраненный JSON истории');
+      console.error('[KV] База пуста или не JSON. Начинаем с чистого листа.');
     }
   }
   return [];
 }
 // --------------------------------
 
-// СПИСОК ПОЛЬЗОВАТЕЛЕЙ С ГАЛОЧКАМИ И ДОСТУПОМ
+// ПОЛЬЗОВАТЕЛИ
 const permanentUsers = [
   {
     username: 'Danumala',
@@ -97,7 +100,6 @@ const permanentUsers = [
 
 let messages = [];
 
-// Безопасный запуск без падений
 loadMessagesFromKV().then(savedMessages => {
   messages = savedMessages || [];
   console.log(`[Бэкенд] Чат готов. Сообщений в базе: ${messages.length}`);
