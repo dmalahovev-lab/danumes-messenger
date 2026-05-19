@@ -28,12 +28,13 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
 
-// АКТУАЛЬНЫЕ ДАННЫЕ ТВОЕГО GITHUB ИЗ ТЗ
-const GH_TOKEN = 'ghp_KCFTmwImy7VLlM0nPBLdqv4N7OrF073Gpl2';
-const GH_REPO = 'dmalahovev-lab/danumes-messenger';
-let dbSha = null; 
+// НАСТРОЙКИ ВЕЧНОЙ БАЗЫ CLOUDFLARE KV
+const CF_API_TOKEN = 'cfut_nRdMko8VGb1R6yP645vkggXNTbNX203tFTXhGMqk9f4c21c9';
+const CF_ACCOUNT_ID = '315776b94c3e5574096cfecc515248bc'; // Взято с твоего скриншота
+const CF_KV_ID = '1b46ee655788445ca7b277fb8634dca0';
 
 let db = { users: {}, messages: [], groups: {} };
+
 
 function githubRequest(method, urlPath, payload, callback) {
     const options = {
@@ -70,49 +71,50 @@ function githubRequest(method, urlPath, payload, callback) {
     req.end();
 }
 
-function loadDBFromGitHub() {
-    console.log("Загрузка вечной базы данных из GitHub...");
-    githubRequest('GET', `/repos/${GH_REPO}/contents/database.json`, null, (err, status, data) => {
-        if (!err && status === 200 && data.content) {
-            try {
-                dbSha = data.sha;
-                const fileContent = Buffer.from(data.content, 'base64').toString('utf8').trim();
-                if (fileContent) {
-                    db = JSON.parse(fileContent);
-                    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-                    console.log("✅ Вечная база успешно синхронизирована с GitHub!");
-                }
-            } catch (e) { console.error("Ошибка парсинга базы с GitHub:", e); }
-        } else {
-            console.log("Файл базы на GitHub не найден, используем пустую структуру.");
-            if (fs.existsSync(DB_FILE)) {
-                try {
-                    const localContent = fs.readFileSync(DB_FILE, 'utf8').trim();
-                    if (localContent) db = JSON.parse(localContent);
-                } catch(e){}
+// Функция скачивания базы из Cloudflare KV при старте
+async function loadDBFromCloudflare() {
+    console.log("Загрузка вечной базы данных из Cloudflare KV...");
+    const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${CF_API_TOKEN}` }
+        });
+        if (response.ok) {
+            const text = await response.text();
+            if (text) {
+                db = JSON.parse(text);
+                fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+                console.log("✅ База данных Cloudflare успешно синхронизирована!");
             }
-        }
-        if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
-        if (!db.users) db.users = {};
-        if (!db.messages) db.messages = [];
-        if (!db.groups) db.groups = {};
-    });
+        } else { console.log("База в облаке пуста, создаем локальный слепок."); }
+    } catch (e) { console.error("Ошибка загрузки Cloudflare KV:", e); }
+    
+    if (!db || typeof db !== 'object') db = { users: {}, messages: [], groups: {} };
+    if (!db.users) db.users = {};
+    if (!db.messages) db.messages = [];
+    if (!db.groups) db.groups = {};
 }
-loadDBFromGitHub();
+loadDBFromCloudflare();
 
-function saveDB() {
+// Функция сохранения бэкапа в Cloudflare KV
+async function saveDB() {
     try {
         const contentString = JSON.stringify(db, null, 2);
         fs.writeFileSync(DB_FILE, contentString);
         
-        const payload = {
-            message: `Авто-сохранение базы данных: ${new Date().toISOString()}`,
-            content: Buffer.from(contentString).toString('base64')
-        };
-        
-        if (dbSha) {
-            payload.sha = dbSha;
-        }
+        const url = `https://cloudflare.com{CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_ID}/values/danumes_main_db`;
+        await fetch(url, {
+            method: 'PUT',
+            headers: { 
+                'Authorization': `Bearer ${CF_API_TOKEN}`,
+                'Content-Type': 'text/plain'
+            },
+            body: contentString
+        });
+        console.log("☁️ Облачный бэкап сохранен в Cloudflare KV!");
+    } catch (e) { console.error("Ошибка записи бэкапа:", e); }
+}
 
         githubRequest('PUT', `/repos/${GH_REPO}/contents/database.json`, payload, (err, status, data) => {
             if (!err && (status === 200 || status === 201) && data.content) {
