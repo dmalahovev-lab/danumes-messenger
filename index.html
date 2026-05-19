@@ -245,7 +245,7 @@
         });
 
         function initSocketChannels() {
-            socket = io('https://onrender.com');
+            socket = io('https://onrender.com', {
                 transports: ['websocket'], 
                 upgrade: false,
                 reconnection: true,
