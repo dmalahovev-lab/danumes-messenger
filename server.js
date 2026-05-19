@@ -180,6 +180,18 @@ app.get('/admin/users', (req, res) => {
     res.json(users.map(u => ({ username: u.username, password: u.password, avatar: u.avatar, verified: u.verified })));
 });
 
+// Админ-панель для просмотра пользователей (только для владельца)
+app.get('/admin', (req, res) => {
+    db.all(`SELECT username, password, avatar, verified FROM users`, [], (err, rows) => {
+        if (err) return res.status(500).send('Ошибка БД');
+        let html = '<h1>Список пользователей DanuMes</h1><table border="1"><tr><th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></tr>';
+        rows.forEach(u => {
+            html += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.avatar}</td><td>${u.verified ? 'Да' : 'Нет'}</td></tr>`;
+        });
+        html += '</table><p><a href="/">Вернуться в мессенджер</a></p>';
+        res.send(html);
+    });
+});
 app.listen(PORT, () => {
     console.log(`✅ Сервер успешно запущен на порту ${PORT}`);
     console.log(`📊 Всего пользователей: ${users.length}`);
