@@ -6,7 +6,7 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Временное хранилище в памяти
+// Хранилище в памяти
 let users = [
     { username: 'Danumala', password: 'danyajukovka', avatar: '👑', online: false, verified: true },
     { username: 'RunFly', password: 'GGWWXXJJ2001', avatar: '🚀', online: false, verified: true }
@@ -15,9 +15,10 @@ let messages = [];
 let channels = [{ id: 'news', name: 'Danumes News', owner: 'Danumala', avatar: '📢', onlyOwnerCanPost: true }];
 let channelMessages = [];
 
-// Настройка загрузки файлов
+// Multer для файлов
 const UPLOADS_DIR = '/tmp/uploads';
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -30,7 +31,7 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// === API ===
+// ========== API ==========
 
 app.post('/register-attempt', (req, res) => {
     const { username, password } = req.body;
@@ -83,7 +84,6 @@ app.post('/send-message', (req, res) => {
         fileName: fileName || null
     };
     messages.push(newMsg);
-    console.log('Новое сообщение от', from, 'к', to);
     res.json({ success: true, message: newMsg });
 });
 
@@ -163,16 +163,24 @@ app.get('/file/:filename', (req, res) => {
 
 app.delete('/delete-message/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    const idx = messages.findIndex(m => m.id === id);
-    if (idx !== -1) messages.splice(idx, 1);
+    const index = messages.findIndex(m => m.id === id);
+    if (index !== -1) messages.splice(index, 1);
     res.json({ success: true });
 });
 
 app.delete('/delete-channel-message/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    const idx = channelMessages.findIndex(m => m.id === id);
-    if (idx !== -1) channelMessages.splice(idx, 1);
+    const index = channelMessages.findIndex(m => m.id === id);
+    if (index !== -1) channelMessages.splice(index, 1);
     res.json({ success: true });
 });
 
-app.listen(PORT, () => console.log(`✅ Сервер запущен на порту ${PORT} (данные в памяти)`));
+// Добавим временный эндпоинт для просмотра пользователей (только для разработки)
+app.get('/admin/users', (req, res) => {
+    res.json(users.map(u => ({ username: u.username, password: u.password, avatar: u.avatar, verified: u.verified })));
+});
+
+app.listen(PORT, () => {
+    console.log(`✅ Сервер успешно запущен на порту ${PORT}`);
+    console.log(`📊 Всего пользователей: ${users.length}`);
+});
