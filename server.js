@@ -7,14 +7,13 @@ const https = require('https');
 const app = express();
 const server = http.createServer(app);
 
-// Конфигурируем сокеты так, чтобы они подхватывали любое входящее соединение с Render
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
     credentials: true
   },
-  allowEIO3: true // Обеспечивает совместимость со старыми версиями библиотек на фронтенде
+  allowEIO3: true
 });
 
 app.use(express.static(path.join(__dirname)));
@@ -27,7 +26,6 @@ const CLOUDFLARE_API_TOKEN = 'cfut_SS1xHLjBmPurWiP1cwYW1WckTJC4q3ukFbM7zyW49d264
 function cloudflareRequest(method, bodyData = null) {
   return new Promise((resolve) => {
     const pathUrl = `/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_NAMESPACE_ID}/values/danumes_chat_history`;
-    
     const payload = bodyData ? (typeof bodyData === 'object' ? JSON.stringify(bodyData) : String(bodyData)) : null;
 
     const options = {
@@ -48,75 +46,50 @@ function cloudflareRequest(method, bodyData = null) {
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        resolve({ status: res.statusCode, body: data });
-      });
+      res.on('end', () => resolve({ status: res.statusCode, body: data }));
     });
 
     req.on('error', (err) => {
-      console.error(`[KV Error] Ошибка запроса (${method}):`, err.message);
+      console.error(`[KV Error]`, err.message);
       resolve(null);
     });
 
-    if (payload) {
-      req.write(payload);
-    }
+    if (payload) req.write(payload);
     req.end();
   });
 }
 
 async function saveMessagesToKV(messagesArray) {
-  const res = await cloudflareRequest('PUT', messagesArray);
-  if (res && res.status === 200) {
-    console.log('[KV] Чат успешно синхронизирован с Cloudflare KV Pairs!');
-  }
+  await cloudflareRequest('PUT', messagesArray);
 }
 
 async function loadMessagesFromKV() {
   const res = await cloudflareRequest('GET');
   if (res && res.status === 200) {
-    try {
-      return JSON.parse(res.body);
-    } catch (e) {
-      console.error('[KV] База пуста. Начинаем с чистого листа.');
-    }
+    try { return JSON.parse(res.body); } catch (e) {}
   }
   return [];
 }
 // --------------------------------
 
-// СПИСОК ПОЛЬЗОВАТЕЛЕЙ С ГАЛОЧКАМИ И ДОСТУПОМ
+// СИСТЕМНЫЕ ПОЛЬЗОВАТЕЛИ
 const permanentUsers = [
-  {
-    username: 'Danumala',
-    password: 'danyajukovka',
-    hasVerifiedBadge: true,
-    hasNewsAccess: true
-  },
-  {
-    username: 'RunFly',
-    password: 'GGWWXXJJ2001',
-    hasVerifiedBadge: true,
-    hasNewsAccess: false
-  }
+  { username: 'Danumala', password: 'danyajukovka', hasVerifiedBadge: true, hasNewsAccess: true },
+  { username: 'RunFly', password: 'GGWWXXJJ2001', hasVerifiedBadge: true, hasNewsAccess: false }
 ];
 
 let messages = [];
 
 loadMessagesFromKV().then(savedMessages => {
   messages = savedMessages || [];
-  console.log(`[Бэкенд] Чат готов. Сообщений в базе: ${messages.length}`);
-}).catch(err => {
-  console.error('[Бэкенд] Ошибка при старте базы:', err.message);
+  console.log(`[Бэкенд] Сообщений подгружено: ${messages.length}`);
 });
 
 io.on('connection', (socket) => {
-  console.log('Пользователь подключился к сокетам:', socket.id);
-
-  // Сразу отправляем историю чата из Cloudflare при коннекте
+  // Передаем сохраненные Cloudflare KV данные обратно в мессенджер
   socket.emit('init-messages', messages);
 
-  // Твоя базовая проверка авторизации
+  // Валидация входа
   socket.on('login-attempt', (data) => {
     const user = permanentUsers.find(u => u.username === data.username && u.password === data.password);
     if (user) {
@@ -126,7 +99,7 @@ io.on('connection', (socket) => {
         hasNewsAccess: user.hasNewsAccess
       });
     } else {
-      socket.emit('login-failure', { message: 'Неверные данные' });
+      socket.emit('login-failure');
     }
   });
 
@@ -144,18 +117,12 @@ io.on('connection', (socket) => {
     messages.push(newMessage);
     io.emit('new-message', newMessage);
 
-    // Отправляем на вечное хранение в Cloudflare KV
+    // Записываем в базу данных
     saveMessagesToKV(messages);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Пользователь отключился:', socket.id);
   });
 });
 
-// Render автоматически передает PORT через переменные окружения,
-// но если его нет — резервируем 3000 порт.
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Сервер Danumes запущен на порту ${PORT}`);
+  console.log(`Сервер Danumes активен на порту ${PORT}`);
 });
