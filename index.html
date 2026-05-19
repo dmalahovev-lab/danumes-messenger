@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danumes</title>
+    <title>Danumes Messenger</title>
     <link href="https://googleapis.com" rel="stylesheet">
-    <!-- Подключаем библиотеку сокетов, чтобы не было ошибки io is not defined -->
+    <!-- Подключение Socket.io с сервера для стабильной связи -->
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
@@ -25,18 +25,16 @@
             overflow: hidden;
         }
 
-        /* Заголовок Danumes в левом верхнем углу */
-        .brand-title {
+        /* --- СТИЛИ ДЛЯ СТРАНИЦЫ ВХОДА --- */
+        .brand-logo-title {
             position: absolute;
             top: 40px;
             left: 50px;
             font-size: 2rem;
             font-weight: 500;
             color: #d1ceda;
-            letter-spacing: -0.5px;
         }
 
-        /* Контейнер авторизации */
         .auth-card {
             background: linear-gradient(145deg, #13101c, #0e0b16);
             padding: 45px 35px;
@@ -46,13 +44,13 @@
             text-align: center;
             border: 1px solid #1a162b;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+            z-index: 10;
         }
 
         .auth-card h2 {
             font-size: 1.8rem;
             font-weight: 500;
             margin-bottom: 30px;
-            color: #f1f1f1;
         }
 
         .input-field {
@@ -65,17 +63,6 @@
             font-size: 0.95rem;
             margin-bottom: 18px;
             outline: none;
-            transition: all 0.3s ease;
-        }
-
-        .input-field:focus {
-            border-color: #4b2374;
-            background-color: #221e30;
-            box-shadow: 0 0 15px rgba(75, 35, 116, 0.2);
-        }
-
-        .input-field::placeholder {
-            color: #5d5973;
         }
 
         .action-btn {
@@ -88,15 +75,6 @@
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(76, 28, 122, 0.4);
-        }
-
-        .action-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(76, 28, 122, 0.6);
         }
 
         .toggle-link {
@@ -107,215 +85,333 @@
 
         .toggle-link span {
             color: #9c82cc;
-            text-decoration: none;
             cursor: pointer;
             margin-left: 5px;
-            transition: color 0.2s;
         }
 
-        .toggle-link span:hover {
-            color: #bfa8eb;
-        }
-
-        /* Кнопка Ошибки Подключения */
-        #error-badge {
-            position: fixed;
-            top: 20px;
-            background-color: #44141a;
-            border: 1px solid #6b1d26;
-            color: #fccfcf;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            display: none;
-            z-index: 100;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-
-        /* --- РАБОЧАЯ ЗОНА МЕССЕНДЖЕРА после входа --- */
+        /* --- СТИЛИ ДЛЯ ОРИГИНАЛЬНОЙ ГЛАВНОЙ СТРАНИЦЫ (ИЗ СКРИНШОТА) --- */
         #messenger-layout {
-            display: none;
+            display: none; /* Откроется после логина */
             width: 100%;
             height: 100vh;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 350px 1fr;
             background-color: #08060d;
         }
 
-        #chat-sidebar {
-            background-color: #0e0b16;
-            border-right: 1px solid #1a162b;
+        /* Левая панель */
+        .sidebar {
+            background-color: #0b0813;
+            border-right: 1px solid #141122;
             display: flex;
             flex-direction: column;
-            padding: 20px;
+            padding: 25px 20px;
         }
 
-        .profile-section {
-            padding-bottom: 20px;
-            border-bottom: 1px solid #1a162b;
-            margin-bottom: 20px;
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .brand-name {
             font-size: 1.1rem;
+            color: #8c889e;
+        }
+
+        .sidebar h1 {
+            font-size: 2rem;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        .create-group-btn {
+            background-color: #151224;
+            border: 1px solid #221d38;
+            color: #a39fbc;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .channel-item {
+            border-top: 1px solid #141122;
+            border-bottom: 1px solid #141122;
+            padding: 20px 0;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .channel-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .channel-subtitle {
+            font-size: 0.9rem;
+            color: #4f4b62;
+        }
+
+        /* Правая панель чата */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            background-color: #08060d;
+            height: 100vh;
+        }
+
+        .chat-header {
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #141122;
+        }
+
+        .chat-user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar-circle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: #112033;
+            border: 1px solid #1b3252;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            color: #5294e2;
+        }
+
+        .user-status-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name-text {
+            font-size: 1.2rem;
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
         }
 
-        .verified-star {
-            color: #9c82cc;
-            font-weight: bold;
-        }
-
-        .news-tab-btn {
-            background-color: #1e1b29;
-            border: 1px solid #28243c;
-            color: #9c82cc;
-            padding: 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            display: none;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-
-        #chat-window {
+        .online-indicator {
+            font-size: 0.85rem;
+            color: #616161;
             display: flex;
-            flex-direction: column;
-            height: 100%;
-            background-color: #0b0813;
+            align-items: center;
+            gap: 5px;
         }
 
-        #messages-view {
+        .online-indicator::before {
+            content: "●";
+            color: #4b8053;
+        }
+
+        .call-logo-placeholder {
+            color: #6a667d;
+            font-size: 1rem;
+        }
+
+        /* Сетка вывода сообщений */
+        .messages-viewport {
             flex: 1;
-            padding: 30px;
+            padding: 40px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
 
-        .msg {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 0.95rem;
+        .chat-msg {
+            max-width: 65%;
+            padding: 14px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
             line-height: 1.4;
             word-wrap: break-word;
         }
 
-        .msg.inbound {
-            background-color: #13101c;
+        .chat-msg.received {
+            background-color: #131020;
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            border: 1px solid #1a162b;
+            border: 1px solid #1c1830;
         }
 
-        .msg.outbound {
-            background: linear-gradient(135deg, #2c124a, #36145c);
+        .chat-msg.transmitted {
+            background: linear-gradient(135deg, #371461, #471a7d);
             align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            border: 1px solid #441b73;
+            border: 1px solid #551f96;
         }
 
-        .msg-author {
-            font-size: 0.75rem;
+        .msg-sender-title {
+            font-size: 0.8rem;
             color: #9c82cc;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
-        .msg-time {
+        .msg-time-stamp {
             font-size: 0.7rem;
             color: #5d5973;
             text-align: right;
             margin-top: 4px;
         }
 
-        .input-bar {
-            padding: 20px 30px;
-            background-color: #0e0b16;
-            border-top: 1px solid #1a162b;
+        /* Нижняя панель ввода */
+        .footer-input-zone {
+            padding: 25px 30px;
             display: flex;
-            gap: 15px;
+            align-items: center;
+            background-color: #08060d;
         }
 
-        .input-bar input {
+        .input-wrapper-inner {
             flex: 1;
-            padding: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
             background-color: #13101c;
-            border: 1px solid #28243c;
+            border: 1px solid #1d1a2e;
             border-radius: 30px;
+            padding: 5px 10px;
+            margin-right: 15px;
+        }
+
+        .attachment-btn {
+            background: none;
+            border: none;
+            color: #7262a6;
+            font-size: 0.85rem;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        .main-chat-input {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px 10px;
             color: #f1f1f1;
+            font-size: 1rem;
             outline: none;
+        }
+
+        .main-chat-input::placeholder {
+            color: #3b374d;
+        }
+
+        .purple-submit-btn {
+            background: linear-gradient(90deg, #441673, #571c94);
+            border: none;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(87, 28, 148, 0.3);
+        }
+
+        .verified-badge-star {
+            color: #a382ec;
         }
     </style>
 </head>
 <body>
 
-    <div id="error-badge">Ошибка подключения к Danumes. Переподключение...</div>
-    <div class="brand-title">Danumes</div>
+    <div class="brand-logo-title" id="brand-logo-text">Danumes</div>
 
-    <!-- ЭКРАН С ФИОЛЕТОВЫМ ДИЗАЙНОМ (ОКНО АВТОРИЗАЦИИ) -->
+    <!-- ОКНО АВТОРИЗАЦИИ (ТВОЙ ДИЗАЙН) -->
     <div id="auth-screen" class="auth-card">
-        <!-- Блок Входа -->
         <div id="login-box">
             <h2>Вход</h2>
             <input type="text" id="login-user" class="input-field" placeholder="Логин">
             <input type="password" id="login-pass" class="input-field" placeholder="Пароль">
             <button class="action-btn" id="btn-login-action">Войти в аккаунт</button>
             <div class="toggle-link">
-                Нет аккаунта? <span onclick="switchView(true)">Зарегистрироваться</span>
+                Нет аккаунта? <span onclick="toggleAuth(true)">Зарегистрироваться</span>
             </div>
         </div>
 
-        <!-- Блок Регистрации -->
         <div id="register-box" style="display: none;">
             <h2>Регистрация</h2>
             <input type="text" id="reg-user" class="input-field" placeholder="Придумайте логин">
             <input type="password" id="reg-pass" class="input-field" placeholder="Придумайте пароль">
             <button class="action-btn" id="btn-reg-action">Создать аккаунт</button>
             <div class="toggle-link">
-                Уже есть аккаунт? <span onclick="switchView(false)">Войти</span>
+                Уже есть аккаунт? <span onclick="toggleAuth(false)">Войти</span>
             </div>
         </div>
     </div>
 
-    <!-- ГЛАВНОЕ ОКНО ЧАТА -->
+    <!-- ГЛАВНАЯ СТРАНИЦА ЧАТА (ДИЗАЙН С ТВОЕГО СКРИНШОТА) -->
     <div id="messenger-layout">
-        <div id="chat-sidebar">
-            <div class="profile-section">
-                <span id="my-profile-name">Пользователь</span>
-                <span id="my-profile-badge" class="verified-star" style="display: none;">✔</span>
+        <!-- Левая колонка -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div>
+                    <div class="brand-name">Danumes</div>
+                    <h1>Чаты</h1>
+                </div>
+                <button class="create-group-btn">Создать группу</button>
             </div>
-            <div style="color: #5d5973; font-size: 0.9rem;">Глобальный чат</div>
-            <button id="danumes-news-btn" class="news-tab-btn">📢 Danumes News</button>
+
+            <div class="channel-item">
+                <div class="channel-title">Danumes News</div>
+                <div class="channel-subtitle" id="news-last-msg">Последнее сообщение канала</div>
+            </div>
         </div>
-        <div id="chat-window">
-            <div id="messages-view"></div>
-            <div class="input-bar">
-                <input type="text" id="msg-input-field" placeholder="Напишите сообщение...">
-                <button class="action-btn" id="btn-send-msg" style="width: auto; padding: 0 25px; margin: 0;">Отправить</button>
+
+        <!-- Правая колонка -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-user-info">
+                    <div class="user-avatar-circle" id="chat-header-avatar">П</div>
+                    <div class="user-status-block">
+                        <div class="user-name-text">
+                            <span id="chat-header-username">Пользователь</span>
+                            <span id="verified-star-icon" class="verified-badge-star" style="display: none;">✔</span>
+                        </div>
+                        <div class="online-indicator">Онлайн</div>
+                    </div>
+                </div>
+                <div class="call-logo-placeholder">Вставь тут логотип звонка</div>
+            </div>
+
+            <!-- Лента сообщений -->
+            <div class="messages-viewport" id="messages-view">
+                <!-- Сюда подгружаются сообщения -->
+            </div>
+
+            <!-- Нижняя панель ввода (Из твоего скриншота) -->
+            <div class="footer-input-zone">
+                <div class="input-wrapper-inner">
+                    <button class="attachment-btn">Вставь скрепку тут</button>
+                    <input type="text" id="chat-message-input" class="main-chat-input" placeholder="Напишите сообщение...">
+                </div>
+                <button class="purple-submit-btn" id="chat-send-btn">Отправить</button>
             </div>
         </div>
     </div>
 
+    <!-- ИНТЕГРАЦИЯ ЛОГИКИ СОКЕТОВ С ТВОИМ ДИЗАЙНОМ -->
     <script>
-        // Подключаемся к твоему серверу на Render
         const socket = io('https://onrender.com');
+        let sessionUser = null;
 
-        let myAccount = null;
-
-        // Показ ошибок сети
-        socket.on('connect', () => document.getElementById('error-badge').style.display = 'none');
-        socket.on('disconnect', () => document.getElementById('error-badge').style.display = 'block');
-
-        // Переключение окон Логин / Регистрация
-        function switchView(toRegister) {
-            document.getElementById('login-box').style.display = toRegister ? 'none' : 'block';
-            document.getElementById('register-box').style.display = toRegister ? 'block' : 'none';
+        function toggleAuth(showRegister) {
+            document.getElementById('login-box').style.display = showRegister ? 'none' : 'block';
+            document.getElementById('register-box').style.display = showRegister ? 'block' : 'none';
         }
 
-        // Починка работы Кнопки Входа
+        // Авторизация
         document.getElementById('btn-login-action').addEventListener('click', () => {
             const username = document.getElementById('login-user').value.trim();
             const password = document.getElementById('login-pass').value.trim();
@@ -324,84 +420,88 @@
             }
         });
 
-        // Починка работы Кнопки Регистрации
         document.getElementById('btn-reg-action').addEventListener('click', () => {
             const username = document.getElementById('reg-user').value.trim();
-            const password = document.getElementById('reg-pass').value.trim();
-            if (username && password) {
-                myAccount = { username, hasVerifiedBadge: false, hasNewsAccess: false };
-                openMessenger();
+            if (username) {
+                sessionUser = { username, hasVerifiedBadge: false, hasNewsAccess: false };
+                initMessengerScreen();
             }
         });
 
-        // Успешный вход системных пользователей (Danumala, RunFly)
-        socket.on('login-success', (serverUser) => {
-            myAccount = serverUser;
-            openMessenger();
+        socket.on('login-success', (userData) => {
+            sessionUser = userData;
+            initMessengerScreen();
         });
 
-        // Авторизация для обычных пользователей, если пароль не совпал с системными
         socket.on('login-failure', () => {
             const username = document.getElementById('login-user').value.trim();
-            myAccount = { username, hasVerifiedBadge: false, hasNewsAccess: false };
-            openMessenger();
+            sessionUser = { username, hasVerifiedBadge: false, hasNewsAccess: false };
+            initMessengerScreen();
         });
 
-        function openMessenger() {
+        // Переход в мессенджер
+        function initMessengerScreen() {
             document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('brand-logo-text').style.display = 'none'; // Скрываем верхний логотип
             document.getElementById('messenger-layout').style.display = 'grid';
-            document.getElementById('my-profile-name').innerText = myAccount.username;
 
-            if (myAccount.hasVerifiedBadge) {
-                document.getElementById('my-profile-badge').style.display = 'inline';
-            }
-            if (myAccount.hasNewsAccess) {
-                document.getElementById('danumes-news-btn').style.display = 'block';
+            // Настраиваем шапку чата под залогиненного пользователя
+            document.getElementById('chat-header-username').innerText = sessionUser.username;
+            document.getElementById('chat-header-avatar').innerText = sessionUser.username.charAt(0).toUpperCase();
+
+            if (sessionUser.hasVerifiedBadge) {
+                document.getElementById('verified-star-icon').style.display = 'inline';
             }
         }
 
-        // Логика отправки сообщений в чат
-        document.getElementById('btn-send-msg').addEventListener('click', postMessage);
-        document.getElementById('msg-input-field').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') postMessage();
+        // Отправка сообщений по нажатию на твою фиолетовую кнопку
+        document.getElementById('chat-send-btn').addEventListener('click', pushMessage);
+        document.getElementById('chat-message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') pushMessage();
         });
 
-        function postMessage() {
-            const field = document.getElementById('msg-input-field');
-            if (field.value.trim() && myAccount) {
+        function pushMessage() {
+            const input = document.getElementById('chat-message-input');
+            if (input.value.trim() && sessionUser) {
                 socket.emit('send-message', {
-                    username: myAccount.username,
-                    text: field.value.trim()
+                    username: sessionUser.username,
+                    text: input.value.trim()
                 });
-                field.value = '';
+                input.value = '';
             }
         }
 
-        // Первичная прогрузка истории из Cloudflare KV Pairs
+        // Загрузка переписки из Cloudflare KV Pairs
         socket.on('init-messages', (history) => {
-            const view = document.getElementById('messages-view');
-            view.innerHTML = '';
-            if (history) history.forEach(m => buildMessageNode(m));
+            const container = document.getElementById('messages-view');
+            container.innerHTML = '';
+            if (history && history.length > 0) {
+                history.forEach(m => drawMessage(m));
+                document.getElementById('news-last-msg').innerText = history[history.length - 1].text;
+            }
         });
 
-        socket.on('new-message', (m) => buildMessageNode(m));
+        socket.on('new-message', (m) => {
+            drawMessage(m);
+            document.getElementById('news-last-msg').innerText = m.text;
+        });
 
-        function buildMessageNode(m) {
-            const view = document.getElementById('messages-view');
-            const isMe = myAccount && m.username === myAccount.username;
+        function drawMessage(m) {
+            const container = document.getElementById('messages-view');
+            const isMyOwn = sessionUser && m.username === sessionUser.username;
 
-            const node = document.createElement('div');
-            node.className = `msg ${isMe ? 'outbound' : 'inbound'}`;
+            const msgNode = document.createElement('div');
+            msgNode.className = `chat-msg ${isMyOwn ? 'transmitted' : 'received'}`;
 
-            const verifiedStar = m.isVerified ? ' <span class="verified-star">✔</span>' : '';
+            const star = m.isVerified ? ' <span class="verified-badge-star">✔</span>' : '';
 
-            node.innerHTML = `
-                <div class="msg-author">${m.username}${verifiedStar}</div>
+            msgNode.innerHTML = `
+                <div class="msg-sender-title">${m.username}${star}</div>
                 <div>${m.text}</div>
-                <div class="msg-time">${m.time || ''}</div>
+                <div class="msg-time-stamp">${m.time || ''}</div>
             `;
-            view.appendChild(node);
-            view.scrollTop = view.scrollHeight;
+            container.appendChild(msgNode);
+            container.scrollTop = container.scrollHeight;
         }
     </script>
 </body>
