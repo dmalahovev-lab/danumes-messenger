@@ -1,15 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-<meta name="theme-color" content="#1a2a3a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DanuMes — Мессенджер с звонками</title>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <title>DanuMes — Мессенджер</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -80,19 +74,6 @@
         .create-group-btn {
             font-size: 24px;
         }
-        .call-btn {
-            background: rgba(0,0,0,0.2);
-            border: none;
-            cursor: pointer;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: auto;
-        }
         .search-box {
             padding: 12px 16px;
             border-bottom: 1px solid;
@@ -123,14 +104,16 @@
         .chat-avatar {
             width: 52px;
             height: 52px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
             flex-shrink: 0;
+            background: linear-gradient(135deg, #4b5563, #6b7280);
         }
+        .chat-avatar[data-avatar="Danumala"] { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .chat-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
         .chat-info { flex: 1; min-width: 0; }
         .chat-name {
             font-weight: 600;
@@ -166,7 +149,19 @@
         }
         body.dark .chat-header { background: rgba(30, 40, 50, 0.4); border-color: rgba(255,255,255,0.1); }
         body.light .chat-header { background: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.05); }
-        .chat-header-avatar { font-size: 44px; cursor: pointer; }
+        .chat-header-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #4b5563, #6b7280);
+        }
+        .chat-header-avatar[data-avatar="Danumala"] { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .chat-header-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
         .chat-header-info { flex: 1; }
         .messages-area {
             flex: 1;
@@ -464,56 +459,6 @@
             .chat-avatar { width: 48px; height: 48px; font-size: 26px; }
             .auth-card { width: 90%; padding: 32px 24px; }
         }
-
-        /* Стили для звонков */
-        .call-notification, .call-controls, .call-waiting {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(12px);
-            border-radius: 48px;
-            padding: 12px 20px;
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            z-index: 5000;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .call-notification button, .call-controls button, .call-waiting button {
-            background: #3b82f6;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .call-controls button.mute-btn {
-            background: #6b7280;
-        }
-        .call-controls button.end-call {
-            background: #ef4444;
-        }
-        .call-waiting button.cancel-waiting {
-            background: #6b7280;
-        }
-        .call-video {
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            width: 320px;
-            background: #000;
-            border-radius: 16px;
-            overflow: hidden;
-            z-index: 5000;
-            border: 2px solid #3b82f6;
-        }
-        .call-video video {
-            width: 100%;
-            display: block;
-        }
     </style>
 </head>
 <body class="dark">
@@ -530,13 +475,6 @@
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
-    let peer = null;
-    let currentCall = null;
-    let localStream = null;
-    let remoteStream = null;
-    let activeCallElement = null;
-    let outgoingCallTimeout = null;
-    let processedCallMessages = new Set();
 
     function initTheme() {
         const saved = localStorage.getItem('theme');
@@ -667,167 +605,6 @@
         }
     }
 
-    // ========== ЗВОНКИ ==========
-    function initPeer() {
-        if (peer) return;
-        const peerId = currentUser.username + '_' + Date.now();
-        peer = new Peer(peerId, {
-            config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
-        });
-        peer.on('call', (call) => {
-            if (currentCall) {
-                call.close();
-                return;
-            }
-            const fromUsername = call.peer.split('_')[0];
-            showIncomingCallUI(fromUsername, call);
-        });
-        peer.on('error', (err) => console.error('Peer error:', err));
-    }
-
-    function showIncomingCallUI(fromUsername, call) {
-        if (activeCallElement) return;
-        const div = document.createElement('div');
-        div.className = 'call-notification';
-        div.id = 'incomingCallUI';
-        div.innerHTML = `
-            <span>📞 Входящий звонок от <strong>${escapeHtml(fromUsername)}</strong></span>
-            <button id="acceptCallBtn">Принять</button>
-            <button id="rejectCallBtn" style="background:#6b7280;">Отклонить</button>
-        `;
-        document.body.appendChild(div);
-        activeCallElement = div;
-
-        div.querySelector('#acceptCallBtn').onclick = async () => {
-            div.remove();
-            activeCallElement = null;
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                call.answer(localStream);
-                call.on('stream', (remoteStream) => {
-                    showActiveCallUI(fromUsername, call, localStream, remoteStream);
-                });
-                currentCall = call;
-            } catch(e) {
-                console.error(e);
-                alert('Не удалось получить доступ к микрофону. Пожалуйста, разрешите доступ в браузере.');
-                call.close();
-            }
-        };
-        div.querySelector('#rejectCallBtn').onclick = () => {
-            div.remove();
-            activeCallElement = null;
-            call.close();
-        };
-    }
-
-    function startCall(targetUsername) {
-        if (!peer) initPeer();
-        if (currentCall) {
-            alert('У вас уже активен звонок');
-            return;
-        }
-        if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
-        
-        const waitingDiv = document.createElement('div');
-        waitingDiv.className = 'call-waiting';
-        waitingDiv.id = 'waitingCallUI';
-        waitingDiv.innerHTML = `
-            <span>📞 Звонок пользователю ${escapeHtml(targetUsername)}... ожидание ответа</span>
-            <button class="cancel-waiting" id="cancelWaitingBtn">Отмена</button>
-        `;
-        document.body.appendChild(waitingDiv);
-        activeCallElement = waitingDiv;
-
-        waitingDiv.querySelector('#cancelWaitingBtn').onclick = () => {
-            if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
-            waitingDiv.remove();
-            activeCallElement = null;
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            localStream = null;
-        };
-
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-            .then(stream => {
-                localStream = stream;
-                const callMessage = `__CALL__${peer.id}`;
-                sendMessage(callMessage, null, null).catch(e => console.error(e));
-                outgoingCallTimeout = setTimeout(() => {
-                    if (activeCallElement && activeCallElement.id === 'waitingCallUI') {
-                        activeCallElement.remove();
-                        activeCallElement = null;
-                        alert('Звонок не принят. Попробуйте позже.');
-                        if (localStream) localStream.getTracks().forEach(t => t.stop());
-                        localStream = null;
-                    }
-                }, 30000);
-            })
-            .catch(e => {
-                waitingDiv.remove();
-                activeCallElement = null;
-                alert('Не удалось получить доступ к микрофону. Пожалуйста, разрешите доступ в браузере.');
-                console.error(e);
-            });
-    }
-
-    function showActiveCallUI(partnerName, call, localStream, remoteStream) {
-        if (activeCallElement) activeCallElement.remove();
-        const controls = document.createElement('div');
-        controls.id = 'activeCallUI';
-        controls.className = 'call-controls';
-        controls.innerHTML = `
-            <span>🔊 Звонок с ${escapeHtml(partnerName)}</span>
-            <button class="mute-btn" id="muteMicrophoneBtn">🔇 Выкл. микро</button>
-            <button class="end-call" id="endCallBtn">📞 Завершить</button>
-        `;
-        document.body.appendChild(controls);
-        activeCallElement = controls;
-
-        let muted = false;
-        controls.querySelector('#muteMicrophoneBtn').onclick = () => {
-            if (localStream) {
-                muted = !muted;
-                localStream.getAudioTracks().forEach(track => track.enabled = !muted);
-                controls.querySelector('#muteMicrophoneBtn').textContent = muted ? '🔊 Вкл. микро' : '🔇 Выкл. микро';
-            }
-        };
-        controls.querySelector('#endCallBtn').onclick = () => {
-            if (call) call.close();
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            if (remoteStream) remoteStream.getTracks().forEach(t => t.stop());
-            controls.remove();
-            const vid = document.getElementById('remoteVideoDiv');
-            if (vid) vid.remove();
-            currentCall = null;
-            localStream = null;
-            remoteStream = null;
-            activeCallElement = null;
-            if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
-        };
-    }
-
-    function handleIncomingCallMessage(msg) {
-        if (msg.text && msg.text.startsWith('__CALL__') && msg.from !== currentUser.username) {
-            const callId = msg.text;
-            if (processedCallMessages.has(callId)) return;
-            processedCallMessages.add(callId);
-            if (currentCall) return;
-            if (activeCallElement) return;
-            const callerPeerId = msg.text.substring(9);
-            if (!peer) initPeer();
-            setTimeout(() => {
-                if (currentCall || activeCallElement) return;
-                // Здесь не делаем автоматический вызов, только показываем уведомление!
-                // showIncomingCallUI будет вызвана отдельно? Нет, сейчас мы находимся внутри обработчика сообщения.
-                // Правильно: мы должны показать UI входящего звонка, и принять решение.
-                // Но у нас уже есть обработчик peer.on('call'), который и должен это делать.
-                // Поэтому здесь ничего дополнительно не делаем.
-                // Гарантируем, что peer.on('call') сработает.
-            }, 1000);
-        }
-    }
-
-    // ---- Рендеры ----
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -851,8 +628,12 @@
             let nameHtml = escapeHtml(chat.name);
             if (chat.type === 'user' && chat.verified) nameHtml += ' <span class="verified-badge">✓</span>';
             if (chat.type === 'user' && chat.online) nameHtml += ' <span class="online-dot"></span>';
+            let avatarAttr = '';
+            if (chat.type === 'user' && (chat.name === 'Danumala' || chat.name === 'RunFly')) {
+                avatarAttr = `data-avatar="${chat.name}"`;
+            }
             html += `<div class="chat-item ${activeClass}" data-type="${chat.type}" data-id="${chat.id}">
-                        <div class="chat-avatar">${chat.avatar}</div>
+                        <div class="chat-avatar" ${avatarAttr}>${chat.avatar}</div>
                         <div class="chat-info">
                             <div class="chat-name">${nameHtml}</div>
                             <div class="chat-lastmsg">${escapeHtml(chat.lastMessage)}</div>
@@ -913,11 +694,7 @@
                 content += `<a href="${msg.file_url}" download class="file-attach" data-url="${msg.file_url}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
             }
             if (msg.text) {
-                if (msg.text.startsWith('__CALL__')) {
-                    content += `<div class="message-text" style="opacity:0.6;">🔔 Запрос звонка</div>`;
-                } else {
-                    content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-                }
+                content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
             }
             let senderName = '';
             if (currentChatType === 'group' && !isOwn) {
@@ -930,9 +707,6 @@
                             <div class="message-time">${time}</div>
                         </div>
                     </div>`;
-            if (msg.text && msg.text.startsWith('__CALL__') && !isOwn) {
-                handleIncomingCallMessage({ from: msg.from_user, text: msg.text });
-            }
         });
         container.innerHTML = html;
         
@@ -972,12 +746,14 @@
             const found = chats.find(c => c.type === 'group' && c.id === currentChat);
             if (found) chatInfo = found;
         }
-        const callButtonHtml = (currentChatType === 'user') ? `<button class="call-btn" id="callBtn">📞</button>` : '';
+        let avatarAttr = '';
+        if (currentChatType === 'user' && (chatInfo.name === 'Danumala' || chatInfo.name === 'RunFly')) {
+            avatarAttr = `data-avatar="${chatInfo.name}"`;
+        }
         mainDiv.innerHTML = `
             <div class="chat-header" id="chatHeader">
-                <div class="chat-header-avatar" id="chatHeaderAvatar">${chatInfo.avatar}</div>
+                <div class="chat-header-avatar" id="chatHeaderAvatar" ${avatarAttr}>${chatInfo.avatar}</div>
                 <div class="chat-header-info"><h3>${escapeHtml(chatInfo.name)}</h3></div>
-                ${callButtonHtml}
             </div>
             <div class="messages-area" id="messagesList"></div>
             <div class="input-area">
@@ -1003,15 +779,6 @@
         const emojiBtn = document.getElementById('emojiBtn');
         const emojiPicker = document.getElementById('emojiPicker');
         const emojiGrid = document.getElementById('emojiGrid');
-        const callBtn = document.getElementById('callBtn');
-        
-        if (callBtn) {
-            callBtn.onclick = () => {
-                if (currentChat && currentChatType === 'user') {
-                    startCall(currentChat);
-                }
-            };
-        }
         
         if (emojiGrid && emojiGrid.children.length === 0) {
             const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉','😍','🤔','😂','🥲','😭','😡','🥺','🤯','💀','👾','🎈','🍕','⚽','🎵','📷','🔒'];
@@ -1216,7 +983,6 @@
             const profileBtn = document.getElementById('profileBtn');
             if (profileBtn) profileBtn.onclick = showAvatarModal;
         }, 100);
-        initPeer();
     }
 
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
@@ -1261,12 +1027,6 @@
 
     initTheme();
     renderAuth();
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('✅ Service Worker зарегистрирован', reg))
-      .catch(err => console.error('❌ Ошибка SW:', err));
-  }
 </script>
 </body>
 </html>
