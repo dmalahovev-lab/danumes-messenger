@@ -6,7 +6,6 @@
     <title>DanuMes — Мессенджер с звонками</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
-        /* Стили остаются прежними (я их не менял, только добавил кнопку звонка) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -460,39 +459,52 @@
             .chat-avatar { width: 48px; height: 48px; font-size: 26px; }
             .auth-card { width: 90%; padding: 32px 24px; }
         }
-        .call-overlay {
+
+        /* Стили для звонков */
+        .call-notification, .call-controls {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 16px;
-            z-index: 5000;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 12px 20px;
             display: flex;
-            gap: 12px;
+            gap: 16px;
             align-items: center;
+            z-index: 5000;
             color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .call-overlay button {
+        .call-notification button, .call-controls button {
             background: #3b82f6;
             border: none;
             padding: 8px 16px;
-            border-radius: 20px;
+            border-radius: 40px;
             cursor: pointer;
+            font-weight: bold;
+        }
+        .call-controls button.mute-btn {
+            background: #6b7280;
+        }
+        .call-controls button.end-call {
+            background: #ef4444;
         }
         .call-video {
             position: fixed;
-            bottom: 80px;
+            bottom: 100px;
             right: 20px;
             width: 320px;
             background: #000;
             border-radius: 16px;
             overflow: hidden;
             z-index: 5000;
+            border: 2px solid #3b82f6;
         }
         .call-video video {
             width: 100%;
+            display: block;
         }
     </style>
 </head>
@@ -511,10 +523,12 @@
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
-    let peer = null;          // PeerJS экземпляр
-    let currentCall = null;   // активный звонок
+    let peer = null;
+    let currentCall = null;
     let localStream = null;
-    let remoteVideoElement = null;
+    let remoteStream = null;
+    let pendingCall = null;      // { from, call }
+    let activeCallNotification = false;
 
     // ---- Инициализация темы ----
     function initTheme() {
@@ -651,91 +665,174 @@
     // ---- Звонки (PeerJS) ----
     function initPeer() {
         if (peer) return;
-        peer = new Peer(currentUser.username + '_' + Date.now(), {
+        const peerId = currentUser.username + '_' + Date.now();
+        peer = new Peer(peerId, {
             config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
         });
         peer.on('call', async (call) => {
-            const acceptCall = confirm(`Входящий звонок от ${call.peer.split('_')[0]}. Принять?`);
-            if (acceptCall) {
-                try {
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    call.answer(localStream);
-                    call.on('stream', (remoteStream) => {
-                        showCallUI(remoteStream);
-                    });
-                    currentCall = call;
-                } catch(e) { console.error(e); alert('Не удалось получить микрофон'); }
-            } else {
+            // Если уже есть активный звонок или ожидающий, не беспокоим
+            if (currentCall || pendingCall) {
+                call.close();
+                return;
+            }
+            const fromUsername = call.peer.split('_')[0];
+            // Показываем встроенное уведомление о звонке
+            showCallNotification(fromUsername, call);
+        });
+        peer.on('error', (err) => console.error('Peer error:', err));
+    }
+
+    function showCallNotification(fromUsername, call) {
+        if (activeCallNotification) return;
+        activeCallNotification = true;
+        const notif = document.createElement('div');
+        notif.className = 'call-notification';
+        notif.id = 'callNotification';
+        notif.innerHTML = `
+            <span>📞 Входящий звонок от <strong>${escapeHtml(fromUsername)}</strong></span>
+            <button id="acceptCallBtn">Принять</button>
+            <button id="rejectCallBtn" style="background:#6b7280;">Отклонить</button>
+        `;
+        document.body.appendChild(notif);
+        const acceptBtn = notif.querySelector('#acceptCallBtn');
+        const rejectBtn = notif.querySelector('#rejectCallBtn');
+        const handleAccept = async () => {
+            notif.remove();
+            activeCallNotification = false;
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                call.answer(localStream);
+                call.on('stream', (remoteStream) => {
+                    remoteStream = remoteStream;
+                    showCallUI(fromUsername, call, localStream, remoteStream);
+                });
+                currentCall = call;
+                pendingCall = null;
+            } catch(e) {
+                console.error(e);
+                alert('Не удалось получить доступ к микрофону');
                 call.close();
             }
-        });
+        };
+        const handleReject = () => {
+            notif.remove();
+            activeCallNotification = false;
+            call.close();
+            pendingCall = null;
+        };
+        acceptBtn.onclick = handleAccept;
+        rejectBtn.onclick = handleReject;
+        pendingCall = { from: fromUsername, call };
     }
 
     function startCall(targetUsername) {
         if (!peer) initPeer();
-        // Генерируем уникальный peerId для этого звонка (можно использовать текущий)
-        const myPeerId = peer.id;
-        // Отправляем системное сообщение с запросом звонка
-        const callMessage = `__CALL__${myPeerId}`;
-        sendMessage(callMessage, null, null).then(() => {
-            alert('Запрос звонка отправлен. Ожидайте ответа...');
-        });
+        if (currentCall) {
+            alert('У вас уже активен звонок');
+            return;
+        }
+        // Сначала запрашиваем микрофон, чтобы потом передать в call
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then(stream => {
+                localStream = stream;
+                // Отправляем системное сообщение с нашим peerId
+                const callMessage = `__CALL__${peer.id}`;
+                sendMessage(callMessage, null, null).then(() => {
+                    alert('Запрос звонка отправлен. Ожидайте ответа...');
+                    // Через некоторое время, если нет ответа, очищаем стрим
+                    setTimeout(() => {
+                        if (!currentCall && localStream) {
+                            localStream.getTracks().forEach(t => t.stop());
+                            localStream = null;
+                        }
+                    }, 30000);
+                });
+            })
+            .catch(e => {
+                alert('Не удалось получить доступ к микрофону');
+                console.error(e);
+            });
     }
 
-    function showCallUI(remoteStream) {
-        // Убираем старый оверлей, если есть
-        const existing = document.getElementById('callOverlay');
-        if (existing) existing.remove();
-        const overlay = document.createElement('div');
-        overlay.id = 'callOverlay';
-        overlay.className = 'call-overlay';
-        overlay.innerHTML = `
-            <span>Звонок в процессе</span>
-            <button id="endCallBtn">Завершить</button>
+    function showCallUI(partnerName, call, localStream, remoteStream) {
+        // Удаляем старый UI, если есть
+        const oldUI = document.getElementById('callControls');
+        if (oldUI) oldUI.remove();
+        const oldVideo = document.getElementById('remoteVideoDiv');
+        if (oldVideo) oldVideo.remove();
+
+        const controls = document.createElement('div');
+        controls.id = 'callControls';
+        controls.className = 'call-controls';
+        controls.innerHTML = `
+            <span>🔊 Звонок с ${escapeHtml(partnerName)}</span>
+            <button class="mute-btn" id="muteMicrophoneBtn">🔇 Выкл. микро</button>
+            <button class="end-call" id="endCallBtn">📞 Завершить</button>
         `;
-        document.body.appendChild(overlay);
-        document.getElementById('endCallBtn').onclick = () => {
-            if (currentCall) currentCall.close();
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            overlay.remove();
-            const vidDiv = document.getElementById('remoteVideoDiv');
-            if (vidDiv) vidDiv.remove();
-            currentCall = null;
+        document.body.appendChild(controls);
+
+        let muted = false;
+        const muteBtn = controls.querySelector('#muteMicrophoneBtn');
+        muteBtn.onclick = () => {
+            if (localStream) {
+                muted = !muted;
+                localStream.getAudioTracks().forEach(track => track.enabled = !muted);
+                muteBtn.textContent = muted ? '🔊 Вкл. микро' : '🔇 Выкл. микро';
+            }
         };
-        // Показываем видео (если есть)
-        const videoDiv = document.createElement('div');
-        videoDiv.id = 'remoteVideoDiv';
-        videoDiv.className = 'call-video';
-        const video = document.createElement('video');
-        video.srcObject = remoteStream;
-        video.autoplay = true;
-        videoDiv.appendChild(video);
-        document.body.appendChild(videoDiv);
-        remoteVideoElement = videoDiv;
+        const endBtn = controls.querySelector('#endCallBtn');
+        endBtn.onclick = () => {
+            if (call) call.close();
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if (remoteStream) remoteStream.getTracks().forEach(t => t.stop());
+            controls.remove();
+            const vid = document.getElementById('remoteVideoDiv');
+            if (vid) vid.remove();
+            currentCall = null;
+            localStream = null;
+            remoteStream = null;
+        };
+        // Если есть видео (в будущем), можно добавить
+        if (remoteStream) {
+            const videoDiv = document.createElement('div');
+            videoDiv.id = 'remoteVideoDiv';
+            videoDiv.className = 'call-video';
+            const video = document.createElement('video');
+            video.srcObject = remoteStream;
+            video.autoplay = true;
+            videoDiv.appendChild(video);
+            document.body.appendChild(videoDiv);
+        }
     }
 
-    // Обработка входящих системных сообщений (звонок)
-    function checkForCallMessage(msg) {
-        if (msg.text && msg.text.startsWith('__CALL__')) {
+    // Обработка системных сообщений звонка (только один раз)
+    let processedCallMessages = new Set();
+    function handleIncomingCallMessage(msg) {
+        if (msg.text && msg.text.startsWith('__CALL__') && msg.from !== currentUser.username) {
+            const callId = msg.text;
+            if (processedCallMessages.has(callId)) return;
+            processedCallMessages.add(callId);
             const callerPeerId = msg.text.substring(9);
+            // Инициируем звонок со стороны получателя
             if (!peer) initPeer();
+            // Небольшая задержка, чтобы убедиться, что peer готов
             setTimeout(() => {
-                if (!currentCall) {
-                    const accept = confirm(`Входящий звонок от ${msg.from}. Принять?`);
-                    if (accept) {
-                        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                            .then(stream => {
-                                localStream = stream;
-                                const call = peer.call(callerPeerId, stream);
-                                call.on('stream', (remoteStream) => {
-                                    showCallUI(remoteStream);
-                                });
-                                currentCall = call;
-                            })
-                            .catch(e => alert('Не удалось получить доступ к микрофону'));
-                    }
-                }
-            }, 500);
+                if (currentCall || pendingCall) return;
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                    .then(stream => {
+                        localStream = stream;
+                        const call = peer.call(callerPeerId, stream);
+                        call.on('stream', (remoteStream) => {
+                            showCallUI(msg.from, call, localStream, remoteStream);
+                        });
+                        currentCall = call;
+                        // Показываем уведомление о начале звонка (можно не показывать, т.к. идёт сразу)
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        alert('Не удалось получить доступ к микрофону для ответа на звонок');
+                    });
+            }, 1000);
         }
     }
 
@@ -825,14 +922,12 @@
                 content += `<a href="${msg.file_url}" download class="file-attach" data-url="${msg.file_url}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
             }
             if (msg.text) {
-                // Проверка на системное сообщение звонка: пропускаем отображение текста
                 if (msg.text.startsWith('__CALL__')) {
                     content += `<div class="message-text" style="opacity:0.6;">🔔 Запрос звонка</div>`;
                 } else {
                     content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
                 }
             }
-            // Для групп показываем имя отправителя, если сообщение не от текущего пользователя
             let senderName = '';
             if (currentChatType === 'group' && !isOwn) {
                 senderName = `<div class="message-sender">${escapeHtml(msg.from_user)}</div>`;
@@ -844,9 +939,9 @@
                             <div class="message-time">${time}</div>
                         </div>
                     </div>`;
-            // Если это системное сообщение звонка и оно адресовано нам, инициируем звонок
+            // Обработка входящего вызова
             if (msg.text && msg.text.startsWith('__CALL__') && !isOwn) {
-                checkForCallMessage({ from: msg.from_user, text: msg.text });
+                handleIncomingCallMessage({ from: msg.from_user, text: msg.text });
             }
         });
         container.innerHTML = html;
@@ -973,6 +1068,7 @@
         msgInput.focus();
     }
 
+    // ---- Модалка аватара (исправленная) ----
     function showAvatarModal() {
         const modal = document.getElementById('avatarModal');
         if (!modal) return;
@@ -1131,7 +1227,7 @@
             const profileBtn = document.getElementById('profileBtn');
             if (profileBtn) profileBtn.onclick = showAvatarModal;
         }, 100);
-        initPeer(); // инициализируем PeerJS
+        initPeer();
     }
 
     // Вспомогательные функции
