@@ -18,11 +18,7 @@
             background: radial-gradient(circle at 20% 30%, #e0e7ff, #f0f4f8);
             color: #1f2937;
         }
-        .messenger {
-            display: flex;
-            height: 100vh;
-            width: 100%;
-        }
+        .messenger { display: flex; height: 100vh; width: 100%; }
         body.dark .messenger { background: rgba(15, 25, 35, 0.4); backdrop-filter: blur(10px); }
         body.light .messenger { background: rgba(245, 245, 255, 0.6); backdrop-filter: blur(10px); }
         .sidebar {
@@ -50,10 +46,7 @@
             background-clip: text;
             color: transparent;
         }
-        .header-buttons {
-            display: flex;
-            gap: 8px;
-        }
+        .header-buttons { display: flex; gap: 8px; }
         .theme-toggle, .profile-btn, .create-group-btn {
             background: rgba(0,0,0,0.2);
             border: none;
@@ -66,18 +59,9 @@
             height: 40px;
             font-size: 20px;
         }
-        .profile-btn {
-            width: 48px;
-            height: 48px;
-            font-size: 32px;
-        }
-        .create-group-btn {
-            font-size: 24px;
-        }
-        .search-box {
-            padding: 12px 16px;
-            border-bottom: 1px solid;
-        }
+        .profile-btn { width: 48px; height: 48px; font-size: 32px; }
+        .create-group-btn { font-size: 24px; }
+        .search-box { padding: 12px 16px; border-bottom: 1px solid; }
         .search-box input {
             width: 100%;
             background: rgba(0,0,0,0.2);
@@ -316,9 +300,7 @@
             width: 100%;
             cursor: pointer;
         }
-        .group-modal .modal-content {
-            width: 400px;
-        }
+        .group-modal .modal-content { width: 400px; }
         .group-modal input {
             width: 100%;
             padding: 12px;
@@ -342,10 +324,7 @@
             padding: 8px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .member-item input {
-            width: auto;
-            margin: 0;
-        }
+        .member-item input { width: auto; margin: 0; }
         .auth-container {
             height: 100vh;
             display: flex;
@@ -445,13 +424,13 @@
 <div id="app"></div>
 <script>
     let currentUser = null;
-    let currentChat = null;       // может быть username, channelId или groupId
-    let currentChatType = 'user'; // 'user', 'channel', 'group'
+    let currentChat = null;
+    let currentChatType = 'user'; // user, channel, group
     let messages = [];
-    let chats = [];               // все элементы боковой панели (user, channel, group)
+    let chats = [];
     let groups = [];
     let channels = [];
-    let allUsers = [];            // список всех пользователей для выбора в группе
+    let allUsers = [];
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
@@ -486,24 +465,21 @@
     }
 
     async function loadAllUsers() {
-        const res = await api('GET', '/get-users');
-        allUsers = res || [];
+        try {
+            const res = await api('GET', '/get-users');
+            allUsers = res || [];
+        } catch(e) { console.error(e); }
     }
 
     async function loadChatsAndChannels() {
         if (!currentUser) return;
         try {
-            // Загружаем пользователей (личные чаты)
             const userChats = await api('GET', `/get-chats/${currentUser.username}`);
-            // Загружаем каналы
             const channelList = await api('GET', '/get-channels');
-            channels = channelList || [];
-            // Загружаем группы пользователя
             const groupList = await api('GET', `/get-groups/${currentUser.username}`);
+            channels = channelList || [];
             groups = groupList || [];
-            
             let all = [];
-            // Каналы
             channels.forEach(ch => {
                 all.push({
                     type: 'channel',
@@ -514,7 +490,6 @@
                     lastTime: ch.lastTime
                 });
             });
-            // Группы
             groups.forEach(g => {
                 all.push({
                     type: 'group',
@@ -525,7 +500,6 @@
                     lastTime: g.lastTime
                 });
             });
-            // Пользователи
             (userChats || []).forEach(uc => {
                 all.push({
                     type: 'user',
@@ -545,24 +519,19 @@
     }
 
     async function loadMessages() {
-    if (!currentUser || !currentChat) return;
-    try {
-        let data;
-        if (currentChatType === 'user') {
-            console.log(`Загрузка сообщений между ${currentUser.username} и ${currentChat}`);
-            data = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
-            console.log('Получено сообщений:', data);
-            messages = data || [];
-        } else if (currentChatType === 'channel') {
-            data = await api('GET', `/get-channel-messages/${currentChat}`);
-            messages = data || [];
-        } else if (currentChatType === 'group') {
-            data = await api('GET', `/get-group-messages/${currentChat}`);
-            messages = data || [];
-        }
-        renderMessages();
-    } catch(e) { console.error(e); }
-}
+        if (!currentUser || !currentChat) return;
+        try {
+            let data;
+            if (currentChatType === 'user') {
+                data = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
+                messages = data || [];
+            } else if (currentChatType === 'channel') {
+                data = await api('GET', `/get-channel-messages/${currentChat}`);
+                messages = data || [];
+            } else if (currentChatType === 'group') {
+                data = await api('GET', `/get-group-messages/${currentChat}`);
+                messages = data || [];
+            }
             renderMessages();
         } catch(e) { console.error(e); }
     }
@@ -580,10 +549,6 @@
             await loadMessages();
             await loadChatsAndChannels();
         } catch(e) { console.error(e); }
-        if (currentChatType === 'user') {
-    console.log('Отправка личного сообщения:', { from: currentUser.username, to: currentChat, text });
-    await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
-}
     }
 
     async function uploadFile(file) {
@@ -597,7 +562,6 @@
         await api('POST', '/update-avatar', { username: currentUser.username, avatar: emoji });
         currentUser.avatar = emoji;
         renderSidebar();
-        // Обновляем аватар в шапке чата, если открыт
         const headerAvatar = document.querySelector('.chat-header-avatar');
         if (headerAvatar) headerAvatar.textContent = emoji;
     }
@@ -614,7 +578,6 @@
         const res = await api('POST', '/create-group', { name, createdBy: currentUser.username, members: memberUsernames });
         if (res.success) {
             await loadChatsAndChannels();
-            // Автоматически открыть созданную группу
             currentChat = res.groupId;
             currentChatType = 'group';
             await loadMessages();
@@ -699,7 +662,6 @@
         html += `</div>`;
         sidebarDiv.innerHTML = html;
 
-        // Обработчики кликов по чатам
         document.querySelectorAll('.chat-item').forEach(el => {
             el.addEventListener('click', () => {
                 const newType = el.dataset.type;
@@ -896,7 +858,6 @@
         const modal = document.getElementById('groupModal');
         if (!modal) return;
         modal.style.display = 'flex';
-        // Заполняем список пользователей
         const membersContainer = document.getElementById('groupMembersList');
         if (membersContainer && membersContainer.children.length === 0 && allUsers.length) {
             allUsers.forEach(u => {
