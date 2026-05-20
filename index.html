@@ -297,7 +297,6 @@
             width: 460px;
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 25px 45px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
         }
         body.light .auth-card {
             background: rgba(255,255,255,0.8);
@@ -328,26 +327,16 @@
             cursor: pointer;
             font-size: 16px;
             font-weight: 600;
-            transition: all 0.2s ease;
             background: transparent;
             color: rgba(255,255,255,0.7);
         }
-        body.light .tab {
-            color: rgba(0,0,0,0.6);
-        }
+        body.light .tab { color: rgba(0,0,0,0.6); }
         .tab.active {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
             box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
-        .auth-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .input-group {
-            position: relative;
-        }
+        .auth-form { display: flex; flex-direction: column; gap: 20px; }
         .input-group input {
             width: 100%;
             background: rgba(0,0,0,0.3);
@@ -380,12 +369,7 @@
             transform: translateY(-1px);
             box-shadow: 0 8px 20px rgba(59,130,246,0.4);
         }
-        .error-text {
-            color: #f87171;
-            font-size: 13px;
-            text-align: center;
-            margin-top: -8px;
-        }
+        .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
         @media (max-width: 680px) {
             .sidebar { width: 80px; }
             .chat-info, .logo { display: none; }
@@ -454,39 +438,24 @@
             channels = channelList || [];
             let all = [];
             channels.forEach(ch => {
-                all.push({
-                    type: 'channel',
-                    id: ch.id,
-                    name: ch.name,
-                    avatar: ch.avatar,
-                    lastMessage: ch.lastMessage || 'Нет сообщений',
-                    lastTime: ch.lastTime,
-                    owner: ch.owner
-                });
+                all.push({ type: 'channel', id: ch.id, name: ch.name, avatar: ch.avatar, lastMessage: ch.lastMessage || 'Нет сообщений', lastTime: ch.lastTime, owner: ch.owner });
             });
             (userChats || []).forEach(uc => {
-                all.push({
-                    type: 'user',
-                    id: uc.username,
-                    name: uc.username,
-                    avatar: uc.avatar,
-                    online: uc.online,
-                    verified: uc.verified,
-                    lastMessage: uc.lastMessage || 'Нет сообщений',
-                    lastTime: uc.lastTime
-                });
+                all.push({ type: 'user', id: uc.username, name: uc.username, avatar: uc.avatar, online: uc.online, verified: uc.verified, lastMessage: uc.lastMessage || 'Нет сообщений', lastTime: uc.lastTime });
             });
             all.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
             chats = all;
             renderSidebar();
-        } catch(e) {
-            console.error('Ошибка загрузки чатов:', e);
-        }
+        } catch(e) { console.error('Ошибка загрузки чатов:', e); }
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) return;
+        if (!currentUser || !currentChat) {
+            console.log('Нет currentUser или currentChat');
+            return;
+        }
         try {
+            console.log('Загружаем сообщения для чата:', currentChatType, currentChat);
             if (currentChatType === 'user') {
                 const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
                 messages = res || [];
@@ -494,10 +463,9 @@
                 const res = await api('GET', `/get-channel-messages/${currentChat}`);
                 messages = res || [];
             }
+            console.log('Получено сообщений:', messages.length);
             renderMessagesOnly();
-        } catch(e) {
-            console.error('Ошибка загрузки сообщений:', e);
-        }
+        } catch(e) { console.error('Ошибка загрузки сообщений:', e); }
     }
 
     async function sendMessage(text, fileUrl = null, fileName = null) {
@@ -505,30 +473,16 @@
         isSending = true;
         try {
             if (currentChatType === 'user') {
-                await api('POST', '/send-message', {
-                    from: currentUser.username,
-                    to: currentChat,
-                    text: text || '',
-                    fileUrl,
-                    fileName
-                });
+                await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
             } else {
-                await api('POST', '/send-channel-message', {
-                    channelId: currentChat,
-                    from: currentUser.username,
-                    text: text || '',
-                    fileUrl,
-                    fileName
-                });
+                await api('POST', '/send-channel-message', { channelId: currentChat, from: currentUser.username, text: text || '', fileUrl, fileName });
             }
             await loadMessages();
             await loadChatsAndChannels();
         } catch(e) {
             console.error('Ошибка отправки:', e);
             showToast('Ошибка отправки сообщения', true);
-        } finally {
-            isSending = false;
-        }
+        } finally { isSending = false; }
     }
 
     async function uploadFile(file) {
@@ -546,24 +500,15 @@
     }
 
     async function deleteMessage(msgId) {
-        if (currentChatType === 'user') {
-            await api('DELETE', `/delete-message/${msgId}`);
-        } else {
-            await api('DELETE', `/delete-channel-message/${msgId}`);
-        }
+        if (currentChatType === 'user') await api('DELETE', `/delete-message/${msgId}`);
+        else await api('DELETE', `/delete-channel-message/${msgId}`);
         await loadMessages();
         await loadChatsAndChannels();
         showToast('Сообщение удалено');
     }
 
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
-    }
-
-    function isImageFile(fileName) {
-        return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
-    }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+    function isImageFile(fileName) { return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName); }
 
     let activeMenu = null;
     function showContextMenu(e, items) {
@@ -573,17 +518,11 @@
         items.forEach(item => {
             const option = document.createElement('div');
             option.textContent = item.label;
-            option.onclick = (ev) => {
-                ev.stopPropagation();
-                item.action();
-                menu.remove();
-                activeMenu = null;
-            };
+            option.onclick = (ev) => { ev.stopPropagation(); item.action(); menu.remove(); activeMenu = null; };
             menu.appendChild(option);
         });
         document.body.appendChild(menu);
-        let left = e.clientX;
-        let top = e.clientY;
+        let left = e.clientX, top = e.clientY;
         if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
         if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
         menu.style.left = left + 'px';
@@ -630,15 +569,13 @@
             let nameHtml = escapeHtml(chat.name);
             if (chat.type === 'user' && chat.verified) nameHtml += ' <span class="verified-badge">✓</span>';
             if (chat.type === 'user' && chat.online) nameHtml += ' <span class="online-dot"></span>';
-            html += `
-                <div class="chat-item ${activeClass}" data-type="${chat.type}" data-id="${chat.id}">
-                    <div class="chat-avatar">${chat.avatar}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${nameHtml}</div>
-                        <div class="chat-lastmsg">${escapeHtml(chat.lastMessage)}</div>
-                    </div>
-                </div>
-            `;
+            html += `<div class="chat-item ${activeClass}" data-type="${chat.type}" data-id="${chat.id}">
+                        <div class="chat-avatar">${chat.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${nameHtml}</div>
+                            <div class="chat-lastmsg">${escapeHtml(chat.lastMessage)}</div>
+                        </div>
+                    </div>`;
         });
         html += `</div>`;
         sidebarDiv.innerHTML = html;
@@ -649,16 +586,15 @@
                 const newType = el.dataset.type;
                 const newId = el.dataset.id;
                 if (!newId) return;
-                
-                console.log('Открываем чат:', newType, newId);
-                currentChatType = newType;
-                currentChat = newId;
-                
-                // Очищаем старые сообщения и загружаем новые
-                messages = [];
-                renderChat();      // Перерисовываем весь чат
-                loadMessages();    // Загружаем сообщения
-                renderSidebar();   // Обновляем активный класс
+                console.log('Клик по чату:', newType, newId);
+                if (currentChat !== newId || currentChatType !== newType) {
+                    currentChatType = newType;
+                    currentChat = newId;
+                    messages = [];
+                    renderChat();
+                    loadMessages();
+                    renderSidebar();
+                }
             });
         });
 
@@ -666,16 +602,11 @@
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 if (searchTimeout) clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    searchQuery = e.target.value;
-                    renderSidebar();
-                }, 300);
+                searchTimeout = setTimeout(() => { searchQuery = e.target.value; renderSidebar(); }, 300);
             });
         }
         const profileBtn = document.getElementById('profileBtn');
-        if (profileBtn) profileBtn.onclick = () => {
-            document.getElementById('avatarModal').style.display = 'flex';
-        };
+        if (profileBtn) profileBtn.onclick = () => { document.getElementById('avatarModal').style.display = 'flex'; };
         const themeBtn = document.getElementById('themeToggle');
         if (themeBtn) themeBtn.onclick = toggleTheme;
     }
@@ -696,28 +627,20 @@
             const isOwn = msg.from === currentUser.username;
             const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             let content = '';
-            if (msg.fileUrl && isImageFile(msg.fileName)) {
-                content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
-            } else if (msg.fileUrl) {
-                content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
-            }
+            if (msg.fileUrl && isImageFile(msg.fileName)) content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
+            else if (msg.fileUrl) content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
             if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-            html += `
-                <div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
-                    <div class="message-bubble">
-                        ${content}
-                        <div class="message-time">${time}</div>
-                    </div>
-                </div>
-            `;
+            html += `<div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
+                        <div class="message-bubble">
+                            ${content}
+                            <div class="message-time">${time}</div>
+                        </div>
+                    </div>`;
         });
         messagesContainer.innerHTML = html;
         
         document.querySelectorAll('.message-image').forEach(img => {
-            img.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showLightbox(img.src);
-            });
+            img.addEventListener('click', (e) => { e.stopPropagation(); showLightbox(img.src); });
         });
         document.querySelectorAll('.message').forEach(msgEl => {
             msgEl.addEventListener('contextmenu', (e) => {
@@ -726,16 +649,11 @@
                 const fileUrl = msgEl.dataset.fileUrl;
                 const isOwn = msgFrom === currentUser.username;
                 const items = [];
-                if (fileUrl) {
-                    items.push({ label: '📥 Скачать файл', action: () => window.open(fileUrl, '_blank') });
-                }
-                if (isOwn) {
-                    items.push({ label: '🗑 Удалить сообщение', action: () => deleteMessage(msgId) });
-                }
+                if (fileUrl) items.push({ label: '📥 Скачать файл', action: () => window.open(fileUrl, '_blank') });
+                if (isOwn) items.push({ label: '🗑 Удалить сообщение', action: () => deleteMessage(msgId) });
                 if (items.length) showContextMenu(e, items);
             });
         });
-        
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
@@ -747,13 +665,10 @@
             return;
         }
         const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
-        
         mainDiv.innerHTML = `
             <div class="chat-header" id="chatHeader">
                 <div class="chat-header-avatar">${chatInfo.avatar}</div>
-                <div class="chat-header-info">
-                    <h3>${escapeHtml(chatInfo.name)}</h3>
-                </div>
+                <div class="chat-header-info"><h3>${escapeHtml(chatInfo.name)}</h3></div>
             </div>
             <div class="messages-area" id="messagesList"></div>
             <div class="input-area">
@@ -793,7 +708,6 @@
         msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
         fileLabel.onclick = () => fileInput.click();
         fileInput.onchange = () => send();
-        
         msgInput.focus();
     }
 
@@ -810,10 +724,7 @@
                 div.textContent = e;
                 div.style.fontSize = '32px';
                 div.style.cursor = 'pointer';
-                div.onclick = () => {
-                    updateAvatar(e);
-                    modal.style.display = 'none';
-                };
+                div.onclick = () => { updateAvatar(e); modal.style.display = 'none'; };
                 grid.appendChild(div);
             });
             const closeBtn = document.getElementById('closeModal');
@@ -831,22 +742,14 @@
                         <div class="tab" id="regTab">Регистрация</div>
                     </div>
                     <div id="loginPanel" class="auth-form">
-                        <div class="input-group">
-                            <input type="text" id="loginUsername" placeholder="Логин">
-                        </div>
-                        <div class="input-group">
-                            <input type="password" id="loginPassword" placeholder="Пароль">
-                        </div>
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
                         <div id="loginError" class="error-text"></div>
                         <button id="doLogin" class="auth-btn">Войти</button>
                     </div>
                     <div id="regPanel" class="auth-form" style="display:none;">
-                        <div class="input-group">
-                            <input type="text" id="regUsername" placeholder="Логин">
-                        </div>
-                        <div class="input-group">
-                            <input type="password" id="regPassword" placeholder="Пароль">
-                        </div>
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
                         <div id="regError" class="error-text"></div>
                         <button id="doReg" class="auth-btn">Зарегистрироваться</button>
                     </div>
@@ -874,9 +777,7 @@
                 await loadChatsAndChannels();
                 startMessenger();
                 showToast(`Добро пожаловать, ${username}!`);
-            } else {
-                document.getElementById('loginError').innerText = res.error;
-            }
+            } else { document.getElementById('loginError').innerText = res.error; }
         };
         document.getElementById('doReg').onclick = async () => {
             const username = document.getElementById('regUsername').value;
@@ -885,9 +786,7 @@
             if (res.success) {
                 showToast('Регистрация успешна! Теперь войдите.');
                 document.getElementById('loginTab').click();
-            } else {
-                document.getElementById('regError').innerText = res.error;
-            }
+            } else { document.getElementById('regError').innerText = res.error; }
         };
     }
 
