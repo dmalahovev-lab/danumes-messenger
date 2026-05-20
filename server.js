@@ -227,4 +227,100 @@ app.get('/admin', async (req, res) => {
     res.send(html);
 });
 
+// === ГРУППЫ ===
+
+// Создать группу
+app.post('/create-group', async (req, res) => {
+    const { name, createdBy, members } = req.body; // members: массив username
+    if (!name || !createdBy) return res.status(400).json({ error: 'Недостаточно данных' });
+    const groupId = Date.now().toString();
+    // Создаём группу
+    await supabase.from('groups').insert([{ id: groupId, name, avatar: '👥', created_by: createdBy }]);
+    // Добавляем создателя
+    await supabase.from('group_members').insert([{ group_id: groupId, username: createdBy }]);
+    // Добавляем остальных участников
+    if (members && members.length) {
+        const memberRows = members.map(u => ({ group_id: groupId, username: u }));
+        await supabase.from('group_members').insert(memberRows);
+    }
+    res.json({ success: true, groupId });
+});
+
+// Получить список групп пользователя (с последним сообщением)
+app.get('/get-groups/:username', async (req, res) => {
+    const { username } = req.params;
+    // Группы, где пользователь участник
+    const { data: memberships } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('username', username);
+    if (!memberships || memberships.length === 0) return res.json([]);
+    const groupIds = memberships.map(m => m.group_id);
+    const { data: groups } = await supabase
+        .from('groups')
+        .select('*')
+        .in('id', groupIds);
+    // Для каждой группы получаем последнее сообщение
+    const { data: allGroupMessages } = await supabase
+        .from('group_messages')
+        .select('*')
+        .in('group_id', groupIds)
+        .order('id', { ascending: false });
+    const result = groups.map(g => {
+        const lastMsg = allGroupMessages?.find(m => m.group_id === g.id);
+        return {
+            type: 'group',
+            id: g.id,
+            name: g.name,
+            avatar: g.avatar,
+            lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
+            lastTime: lastMsg ? lastMsg.timestamp : null
+        };
+    });
+    result.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
+    res.json(result);
+});
+
+// Получить сообщения группы
+app.get('/get-group-messages/:groupId', async (req, res) => {
+    const { groupId } = req.params;
+    const { data } = await supabase
+        .from('group_messages')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('id', { ascending: true });
+    res.json(data || []);
+});
+
+// Отправить сообщение в группу
+app.post('/send-group-message', async (req, res) => {
+    const { groupId, from, text, fileUrl, fileName } = req.body;
+    if (!groupId || !from || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
+    const newMsg = {
+        id: Date.now(),
+        group_id: groupId,
+        from_user: from,
+        text: text || '',
+        file_url: fileUrl,
+        file_name: fileName,
+        timestamp: new Date().toISOString()
+    };
+    const { error } = await supabase.from('group_messages').insert([newMsg]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, message: newMsg });
+});
+
+// Получить всех пользователей (для выбора участников группы)
+app.get('/get-all-users', async (req, res) => {
+    const { data } = await supabase.from('users').select('username, avatar');
+    res.json(data || []);
+});
+
+// Удалить сообщение в группе
+app.delete('/delete-group-message/:id', async (req, res) => {
+    const { id } = req.params;
+    await supabase.from('group_messages').delete().eq('id', parseInt(id));
+    res.json({ success: true });
+});
+
 app.listen(PORT, () => console.log(`🚀 Сервер Supabase запущен на порту ${PORT}`));
