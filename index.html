@@ -480,10 +480,15 @@
     }
 
     async function updateAvatar(emoji) {
-        await api('POST', '/update-avatar', { username: currentUser.username, avatar: emoji });
-        currentUser.avatar = emoji;
-        renderSidebar();
+    await api('POST', '/update-avatar', { username: currentUser.username, avatar: emoji });
+    currentUser.avatar = emoji;
+    renderSidebar();
+    // Если открыт чат, обновляем аватар в шапке
+    if (currentChat) {
+        const chatHeaderAvatar = document.querySelector('.chat-header-avatar');
+        if (chatHeaderAvatar) chatHeaderAvatar.textContent = emoji;
     }
+}
 
     async function deleteMessage(msgId) {
         if (currentChatType === 'user') await api('DELETE', `/delete-message/${msgId}`);
