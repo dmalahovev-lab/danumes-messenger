@@ -2,59 +2,22 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const DB_PATH = process.env.RENDER ? '/tmp/danumes.db' : path.join(__dirname, 'danumes.db');
-const db = new sqlite3.Database(DB_PATH);
+// ===== ТВОИ КЛЮЧИ SUPABASE (уже вставлены) =====
+const SUPABASE_URL = 'https://uqlihmsrxmjeqlddztuq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxbGlobXNyeG1qZXFsZGR6dHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjQ3NTEsImV4cCI6MjA5NDg0MDc1MX0.NjTgmgL9SrW0taod0aEETjqe56BtyA7c8m7Hw_fyJu8';
 
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT NOT NULL,
-        avatar TEXT DEFAULT '👤',
-        online INTEGER DEFAULT 0,
-        verified INTEGER DEFAULT 0
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY,
-        from_user TEXT NOT NULL,
-        to_user TEXT NOT NULL,
-        text TEXT,
-        file_url TEXT,
-        file_name TEXT,
-        timestamp TEXT
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS channels (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        owner TEXT NOT NULL,
-        avatar TEXT DEFAULT '📢',
-        only_owner_can_post INTEGER DEFAULT 1
-    )`);
-    db.run(`CREATE TABLE IF NOT EXISTS channel_messages (
-        id INTEGER PRIMARY KEY,
-        channel_id TEXT NOT NULL,
-        from_user TEXT NOT NULL,
-        text TEXT,
-        file_url TEXT,
-        file_name TEXT,
-        timestamp TEXT
-    )`);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const stmt = db.prepare(`INSERT OR IGNORE INTO users (username, password, avatar, verified) VALUES (?, ?, ?, ?)`);
-    stmt.run('Danumala', 'danyajukovka', '👑', 1);
-    stmt.run('RunFly', 'GGWWXXJJ2001', '🚀', 1);
-    stmt.finalize();
-
-    db.run(`INSERT OR IGNORE INTO channels (id, name, owner) VALUES ('news', 'Danumes News', 'Danumala')`);
-});
-
+// Папка для временного хранения файлов (на Render)
 const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+// Настройка multer для загрузки файлов
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -67,145 +30,222 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+// Функция для преобразования имен полей (supabase использует snake_case)
+function toSnakeCase(obj) {
+    if (!obj) return obj;
+    const result = {};
+    for (let key in obj) {
+        if (key === 'from') result['from_user'] = obj[key];
+        else if (key === 'to') result['to_user'] = obj[key];
+        else if (key === 'fileUrl') result['file_url'] = obj[key];
+        else if (key === 'fileName') result['file_name'] = obj[key];
+        else if (key === 'channelId') result['channel_id'] = obj[key];
+        else result[key] = obj[key];
+    }
+    return result;
+}
+
+function fromSnakeCase(obj) {
+    if (!obj) return obj;
+    const result = {};
+    for (let key in obj) {
+        if (key === 'from_user') result['from'] = obj[key];
+        else if (key === 'to_user') result['to'] = obj[key];
+        else if (key === 'file_url') result['fileUrl'] = obj[key];
+        else if (key === 'file_name') result['fileName'] = obj[key];
+        else if (key === 'channel_id') result['channelId'] = obj[key];
+        else result[key] = obj[key];
+    }
+    return result;
+}
+
 // ========== API ==========
 
-app.post('/register-attempt', (req, res) => {
+// Регистрация
+app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
-    db.get(`SELECT username FROM users WHERE username = ?`, [username], (err, row) => {
-        if (row) return res.json({ success: false, error: 'Пользователь уже существует' });
-        db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, password], (err) => {
-            if (err) return res.json({ success: false, error: 'Ошибка БД' });
-            res.json({ success: true });
-        });
-    });
-});
-
-app.post('/login-attempt', (req, res) => {
-    const { username, password } = req.body;
-    db.get(`SELECT username, avatar, verified FROM users WHERE username = ? AND password = ?`, [username, password], (err, row) => {
-        if (row) {
-            db.run(`UPDATE users SET online = 1 WHERE username = ?`, [username]);
-            res.json({ success: true, username: row.username, avatar: row.avatar, verified: row.verified });
-        } else {
-            res.json({ success: false, error: 'Неверные имя или пароль' });
-        }
-    });
-});
-
-app.post('/logout', (req, res) => {
-    const { username } = req.body;
-    db.run(`UPDATE users SET online = 0 WHERE username = ?`, [username]);
+    
+    // Проверяем, существует ли пользователь
+    const { data: existing } = await supabase.from('users').select('username').eq('username', username);
+    if (existing && existing.length > 0) {
+        return res.json({ success: false, error: 'Пользователь уже существует' });
+    }
+    
+    // Создаём нового пользователя
+    const { error } = await supabase.from('users').insert([{
+        username,
+        password,
+        avatar: '👤',
+        online: false,
+        verified: false
+    }]);
+    
+    if (error) return res.json({ success: false, error: 'Ошибка БД: ' + error.message });
     res.json({ success: true });
 });
 
-app.get('/get-users', (req, res) => {
-    db.all(`SELECT username, avatar, online, verified FROM users`, [], (err, rows) => {
-        res.json(rows);
-    });
+// Вход
+app.post('/login-attempt', async (req, res) => {
+    const { username, password } = req.body;
+    const { data, error } = await supabase
+        .from('users')
+        .select('username, avatar, verified')
+        .eq('username', username)
+        .eq('password', password);
+    
+    if (error || !data || data.length === 0) {
+        return res.json({ success: false, error: 'Неверные имя или пароль' });
+    }
+    
+    // Обновляем статус онлайн
+    await supabase.from('users').update({ online: true }).eq('username', username);
+    
+    res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
 });
 
-app.post('/update-avatar', (req, res) => {
+// Выход
+app.post('/logout', async (req, res) => {
+    const { username } = req.body;
+    await supabase.from('users').update({ online: false }).eq('username', username);
+    res.json({ success: true });
+});
+
+// Получить всех пользователей
+app.get('/get-users', async (req, res) => {
+    const { data } = await supabase.from('users').select('username, avatar, online, verified');
+    res.json(data || []);
+});
+
+// Обновить аватар
+app.post('/update-avatar', async (req, res) => {
     const { username, avatar } = req.body;
-    db.run(`UPDATE users SET avatar = ? WHERE username = ?`, [avatar, username]);
+    await supabase.from('users').update({ avatar }).eq('username', username);
     res.json({ success: true, avatar });
 });
 
-app.post('/send-message', (req, res) => {
+// Отправить личное сообщение
+app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    const id = Date.now();
-    const timestamp = new Date().toISOString();
-    db.run(`INSERT INTO messages (id, from_user, to_user, text, file_url, file_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, from, to, text || '', fileUrl || null, fileName || null, timestamp], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true, message: { id, from, to, text, timestamp, fileUrl, fileName } });
-        });
+    
+    const newMsg = {
+        id: Date.now(),
+        from_user: from,
+        to_user: to,
+        text: text || '',
+        file_url: fileUrl || null,
+        file_name: fileName || null,
+        timestamp: new Date().toISOString()
+    };
+    
+    const { error } = await supabase.from('messages').insert([newMsg]);
+    if (error) return res.status(500).json({ error: error.message });
+    
+    res.json({ success: true, message: fromSnakeCase(newMsg) });
 });
 
-app.get('/get-messages/:user1/:user2', (req, res) => {
+// Получить историю диалога
+app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
-    db.all(`SELECT id, from_user as from, to_user as to, text, file_url as fileUrl, file_name as fileName, timestamp 
-            FROM messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY id ASC`,
-        [user1, user2, user2, user1], (err, rows) => {
-            res.json(rows);
-        });
+    const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
+        .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
+        .order('id', { ascending: true });
+    
+    const messages = (data || []).map(m => fromSnakeCase(m));
+    res.json(messages);
 });
 
-app.get('/get-chats/:username', (req, res) => {
+// Получить список чатов
+app.get('/get-chats/:username', async (req, res) => {
     const { username } = req.params;
-    db.all(`SELECT DISTINCT 
-                CASE WHEN from_user = ? THEN to_user ELSE from_user END as chatUser
-            FROM messages WHERE from_user = ? OR to_user = ?`, [username, username, username], (err, rows) => {
-        const chatSet = rows.map(r => r.chatUser);
-        db.all(`SELECT username, avatar, online, verified FROM users`, [], (err, users) => {
-            const allUsers = users.map(u => u.username).filter(u => u !== username);
-            const uniqueChats = [...new Set([...chatSet, ...allUsers])];
-            const chatList = uniqueChats.map(chatUsername => {
-                const user = users.find(u => u.username === chatUsername);
-                return {
-                    username: chatUsername,
-                    avatar: user ? user.avatar : '👤',
-                    online: user ? user.online : false,
-                    verified: user ? user.verified : false,
-                    lastMessage: 'Нет сообщений',
-                    lastTime: null
-                };
-            });
-            const promises = chatList.map(chat => {
-                return new Promise((resolve) => {
-                    db.get(`SELECT text, file_url, timestamp FROM messages 
-                            WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) 
-                            ORDER BY id DESC LIMIT 1`,
-                        [username, chat.username, chat.username, username], (err, row) => {
-                            if (row) {
-                                chat.lastMessage = row.text || 'Файл';
-                                chat.lastTime = row.timestamp;
-                            }
-                            resolve();
-                        });
-                });
-            });
-            Promise.all(promises).then(() => {
-                chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
-                res.json(chatList);
-            });
-        });
+    
+    // Получаем всех пользователей
+    const { data: users } = await supabase.from('users').select('username, avatar, online, verified');
+    
+    // Получаем сообщения
+    const { data: allMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`from_user.eq.${username},to_user.eq.${username}`);
+    
+    const messages = (allMessages || []).map(m => fromSnakeCase(m));
+    
+    // Собираем уникальных собеседников
+    const chatSet = new Set();
+    messages.forEach(m => {
+        if (m.from === username) chatSet.add(m.to);
+        if (m.to === username) chatSet.add(m.from);
     });
+    users.forEach(u => { if (u.username !== username) chatSet.add(u.username); });
+    
+    const chatList = Array.from(chatSet).map(chatUsername => {
+        const user = users.find(u => u.username === chatUsername);
+        const lastMsg = messages.filter(m => (m.from === username && m.to === chatUsername) || (m.from === chatUsername && m.to === username))
+            .sort((a,b) => b.id - a.id)[0];
+        return {
+            username: chatUsername,
+            avatar: user ? user.avatar : '👤',
+            online: user ? user.online : false,
+            verified: user ? user.verified : false,
+            lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
+            lastTime: lastMsg ? lastMsg.timestamp : null
+        };
+    });
+    
+    chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
+    res.json(chatList);
 });
 
-app.get('/get-channels', (req, res) => {
-    db.all(`SELECT id, name, owner, avatar FROM channels`, [], (err, rows) => {
-        const channelList = rows.map(ch => ({ ...ch, lastMessage: 'Нет сообщений', lastTime: null }));
-        res.json(channelList);
-    });
+// === КАНАЛЫ ===
+app.get('/get-channels', async (req, res) => {
+    const { data: channels } = await supabase.from('channels').select('*');
+    res.json(channels || []);
 });
 
-app.get('/get-channel-messages/:channelId', (req, res) => {
+app.get('/get-channel-messages/:channelId', async (req, res) => {
     const { channelId } = req.params;
-    db.all(`SELECT id, from_user as from, text, file_url as fileUrl, file_name as fileName, timestamp 
-            FROM channel_messages WHERE channel_id = ? ORDER BY id ASC`, [channelId], (err, rows) => {
-        res.json(rows);
-    });
+    const { data } = await supabase
+        .from('channel_messages')
+        .select('*')
+        .eq('channel_id', channelId)
+        .order('id', { ascending: true });
+    
+    const messages = (data || []).map(m => fromSnakeCase(m));
+    res.json(messages);
 });
 
-app.post('/send-channel-message', (req, res) => {
+app.post('/send-channel-message', async (req, res) => {
     const { channelId, from, text, fileUrl, fileName } = req.body;
     if (!channelId || !from || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
-    db.get(`SELECT owner, only_owner_can_post FROM channels WHERE id = ?`, [channelId], (err, row) => {
-        if (row && row.only_owner_can_post && from !== row.owner) {
-            return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
-        }
-        const id = Date.now();
-        const timestamp = new Date().toISOString();
-        db.run(`INSERT INTO channel_messages (id, channel_id, from_user, text, file_url, file_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, channelId, from, text || '', fileUrl || null, fileName || null, timestamp], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, message: { id, channelId, from, text, timestamp, fileUrl, fileName } });
-            });
-    });
+    
+    // Проверяем права (только владелец канала может писать)
+    const { data: channel } = await supabase.from('channels').select('owner, only_owner_can_post').eq('id', channelId);
+    if (channel && channel[0] && channel[0].only_owner_can_post && from !== channel[0].owner) {
+        return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
+    }
+    
+    const newMsg = {
+        id: Date.now(),
+        channel_id: channelId,
+        from_user: from,
+        text: text || '',
+        file_url: fileUrl || null,
+        file_name: fileName || null,
+        timestamp: new Date().toISOString()
+    };
+    
+    const { error } = await supabase.from('channel_messages').insert([newMsg]);
+    if (error) return res.status(500).json({ error: error.message });
+    
+    res.json({ success: true, message: fromSnakeCase(newMsg) });
 });
 
+// === ФАЙЛЫ И УДАЛЕНИЕ ===
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
     res.json({ success: true, fileUrl: `/file/${req.file.filename}`, fileName: req.file.originalname });
@@ -217,45 +257,28 @@ app.get('/file/:filename', (req, res) => {
     else res.status(404).send('Файл не найден');
 });
 
-app.delete('/delete-message/:id', (req, res) => {
+app.delete('/delete-message/:id', async (req, res) => {
     const { id } = req.params;
-    db.get(`SELECT file_url FROM messages WHERE id = ?`, [id], (err, row) => {
-        if (row && row.file_url) {
-            const fileName = row.file_url.replace('/file/', '');
-            const filePath = path.join(UPLOADS_DIR, fileName);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-        db.run(`DELETE FROM messages WHERE id = ?`, [id]);
-        res.json({ success: true });
-    });
+    // Удаляем сообщение
+    await supabase.from('messages').delete().eq('id', parseInt(id));
+    res.json({ success: true });
 });
 
-app.delete('/delete-channel-message/:id', (req, res) => {
+app.delete('/delete-channel-message/:id', async (req, res) => {
     const { id } = req.params;
-    db.get(`SELECT file_url FROM channel_messages WHERE id = ?`, [id], (err, row) => {
-        if (row && row.file_url) {
-            const fileName = row.file_url.replace('/file/', '');
-            const filePath = path.join(UPLOADS_DIR, fileName);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-        db.run(`DELETE FROM channel_messages WHERE id = ?`, [id]);
-        res.json({ success: true });
-    });
+    await supabase.from('channel_messages').delete().eq('id', parseInt(id));
+    res.json({ success: true });
 });
 
-// Админ-панель для Danumala
-app.get('/admin', (req, res) => {
-    // Простая проверка, что запрос пришёл от Danumala (можно улучшить, но для теста)
-    // Реальная аутентификация требует сессий, а пока просто покажем таблицу
-    db.all(`SELECT username, password, avatar, verified FROM users`, [], (err, rows) => {
-        if (err) return res.status(500).send('Ошибка БД');
-        let html = '<h1>Админ-панель DanuMes</h1><table border="1" cellpadding="5"><tr><th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></tr>';
-        rows.forEach(u => {
-            html += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.avatar}</td><td>${u.verified ? '✓' : 'Нет'}</td></tr>`;
-        });
-        html += '</table><p><a href="/">Вернуться в мессенджер</a></p>';
-        res.send(html);
+// Админ-панель для просмотра пользователей (только для Danumala)
+app.get('/admin', async (req, res) => {
+    const { data: users } = await supabase.from('users').select('username, password, avatar, verified');
+    let html = '<h1>Пользователи DanuMes</h1><table border="1">服务<th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></tr>';
+    users.forEach(u => {
+        html += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.avatar}</td><td>${u.verified ? 'Да' : 'Нет'}</td></tr>`;
     });
+    html += '</table><p><a href="/">Вернуться в чат</a></p>';
+    res.send(html);
 });
 
-app.listen(PORT, () => console.log(`🚀 Сервер SQLite запущен на порту ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Сервер Supabase запущен на порту ${PORT}`));
