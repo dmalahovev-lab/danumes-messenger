@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-            transition: background 0.2s;
+            transition: background 0.2s, color 0.2s;
         }
         body.dark {
             background: radial-gradient(circle at 20% 30%, #1a2a3a, #0a0f1e);
@@ -283,6 +283,7 @@
             85% { opacity: 1; transform: translateX(-50%) translateY(0); }
             100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
         }
+        /* ========== НОВЫЕ СТИЛИ ДЛЯ ФОРМ ========== */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -297,6 +298,7 @@
             width: 460px;
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 25px 45px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
         }
         body.light .auth-card {
             background: rgba(255,255,255,0.8);
@@ -315,35 +317,54 @@
             display: flex;
             gap: 16px;
             margin-bottom: 32px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 60px;
+            padding: 4px;
         }
         .tab {
             flex: 1;
             text-align: center;
-            padding: 14px 0;
-            background: rgba(0,0,0,0.2);
-            border-radius: 60px;
+            padding: 12px 0;
+            border-radius: 56px;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
         }
-        body.dark .tab { color: #eee; }
-        body.light .tab { color: #1f2937; }
+        body.light .tab {
+            color: rgba(0,0,0,0.6);
+        }
         .tab.active {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
-        .auth-form input {
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .input-group {
+            position: relative;
+        }
+        .input-group input {
             width: 100%;
             background: rgba(0,0,0,0.3);
             border: 1px solid rgba(255,255,255,0.2);
             padding: 16px 20px;
             border-radius: 60px;
             font-size: 16px;
-            margin-bottom: 24px;
             outline: none;
+            transition: all 0.2s ease;
         }
-        body.dark .auth-form input { color: white; }
-        body.light .auth-form input { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1f2937; }
+        body.dark .input-group input { color: white; }
+        body.light .input-group input { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1f2937; }
+        .input-group input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
+        }
         .auth-btn {
             width: 100%;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
@@ -351,11 +372,21 @@
             padding: 16px;
             border-radius: 60px;
             color: white;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
         }
-        .error-text { color: #f87171; font-size: 14px; text-align: center; margin-bottom: 16px; }
+        .auth-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(59,130,246,0.4);
+        }
+        .error-text {
+            color: #f87171;
+            font-size: 13px;
+            text-align: center;
+            margin-top: -8px;
+        }
         @media (max-width: 680px) {
             .sidebar { width: 80px; }
             .chat-info, .logo { display: none; }
@@ -417,75 +448,84 @@
 
     async function loadChatsAndChannels() {
         if (!currentUser) return;
-        const userChats = await api('GET', `/get-chats/${currentUser.username}`);
-        const channelList = await api('GET', '/get-channels');
-        channels = channelList;
-        let all = [];
-        channels.forEach(ch => {
-            all.push({
-                type: 'channel',
-                id: ch.id,
-                name: ch.name,
-                avatar: ch.avatar,
-                lastMessage: ch.lastMessage,
-                lastTime: ch.lastTime,
-                owner: ch.owner
+        try {
+            const userChats = await api('GET', `/get-chats/${currentUser.username}`);
+            const channelList = await api('GET', '/get-channels');
+            channels = channelList || [];
+            let all = [];
+            channels.forEach(ch => {
+                all.push({
+                    type: 'channel',
+                    id: ch.id,
+                    name: ch.name,
+                    avatar: ch.avatar,
+                    lastMessage: ch.lastMessage || 'Нет сообщений',
+                    lastTime: ch.lastTime,
+                    owner: ch.owner
+                });
             });
-        });
-        userChats.forEach(uc => {
-            all.push({
-                type: 'user',
-                id: uc.username,
-                name: uc.username,
-                avatar: uc.avatar,
-                online: uc.online,
-                verified: uc.verified,
-                lastMessage: uc.lastMessage,
-                lastTime: uc.lastTime
+            (userChats || []).forEach(uc => {
+                all.push({
+                    type: 'user',
+                    id: uc.username,
+                    name: uc.username,
+                    avatar: uc.avatar,
+                    online: uc.online,
+                    verified: uc.verified,
+                    lastMessage: uc.lastMessage || 'Нет сообщений',
+                    lastTime: uc.lastTime
+                });
             });
-        });
-        all.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
-        chats = all;
-        renderSidebar();
+            all.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
+            chats = all;
+            renderSidebar();
+        } catch(e) {
+            console.error('Ошибка загрузки чатов:', e);
+        }
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) {
-            console.log('Нет currentUser или currentChat');
-            return;
+        if (!currentUser || !currentChat) return;
+        try {
+            if (currentChatType === 'user') {
+                const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
+                messages = res || [];
+            } else {
+                const res = await api('GET', `/get-channel-messages/${currentChat}`);
+                messages = res || [];
+            }
+            renderChat();
+        } catch(e) {
+            console.error('Ошибка загрузки сообщений:', e);
         }
-        console.log('Загружаем сообщения для:', currentChatType, currentChat);
-        if (currentChatType === 'user') {
-            const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
-            messages = res;
-        } else {
-            const res = await api('GET', `/get-channel-messages/${currentChat}`);
-            messages = res;
-        }
-        renderChat();
     }
 
     async function sendMessage(text, fileUrl = null, fileName = null) {
         if (!text && !fileUrl) return;
-        if (currentChatType === 'user') {
-            await api('POST', '/send-message', {
-                from: currentUser.username,
-                to: currentChat,
-                text: text || '',
-                fileUrl,
-                fileName
-            });
-        } else {
-            await api('POST', '/send-channel-message', {
-                channelId: currentChat,
-                from: currentUser.username,
-                text: text || '',
-                fileUrl,
-                fileName
-            });
+        try {
+            if (currentChatType === 'user') {
+                await api('POST', '/send-message', {
+                    from: currentUser.username,
+                    to: currentChat,
+                    text: text || '',
+                    fileUrl,
+                    fileName
+                });
+            } else {
+                await api('POST', '/send-channel-message', {
+                    channelId: currentChat,
+                    from: currentUser.username,
+                    text: text || '',
+                    fileUrl,
+                    fileName
+                });
+            }
+            await loadMessages();
+            await loadChatsAndChannels();
+        } catch(e) {
+            console.error('Ошибка отправки:', e);
+            showToast('Ошибка отправки сообщения', true);
         }
-        await loadMessages();
-        await loadChatsAndChannels();
     }
 
     async function uploadFile(file) {
@@ -600,21 +640,18 @@
         html += `</div>`;
         sidebarDiv.innerHTML = html;
 
-        // ========== ГЛАВНОЕ: ОБРАБОТЧИК КЛИКА ПО ЧАТУ ==========
         document.querySelectorAll('.chat-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const newType = el.dataset.type;
                 const newId = el.dataset.id;
-                console.log('Клик по чату:', newType, newId);
                 if (!newId) return;
-                // Обновляем текущий чат
-                currentChatType = newType;
-                currentChat = newId;
-                // Загружаем сообщения
-                loadMessages();
-                // Перерисовываем sidebar, чтобы подсветить активный чат
-                renderSidebar();
+                if (currentChat !== newId || currentChatType !== newType) {
+                    currentChatType = newType;
+                    currentChat = newId;
+                    loadMessages();
+                    renderSidebar();
+                }
             });
         });
 
@@ -729,18 +766,20 @@
                 await sendMessage(text);
             }
             msgInput.value = '';
-            const msgsDiv = document.getElementById('messagesList');
-            if (msgsDiv) msgsDiv.scrollTop = msgsDiv.scrollHeight;
+            // Прокрутка вниз
+            setTimeout(() => {
+                const msgsDiv = document.getElementById('messagesList');
+                if (msgsDiv) msgsDiv.scrollTop = msgsDiv.scrollHeight;
+            }, 100);
         };
+        
+        // НОВЫЙ ОБРАБОТЧИК: убираем старые, вешаем новые
         sendBtn.onclick = send;
         msgInput.onkeypress = (e) => { if (e.key === 'Enter') send(); };
         fileLabel.onclick = () => fileInput.click();
         fileInput.onchange = () => send();
-
-        setTimeout(() => {
-            const msgsDiv = document.getElementById('messagesList');
-            if (msgsDiv) msgsDiv.scrollTop = msgsDiv.scrollHeight;
-        }, 100);
+        
+        // Не очищаем поле ввода нигде, кроме как после отправки
     }
 
     function showAvatarModal() {
@@ -776,15 +815,23 @@
                         <div class="tab active" id="loginTab">Вход</div>
                         <div class="tab" id="regTab">Регистрация</div>
                     </div>
-                    <div id="loginPanel">
-                        <input type="text" id="loginUsername" placeholder="Логин">
-                        <input type="password" id="loginPassword" placeholder="Пароль">
+                    <div id="loginPanel" class="auth-form">
+                        <div class="input-group">
+                            <input type="text" id="loginUsername" placeholder="Логин">
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="loginPassword" placeholder="Пароль">
+                        </div>
                         <div id="loginError" class="error-text"></div>
                         <button id="doLogin" class="auth-btn">Войти</button>
                     </div>
-                    <div id="regPanel" style="display:none;">
-                        <input type="text" id="regUsername" placeholder="Логин">
-                        <input type="password" id="regPassword" placeholder="Пароль">
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <div class="input-group">
+                            <input type="text" id="regUsername" placeholder="Логин">
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="regPassword" placeholder="Пароль">
+                        </div>
                         <div id="regError" class="error-text"></div>
                         <button id="doReg" class="auth-btn">Зарегистрироваться</button>
                     </div>
@@ -792,14 +839,14 @@
             </div>
         `;
         document.getElementById('loginTab').onclick = () => {
-            document.getElementById('loginPanel').style.display = 'block';
+            document.getElementById('loginPanel').style.display = 'flex';
             document.getElementById('regPanel').style.display = 'none';
             document.getElementById('loginTab').classList.add('active');
             document.getElementById('regTab').classList.remove('active');
         };
         document.getElementById('regTab').onclick = () => {
             document.getElementById('loginPanel').style.display = 'none';
-            document.getElementById('regPanel').style.display = 'block';
+            document.getElementById('regPanel').style.display = 'flex';
             document.getElementById('regTab').classList.add('active');
             document.getElementById('loginTab').classList.remove('active');
         };
