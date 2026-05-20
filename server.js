@@ -7,7 +7,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Конфигурация Supabase (замени на свои ключи, если не совпадают)
+// Конфигурация Supabase
 const SUPABASE_URL = 'https://uqlihmsrxmjeqlddztuq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxbGlobXNyeG1qZXFsZGR6dHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjQ3NTEsImV4cCI6MjA5NDg0MDc1MX0.NjTgmgL9SrW0taod0aEETjqe56BtyA7c8m7Hw_fyJu8';
 
@@ -83,13 +83,13 @@ app.post('/send-message', async (req, res) => {
     res.json({ success: true, message: newMsg });
 });
 
+// ИСПРАВЛЕННЫЙ МАРШРУТ ПОЛУЧЕНИЯ СООБЩЕНИЙ МЕЖДУ ДВУМЯ ПОЛЬЗОВАТЕЛЯМИ
 app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
     const { data } = await supabase
         .from('messages')
         .select('*')
-        .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
-        .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
+        .or(`and(from_user.eq.${user1},to_user.eq.${user2}),and(from_user.eq.${user2},to_user.eq.${user1})`)
         .order('id', { ascending: true });
     res.json(data || []);
 });
@@ -245,7 +245,7 @@ app.delete('/delete-channel-message/:id', async (req, res) => {
 // Админ-панель
 app.get('/admin', async (req, res) => {
     const { data: users } = await supabase.from('users').select('username, password, avatar, verified');
-    let html = '<h1>Пользователи DanuMes</h1><table border="1">服务<th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></table>';
+    let html = '<h1>Пользователи DanuMes</h1><table border="1">服务<th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></tr>';
     (users || []).forEach(u => {
         html += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.avatar}</td><td>${u.verified ? 'Да' : 'Нет'}</td></tr>`;
     });
