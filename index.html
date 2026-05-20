@@ -461,7 +461,7 @@
         }
 
         /* Стили для звонков */
-        .call-notification, .call-controls {
+        .call-notification, .call-controls, .call-waiting {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -477,7 +477,7 @@
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .call-notification button, .call-controls button {
+        .call-notification button, .call-controls button, .call-waiting button {
             background: #3b82f6;
             border: none;
             padding: 8px 16px;
@@ -490,6 +490,9 @@
         }
         .call-controls button.end-call {
             background: #ef4444;
+        }
+        .call-waiting button.cancel-waiting {
+            background: #6b7280;
         }
         .call-video {
             position: fixed;
@@ -527,8 +530,8 @@
     let currentCall = null;
     let localStream = null;
     let remoteStream = null;
-    let pendingCall = null;      // { from, call }
-    let activeCallNotification = false;
+    let activeCallElement = null; // ссылка на активный UI звонка
+    let outgoingCallTimeout = null; // таймаут для ожидания ответа
 
     // ---- Инициализация темы ----
     function initTheme() {
@@ -670,99 +673,111 @@
             config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
         });
         peer.on('call', async (call) => {
-            // Если уже есть активный звонок или ожидающий, не беспокоим
-            if (currentCall || pendingCall) {
+            if (currentCall) {
                 call.close();
                 return;
             }
             const fromUsername = call.peer.split('_')[0];
-            // Показываем встроенное уведомление о звонке
-            showCallNotification(fromUsername, call);
+            showIncomingCallUI(fromUsername, call);
         });
         peer.on('error', (err) => console.error('Peer error:', err));
     }
 
-    function showCallNotification(fromUsername, call) {
-        if (activeCallNotification) return;
-        activeCallNotification = true;
-        const notif = document.createElement('div');
-        notif.className = 'call-notification';
-        notif.id = 'callNotification';
-        notif.innerHTML = `
+    // Отображение интерфейса при входящем звонке
+    function showIncomingCallUI(fromUsername, call) {
+        if (activeCallElement) return;
+        const div = document.createElement('div');
+        div.className = 'call-notification';
+        div.id = 'incomingCallUI';
+        div.innerHTML = `
             <span>📞 Входящий звонок от <strong>${escapeHtml(fromUsername)}</strong></span>
             <button id="acceptCallBtn">Принять</button>
             <button id="rejectCallBtn" style="background:#6b7280;">Отклонить</button>
         `;
-        document.body.appendChild(notif);
-        const acceptBtn = notif.querySelector('#acceptCallBtn');
-        const rejectBtn = notif.querySelector('#rejectCallBtn');
-        const handleAccept = async () => {
-            notif.remove();
-            activeCallNotification = false;
+        document.body.appendChild(div);
+        activeCallElement = div;
+
+        div.querySelector('#acceptCallBtn').onclick = async () => {
+            div.remove();
+            activeCallElement = null;
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 call.answer(localStream);
                 call.on('stream', (remoteStream) => {
-                    remoteStream = remoteStream;
-                    showCallUI(fromUsername, call, localStream, remoteStream);
+                    showActiveCallUI(fromUsername, call, localStream, remoteStream);
                 });
                 currentCall = call;
-                pendingCall = null;
             } catch(e) {
                 console.error(e);
-                alert('Не удалось получить доступ к микрофону');
+                alert('Не удалось получить доступ к микрофону. Пожалуйста, разрешите доступ в браузере.');
                 call.close();
             }
         };
-        const handleReject = () => {
-            notif.remove();
-            activeCallNotification = false;
+        div.querySelector('#rejectCallBtn').onclick = () => {
+            div.remove();
+            activeCallElement = null;
             call.close();
-            pendingCall = null;
         };
-        acceptBtn.onclick = handleAccept;
-        rejectBtn.onclick = handleReject;
-        pendingCall = { from: fromUsername, call };
     }
 
+    // Исходящий звонок
     function startCall(targetUsername) {
         if (!peer) initPeer();
         if (currentCall) {
             alert('У вас уже активен звонок');
             return;
         }
-        // Сначала запрашиваем микрофон, чтобы потом передать в call
+        if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
+        
+        // Показываем ожидание
+        const waitingDiv = document.createElement('div');
+        waitingDiv.className = 'call-waiting';
+        waitingDiv.id = 'waitingCallUI';
+        waitingDiv.innerHTML = `
+            <span>📞 Звонок пользователю ${escapeHtml(targetUsername)}... ожидание ответа</span>
+            <button class="cancel-waiting" id="cancelWaitingBtn">Отмена</button>
+        `;
+        document.body.appendChild(waitingDiv);
+        activeCallElement = waitingDiv;
+
+        waitingDiv.querySelector('#cancelWaitingBtn').onclick = () => {
+            if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
+            waitingDiv.remove();
+            activeCallElement = null;
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            localStream = null;
+        };
+
+        // Получаем микрофон и отправляем сигнал
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then(stream => {
                 localStream = stream;
-                // Отправляем системное сообщение с нашим peerId
                 const callMessage = `__CALL__${peer.id}`;
-                sendMessage(callMessage, null, null).then(() => {
-                    alert('Запрос звонка отправлен. Ожидайте ответа...');
-                    // Через некоторое время, если нет ответа, очищаем стрим
-                    setTimeout(() => {
-                        if (!currentCall && localStream) {
-                            localStream.getTracks().forEach(t => t.stop());
-                            localStream = null;
-                        }
-                    }, 30000);
-                });
+                sendMessage(callMessage, null, null).catch(e => console.error(e));
+                // Устанавливаем таймаут на ожидание ответа (30 секунд)
+                outgoingCallTimeout = setTimeout(() => {
+                    if (activeCallElement && activeCallElement.id === 'waitingCallUI') {
+                        activeCallElement.remove();
+                        activeCallElement = null;
+                        alert('Звонок не принят. Попробуйте позже.');
+                        if (localStream) localStream.getTracks().forEach(t => t.stop());
+                        localStream = null;
+                    }
+                }, 30000);
             })
             .catch(e => {
-                alert('Не удалось получить доступ к микрофону');
+                waitingDiv.remove();
+                activeCallElement = null;
+                alert('Не удалось получить доступ к микрофону. Пожалуйста, разрешите доступ в браузере.');
                 console.error(e);
             });
     }
 
-    function showCallUI(partnerName, call, localStream, remoteStream) {
-        // Удаляем старый UI, если есть
-        const oldUI = document.getElementById('callControls');
-        if (oldUI) oldUI.remove();
-        const oldVideo = document.getElementById('remoteVideoDiv');
-        if (oldVideo) oldVideo.remove();
-
+    // Активный звонок (панель управления)
+    function showActiveCallUI(partnerName, call, localStream, remoteStream) {
+        if (activeCallElement) activeCallElement.remove();
         const controls = document.createElement('div');
-        controls.id = 'callControls';
+        controls.id = 'activeCallUI';
         controls.className = 'call-controls';
         controls.innerHTML = `
             <span>🔊 Звонок с ${escapeHtml(partnerName)}</span>
@@ -770,18 +785,17 @@
             <button class="end-call" id="endCallBtn">📞 Завершить</button>
         `;
         document.body.appendChild(controls);
+        activeCallElement = controls;
 
         let muted = false;
-        const muteBtn = controls.querySelector('#muteMicrophoneBtn');
-        muteBtn.onclick = () => {
+        controls.querySelector('#muteMicrophoneBtn').onclick = () => {
             if (localStream) {
                 muted = !muted;
                 localStream.getAudioTracks().forEach(track => track.enabled = !muted);
-                muteBtn.textContent = muted ? '🔊 Вкл. микро' : '🔇 Выкл. микро';
+                controls.querySelector('#muteMicrophoneBtn').textContent = muted ? '🔊 Вкл. микро' : '🔇 Выкл. микро';
             }
         };
-        const endBtn = controls.querySelector('#endCallBtn');
-        endBtn.onclick = () => {
+        controls.querySelector('#endCallBtn').onclick = () => {
             if (call) call.close();
             if (localStream) localStream.getTracks().forEach(t => t.stop());
             if (remoteStream) remoteStream.getTracks().forEach(t => t.stop());
@@ -791,42 +805,34 @@
             currentCall = null;
             localStream = null;
             remoteStream = null;
+            activeCallElement = null;
+            if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
         };
-        // Если есть видео (в будущем), можно добавить
-        if (remoteStream) {
-            const videoDiv = document.createElement('div');
-            videoDiv.id = 'remoteVideoDiv';
-            videoDiv.className = 'call-video';
-            const video = document.createElement('video');
-            video.srcObject = remoteStream;
-            video.autoplay = true;
-            videoDiv.appendChild(video);
-            document.body.appendChild(videoDiv);
-        }
     }
 
-    // Обработка системных сообщений звонка (только один раз)
+    // Обработка системных сообщений для звонка
     let processedCallMessages = new Set();
     function handleIncomingCallMessage(msg) {
         if (msg.text && msg.text.startsWith('__CALL__') && msg.from !== currentUser.username) {
             const callId = msg.text;
             if (processedCallMessages.has(callId)) return;
             processedCallMessages.add(callId);
+            if (currentCall) return;
+            if (activeCallElement) return;
+            
             const callerPeerId = msg.text.substring(9);
-            // Инициируем звонок со стороны получателя
             if (!peer) initPeer();
             // Небольшая задержка, чтобы убедиться, что peer готов
             setTimeout(() => {
-                if (currentCall || pendingCall) return;
+                if (currentCall || activeCallElement) return;
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false })
                     .then(stream => {
                         localStream = stream;
                         const call = peer.call(callerPeerId, stream);
                         call.on('stream', (remoteStream) => {
-                            showCallUI(msg.from, call, localStream, remoteStream);
+                            showActiveCallUI(msg.from, call, localStream, remoteStream);
                         });
                         currentCall = call;
-                        // Показываем уведомление о начале звонка (можно не показывать, т.к. идёт сразу)
                     })
                     .catch(e => {
                         console.error(e);
@@ -939,7 +945,6 @@
                             <div class="message-time">${time}</div>
                         </div>
                     </div>`;
-            // Обработка входящего вызова
             if (msg.text && msg.text.startsWith('__CALL__') && !isOwn) {
                 handleIncomingCallMessage({ from: msg.from_user, text: msg.text });
             }
