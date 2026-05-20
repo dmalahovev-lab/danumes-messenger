@@ -406,7 +406,7 @@
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
-    let isSending = false; // флаг для предотвращения дублей
+    let isSending = false;
 
     function initTheme() {
         const saved = localStorage.getItem('theme');
@@ -494,7 +494,7 @@
                 const res = await api('GET', `/get-channel-messages/${currentChat}`);
                 messages = res || [];
             }
-            renderMessagesOnly(); // только обновляем список сообщений, не трогая поле ввода
+            renderMessagesOnly();
         } catch(e) {
             console.error('Ошибка загрузки сообщений:', e);
         }
@@ -649,14 +649,16 @@
                 const newType = el.dataset.type;
                 const newId = el.dataset.id;
                 if (!newId) return;
-                if (currentChat !== newId || currentChatType !== newType) {
-                    currentChatType = newType;
-                    currentChat = newId;
-                    loadMessages();
-                    renderSidebar();
-                    // Обновляем заголовок чата отдельно
-                    updateChatHeader();
-                }
+                
+                console.log('Открываем чат:', newType, newId);
+                currentChatType = newType;
+                currentChat = newId;
+                
+                // Очищаем старые сообщения и загружаем новые
+                messages = [];
+                renderChat();      // Перерисовываем весь чат
+                loadMessages();    // Загружаем сообщения
+                renderSidebar();   // Обновляем активный класс
             });
         });
 
@@ -676,18 +678,6 @@
         };
         const themeBtn = document.getElementById('themeToggle');
         if (themeBtn) themeBtn.onclick = toggleTheme;
-    }
-
-    function updateChatHeader() {
-        const headerDiv = document.getElementById('chatHeader');
-        if (!headerDiv || !currentChat) return;
-        const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
-        headerDiv.innerHTML = `
-            <div class="chat-header-avatar">${chatInfo.avatar}</div>
-            <div class="chat-header-info">
-                <h3>${escapeHtml(chatInfo.name)}</h3>
-            </div>
-        `;
     }
 
     function renderMessagesOnly() {
@@ -723,7 +713,6 @@
         });
         messagesContainer.innerHTML = html;
         
-        // Добавляем обработчики для картинок и контекстного меню
         document.querySelectorAll('.message-image').forEach(img => {
             img.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -747,7 +736,6 @@
             });
         });
         
-        // Прокрутка вниз
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
@@ -760,7 +748,6 @@
         }
         const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
         
-        // Создаём структуру чата с отдельным контейнером для сообщений
         mainDiv.innerHTML = `
             <div class="chat-header" id="chatHeader">
                 <div class="chat-header-avatar">${chatInfo.avatar}</div>
@@ -779,10 +766,8 @@
             </div>
         `;
         
-        // Загружаем сообщения
         renderMessagesOnly();
         
-        // Настраиваем отправку
         const msgInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const fileLabel = document.getElementById('fileLabel');
@@ -809,7 +794,6 @@
         fileLabel.onclick = () => fileInput.click();
         fileInput.onchange = () => send();
         
-        // Фокус в поле ввода
         msgInput.focus();
     }
 
