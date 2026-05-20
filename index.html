@@ -545,19 +545,24 @@
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) return;
-        try {
-            let data;
-            if (currentChatType === 'user') {
-                data = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
-                messages = data || [];
-            } else if (currentChatType === 'channel') {
-                data = await api('GET', `/get-channel-messages/${currentChat}`);
-                messages = data || [];
-            } else if (currentChatType === 'group') {
-                data = await api('GET', `/get-group-messages/${currentChat}`);
-                messages = data || [];
-            }
+    if (!currentUser || !currentChat) return;
+    try {
+        let data;
+        if (currentChatType === 'user') {
+            console.log(`Загрузка сообщений между ${currentUser.username} и ${currentChat}`);
+            data = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
+            console.log('Получено сообщений:', data);
+            messages = data || [];
+        } else if (currentChatType === 'channel') {
+            data = await api('GET', `/get-channel-messages/${currentChat}`);
+            messages = data || [];
+        } else if (currentChatType === 'group') {
+            data = await api('GET', `/get-group-messages/${currentChat}`);
+            messages = data || [];
+        }
+        renderMessages();
+    } catch(e) { console.error(e); }
+}
             renderMessages();
         } catch(e) { console.error(e); }
     }
@@ -575,6 +580,10 @@
             await loadMessages();
             await loadChatsAndChannels();
         } catch(e) { console.error(e); }
+        if (currentChatType === 'user') {
+    console.log('Отправка личного сообщения:', { from: currentUser.username, to: currentChat, text });
+    await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
+}
     }
 
     async function uploadFile(file) {
