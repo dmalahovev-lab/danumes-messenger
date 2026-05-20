@@ -283,7 +283,6 @@
             85% { opacity: 1; transform: translateX(-50%) translateY(0); }
             100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
         }
-        /* ========== НОВЫЕ СТИЛИ ДЛЯ ФОРМ ========== */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -407,6 +406,7 @@
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
+    let isSending = false; // флаг для предотвращения дублей
 
     function initTheme() {
         const saved = localStorage.getItem('theme');
@@ -494,14 +494,15 @@
                 const res = await api('GET', `/get-channel-messages/${currentChat}`);
                 messages = res || [];
             }
-            renderChat();
+            renderMessagesOnly(); // только обновляем список сообщений, не трогая поле ввода
         } catch(e) {
             console.error('Ошибка загрузки сообщений:', e);
         }
     }
 
     async function sendMessage(text, fileUrl = null, fileName = null) {
-        if (!text && !fileUrl) return;
+        if ((!text && !fileUrl) || isSending) return;
+        isSending = true;
         try {
             if (currentChatType === 'user') {
                 await api('POST', '/send-message', {
@@ -525,6 +526,8 @@
         } catch(e) {
             console.error('Ошибка отправки:', e);
             showToast('Ошибка отправки сообщения', true);
+        } finally {
+            isSending = false;
         }
     }
 
@@ -651,6 +654,8 @@
                     currentChat = newId;
                     loadMessages();
                     renderSidebar();
+                    // Обновляем заголовок чата отдельно
+                    updateChatHeader();
                 }
             });
         });
@@ -673,64 +678,58 @@
         if (themeBtn) themeBtn.onclick = toggleTheme;
     }
 
-    function renderChat() {
-        const mainDiv = document.getElementById('chatMain');
-        if (!mainDiv) return;
-        if (!currentChat) {
-            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; opacity:0.6;">✨ Выберите чат ✨</div>`;
-            return;
-        }
+    function updateChatHeader() {
+        const headerDiv = document.getElementById('chatHeader');
+        if (!headerDiv || !currentChat) return;
         const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
-        let messagesHtml = `<div class="messages-area" id="messagesList">`;
-        if (messages && messages.length > 0) {
-            messages.forEach(msg => {
-                const isOwn = msg.from === currentUser.username;
-                const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                let content = '';
-                if (msg.fileUrl && isImageFile(msg.fileName)) {
-                    content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
-                } else if (msg.fileUrl) {
-                    content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
-                }
-                if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-                messagesHtml += `
-                    <div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
-                        <div class="message-bubble">
-                            ${content}
-                            <div class="message-time">${time}</div>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            messagesHtml += `<div style="text-align:center; opacity:0.5; padding:20px;">Нет сообщений. Напишите первое!</div>`;
-        }
-        messagesHtml += `</div>`;
-        mainDiv.innerHTML = `
-            <div class="chat-header">
-                <div class="chat-header-avatar">${chatInfo.avatar}</div>
-                <div class="chat-header-info">
-                    <h3>${escapeHtml(chatInfo.name)}</h3>
-                </div>
-            </div>
-            ${messagesHtml}
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <input type="text" id="messageInput" placeholder="Сообщение">
-                    <label class="file-btn" id="fileLabel">📎</label>
-                    <input type="file" id="fileInput" style="display:none">
-                </div>
-                <button class="send-btn" id="sendBtn">➤</button>
+        headerDiv.innerHTML = `
+            <div class="chat-header-avatar">${chatInfo.avatar}</div>
+            <div class="chat-header-info">
+                <h3>${escapeHtml(chatInfo.name)}</h3>
             </div>
         `;
+    }
 
+    function renderMessagesOnly() {
+        const messagesContainer = document.getElementById('messagesList');
+        if (!messagesContainer) return;
+        if (!currentChat) {
+            messagesContainer.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Выберите чат</div>`;
+            return;
+        }
+        if (!messages || messages.length === 0) {
+            messagesContainer.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Нет сообщений. Напишите первое!</div>`;
+            return;
+        }
+        let html = '';
+        messages.forEach(msg => {
+            const isOwn = msg.from === currentUser.username;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            let content = '';
+            if (msg.fileUrl && isImageFile(msg.fileName)) {
+                content += `<img src="${msg.fileUrl}" class="message-image" data-url="${msg.fileUrl}">`;
+            } else if (msg.fileUrl) {
+                content += `<a href="${msg.fileUrl}" download class="file-attach" data-url="${msg.fileUrl}">📎 ${escapeHtml(msg.fileName || 'Файл')}</a>`;
+            }
+            if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+            html += `
+                <div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from}" data-file-url="${msg.fileUrl || ''}">
+                    <div class="message-bubble">
+                        ${content}
+                        <div class="message-time">${time}</div>
+                    </div>
+                </div>
+            `;
+        });
+        messagesContainer.innerHTML = html;
+        
+        // Добавляем обработчики для картинок и контекстного меню
         document.querySelectorAll('.message-image').forEach(img => {
             img.addEventListener('click', (e) => {
                 e.stopPropagation();
                 showLightbox(img.src);
             });
         });
-
         document.querySelectorAll('.message').forEach(msgEl => {
             msgEl.addEventListener('contextmenu', (e) => {
                 const msgId = msgEl.dataset.msgId;
@@ -747,12 +746,48 @@
                 if (items.length) showContextMenu(e, items);
             });
         });
+        
+        // Прокрутка вниз
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
+    function renderChat() {
+        const mainDiv = document.getElementById('chatMain');
+        if (!mainDiv) return;
+        if (!currentChat) {
+            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; opacity:0.6;">✨ Выберите чат ✨</div>`;
+            return;
+        }
+        const chatInfo = chats.find(c => c.id === currentChat && c.type === currentChatType) || { name: currentChat, avatar: '💬' };
+        
+        // Создаём структуру чата с отдельным контейнером для сообщений
+        mainDiv.innerHTML = `
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-avatar">${chatInfo.avatar}</div>
+                <div class="chat-header-info">
+                    <h3>${escapeHtml(chatInfo.name)}</h3>
+                </div>
+            </div>
+            <div class="messages-area" id="messagesList"></div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Сообщение">
+                    <label class="file-btn" id="fileLabel">📎</label>
+                    <input type="file" id="fileInput" style="display:none">
+                </div>
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+        `;
+        
+        // Загружаем сообщения
+        renderMessagesOnly();
+        
+        // Настраиваем отправку
         const msgInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const fileLabel = document.getElementById('fileLabel');
         const fileInput = document.getElementById('fileInput');
-
+        
         const send = async () => {
             const text = msgInput.value.trim();
             if (fileInput.files.length) {
@@ -766,20 +801,16 @@
                 await sendMessage(text);
             }
             msgInput.value = '';
-            // Прокрутка вниз
-            setTimeout(() => {
-                const msgsDiv = document.getElementById('messagesList');
-                if (msgsDiv) msgsDiv.scrollTop = msgsDiv.scrollHeight;
-            }, 100);
+            msgInput.focus();
         };
         
-        // НОВЫЙ ОБРАБОТЧИК: убираем старые, вешаем новые
         sendBtn.onclick = send;
-        msgInput.onkeypress = (e) => { if (e.key === 'Enter') send(); };
+        msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
         fileLabel.onclick = () => fileInput.click();
         fileInput.onchange = () => send();
         
-        // Не очищаем поле ввода нигде, кроме как после отправки
+        // Фокус в поле ввода
+        msgInput.focus();
     }
 
     function showAvatarModal() {
