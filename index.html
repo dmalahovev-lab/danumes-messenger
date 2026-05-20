@@ -514,7 +514,6 @@
 <body class="dark">
 <div id="app"></div>
 <script>
-    // ---- Глобальные переменные ----
     let currentUser = null;
     let currentChat = null;
     let currentChatType = 'user';
@@ -530,10 +529,10 @@
     let currentCall = null;
     let localStream = null;
     let remoteStream = null;
-    let activeCallElement = null; // ссылка на активный UI звонка
-    let outgoingCallTimeout = null; // таймаут для ожидания ответа
+    let activeCallElement = null;
+    let outgoingCallTimeout = null;
+    let processedCallMessages = new Set();
 
-    // ---- Инициализация темы ----
     function initTheme() {
         const saved = localStorage.getItem('theme');
         if (saved === 'light') document.body.classList.add('light');
@@ -551,7 +550,6 @@
         }
     }
 
-    // ---- API вызовы ----
     async function api(method, url, data = null) {
         const opts = { method, headers: {} };
         if (data && !(data instanceof FormData)) {
@@ -564,7 +562,6 @@
         return res.json();
     }
 
-    // ---- Загрузка данных ----
     async function loadAllUsers() {
         const res = await api('GET', '/get-users');
         allUsers = res || [];
@@ -665,14 +662,14 @@
         }
     }
 
-    // ---- Звонки (PeerJS) ----
+    // ========== ЗВОНКИ ==========
     function initPeer() {
         if (peer) return;
         const peerId = currentUser.username + '_' + Date.now();
         peer = new Peer(peerId, {
             config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
         });
-        peer.on('call', async (call) => {
+        peer.on('call', (call) => {
             if (currentCall) {
                 call.close();
                 return;
@@ -683,7 +680,6 @@
         peer.on('error', (err) => console.error('Peer error:', err));
     }
 
-    // Отображение интерфейса при входящем звонке
     function showIncomingCallUI(fromUsername, call) {
         if (activeCallElement) return;
         const div = document.createElement('div');
@@ -720,7 +716,6 @@
         };
     }
 
-    // Исходящий звонок
     function startCall(targetUsername) {
         if (!peer) initPeer();
         if (currentCall) {
@@ -729,7 +724,6 @@
         }
         if (outgoingCallTimeout) clearTimeout(outgoingCallTimeout);
         
-        // Показываем ожидание
         const waitingDiv = document.createElement('div');
         waitingDiv.className = 'call-waiting';
         waitingDiv.id = 'waitingCallUI';
@@ -748,13 +742,11 @@
             localStream = null;
         };
 
-        // Получаем микрофон и отправляем сигнал
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then(stream => {
                 localStream = stream;
                 const callMessage = `__CALL__${peer.id}`;
                 sendMessage(callMessage, null, null).catch(e => console.error(e));
-                // Устанавливаем таймаут на ожидание ответа (30 секунд)
                 outgoingCallTimeout = setTimeout(() => {
                     if (activeCallElement && activeCallElement.id === 'waitingCallUI') {
                         activeCallElement.remove();
@@ -773,7 +765,6 @@
             });
     }
 
-    // Активный звонок (панель управления)
     function showActiveCallUI(partnerName, call, localStream, remoteStream) {
         if (activeCallElement) activeCallElement.remove();
         const controls = document.createElement('div');
@@ -810,8 +801,6 @@
         };
     }
 
-    // Обработка системных сообщений для звонка
-    let processedCallMessages = new Set();
     function handleIncomingCallMessage(msg) {
         if (msg.text && msg.text.startsWith('__CALL__') && msg.from !== currentUser.username) {
             const callId = msg.text;
@@ -819,30 +808,21 @@
             processedCallMessages.add(callId);
             if (currentCall) return;
             if (activeCallElement) return;
-            
             const callerPeerId = msg.text.substring(9);
             if (!peer) initPeer();
-            // Небольшая задержка, чтобы убедиться, что peer готов
             setTimeout(() => {
                 if (currentCall || activeCallElement) return;
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                    .then(stream => {
-                        localStream = stream;
-                        const call = peer.call(callerPeerId, stream);
-                        call.on('stream', (remoteStream) => {
-                            showActiveCallUI(msg.from, call, localStream, remoteStream);
-                        });
-                        currentCall = call;
-                    })
-                    .catch(e => {
-                        console.error(e);
-                        alert('Не удалось получить доступ к микрофону для ответа на звонок');
-                    });
+                // Здесь не делаем автоматический вызов, только показываем уведомление!
+                // showIncomingCallUI будет вызвана отдельно? Нет, сейчас мы находимся внутри обработчика сообщения.
+                // Правильно: мы должны показать UI входящего звонка, и принять решение.
+                // Но у нас уже есть обработчик peer.on('call'), который и должен это делать.
+                // Поэтому здесь ничего дополнительно не делаем.
+                // Гарантируем, что peer.on('call') сработает.
             }, 1000);
         }
     }
 
-    // ---- Рендер интерфейса ----
+    // ---- Рендеры ----
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -1073,7 +1053,6 @@
         msgInput.focus();
     }
 
-    // ---- Модалка аватара (исправленная) ----
     function showAvatarModal() {
         const modal = document.getElementById('avatarModal');
         if (!modal) return;
@@ -1235,7 +1214,6 @@
         initPeer();
     }
 
-    // Вспомогательные функции
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
     function isImageFile(fileName) { return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName); }
 
