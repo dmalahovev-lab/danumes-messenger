@@ -403,10 +403,703 @@
         }
     }
 
-    // ========== РЕНДЕРЫ ==========
-    // (здесь идут функции renderSidebar, renderMessages, renderChat, модалки, настройки и т.д.)
-    // Из-за огромного объёма я продолжу в следующем сообщении.
-    // Но чтобы вы могли сразу получить рабочий код, я дам ссылку на полный файл (в виде продолжения).
+        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ РЕНДЕРИНГА ==========
+    function renderSidebar() {
+        const sidebarDiv = document.getElementById('sidebar');
+        if (!sidebarDiv) return;
+        let filtered = chats.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        let html = `
+            <div class="sidebar-header">
+                <div class="logo">DanuMes</div>
+                <div class="header-buttons">
+                    <button class="create-group-btn" id="createGroupBtn">👥+</button>
+                    <button class="theme-toggle" id="themeToggle">🌓</button>
+                    <button class="settings-btn" id="settingsBtn">⚙️</button>
+                    <button class="profile-btn" id="profileBtn">${currentUser.avatar}</button>
+                </div>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Поиск" value="${escapeHtml(searchQuery)}">
+            </div>
+            <div class="chats-list" id="chatsList">
+        `;
+        filtered.forEach(chat => {
+            const activeClass = (currentChat === chat.id && currentChatType === chat.type) ? 'active' : '';
+            let nameHtml = escapeHtml(chat.name);
+            if (chat.type === 'user' && chat.verified) nameHtml += ' <span class="verified-badge">✓</span>';
+            if (chat.type === 'user' && chat.online) nameHtml += ' <span class="online-dot"></span>';
+            let avatarAttr = '';
+            if (chat.type === 'user' && (chat.name === 'Danumala' || chat.name === 'RunFly')) {
+                avatarAttr = `data-avatar="${chat.name}"`;
+            }
+            html += `<div class="chat-item ${activeClass}" data-type="${chat.type}" data-id="${chat.id}">
+                        <div class="chat-avatar" ${avatarAttr}>${chat.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${nameHtml}</div>
+                            <div class="chat-lastmsg">${escapeHtml(chat.lastMessage)}</div>
+                        </div>
+                    </div>`;
+        });
+        html += `</div>`;
+        sidebarDiv.innerHTML = html;
+
+        document.querySelectorAll('.chat-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const newType = el.dataset.type;
+                const newId = el.dataset.id;
+                if (!newId) return;
+                if (currentChat !== newId || currentChatType !== newType) {
+                    // Сохраняем черновик текущего чата
+                    const draftInput = document.getElementById('messageInput');
+                    if (draftInput && currentChat) {
+                        saveDraftToServer(draftInput.value);
+                    }
+                    currentChatType = newType;
+                    currentChat = newId;
+                    messages = [];
+                    renderChat();
+                    loadMessages();
+                    renderSidebar();
+                }
+            });
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                if (searchTimeout) clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => { searchQuery = e.target.value; renderSidebar(); }, 300);
+            });
+        }
+        const profileBtn = document.getElementById('profileBtn');
+        if (profileBtn) profileBtn.onclick = () => { showAvatarModal(); };
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) themeBtn.onclick = toggleTheme;
+        const createGroupBtn = document.getElementById('createGroupBtn');
+        if (createGroupBtn) createGroupBtn.onclick = showCreateGroupModal;
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) settingsBtn.onclick = showSettingsModal;
+    }
+
+    // Рендер сообщений с реакциями и контекстным меню (редактирование, удаление)
+    function renderMessages() {
+        const container = document.getElementById('messagesList');
+        if (!container) return;
+        if (!currentChat) {
+            container.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Выберите чат</div>`;
+            return;
+        }
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Нет сообщений. Напишите первое!</div>`;
+            return;
+        }
+        let html = '';
+        messages.forEach(msg => {
+            const isOwn = msg.from_user === currentUser.username;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            let content = '';
+            if (msg.file_url && isImageFile(msg.file_name)) {
+                content += `<img src="${msg.file_url}" class="message-image" data-url="${msg.file_url}">`;
+            } else if (msg.file_url) {
+                content += `<a href="${msg.file_url}" download class="file-attach" data-url="${msg.file_url}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
+            }
+            if (msg.text) {
+                content += `<div class="message-text" data-msg-id="${msg.id}" data-original-text="${escapeHtml(msg.text)}">${escapeHtml(msg.text)}</div>`;
+            }
+            if (msg.edited) {
+                content += `<span class="edited-mark" style="font-size:10px; opacity:0.5; margin-left:5px;">(ред.)</span>`;
+            }
+            // Реакции
+            let reactionsHtml = '';
+            if (msg.reactions && msg.reactions.length) {
+                const grouped = msg.reactions.reduce((acc, r) => {
+                    acc[r.reaction] = (acc[r.reaction] || 0) + 1;
+                    return acc;
+                }, {});
+                reactionsHtml = `<div class="reactions-container" style="display:flex; gap:6px; margin-top:4px;">`;
+                for (let [reaction, count] of Object.entries(grouped)) {
+                    const userReacted = msg.reactions.some(r => r.username === currentUser.username && r.reaction === reaction);
+                    reactionsHtml += `<span class="reaction-badge" data-msg-id="${msg.id}" data-reaction="${reaction}" style="cursor:pointer; ${userReacted ? 'background:#3b82f6;' : ''}">${reaction} ${count}</span>`;
+                }
+                reactionsHtml += `</div>`;
+            }
+            let senderName = '';
+            if (currentChatType === 'group' && !isOwn) {
+                senderName = `<div class="message-sender">${escapeHtml(msg.from_user)}</div>`;
+            }
+            html += `<div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from_user}" data-file-url="${msg.file_url || ''}">
+                        <div class="message-bubble" id="bubble-${msg.id}">
+                            ${senderName}
+                            ${content}
+                            ${reactionsHtml}
+                            <div class="message-time">${time}</div>
+                        </div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+
+        // Обработка кликов по реакциям
+        document.querySelectorAll('.reaction-badge').forEach(el => {
+            el.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const msgId = el.dataset.msgId;
+                const reaction = el.dataset.reaction;
+                // Проверяем, поставил ли уже пользователь такую реакцию
+                const msg = messages.find(m => m.id == msgId);
+                const hasReacted = msg.reactions.some(r => r.username === currentUser.username && r.reaction === reaction);
+                if (hasReacted) {
+                    await removeReaction(msgId);
+                } else {
+                    await addReaction(msgId, reaction);
+                }
+            });
+        });
+
+        // Контекстное меню (ПКМ) – редактирование, удаление, реакции (вынесены отдельно)
+        document.querySelectorAll('.message').forEach(msgEl => {
+            msgEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const msgId = msgEl.dataset.msgId;
+                const msgFrom = msgEl.dataset.msgFrom;
+                const fileUrl = msgEl.dataset.fileUrl;
+                const isOwn = msgFrom === currentUser.username;
+                const items = [];
+                if (isOwn) {
+                    items.push({ label: '✏️ Редактировать', action: () => {
+                        const textDiv = msgEl.querySelector('.message-text');
+                        if (!textDiv) return;
+                        const originalText = textDiv.dataset.originalText || textDiv.textContent;
+                        const bubble = msgEl.querySelector('.message-bubble');
+                        const editHtml = `<input type="text" class="edit-input" value="${escapeHtml(originalText)}"><button class="save-edit" style="margin-left:6px;">✓</button>`;
+                        const originalContent = bubble.innerHTML;
+                        bubble.innerHTML = editHtml;
+                        const input = bubble.querySelector('.edit-input');
+                        input.focus();
+                        const saveBtn = bubble.querySelector('.save-edit');
+                        const saveHandler = async () => {
+                            const newText = input.value.trim();
+                            if (newText && newText !== originalText) {
+                                await editMessage(msgId, newText);
+                            }
+                            bubble.innerHTML = originalContent;
+                            // перепривяжем обработчики
+                            attachMsgHandlers();
+                        };
+                        saveBtn.onclick = saveHandler;
+                        input.onkeypress = (e) => { if (e.key === 'Enter') saveHandler(); };
+                    }});
+                }
+                if (fileUrl) {
+                    items.push({ label: '📥 Скачать файл', action: () => window.open(fileUrl, '_blank') });
+                }
+                if (isOwn) {
+                    items.push({ label: '🗑 Удалить сообщение', action: () => deleteMessage(msgId) });
+                }
+                if (items.length) showContextMenu(e, items);
+            });
+        });
+
+        function attachMsgHandlers() {
+            document.querySelectorAll('.message-image').forEach(img => {
+                img.addEventListener('click', (e) => { e.stopPropagation(); showLightbox(img.src); });
+            });
+        }
+        attachMsgHandlers();
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function renderChat() {
+        const mainDiv = document.getElementById('chatMain');
+        if (!mainDiv) return;
+        if (!currentChat) {
+            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; opacity:0.6;">✨ Выберите чат ✨</div>`;
+            return;
+        }
+        let chatInfo = { name: currentChat, avatar: '💬' };
+        if (currentChatType === 'user') {
+            const found = chats.find(c => c.type === 'user' && c.id === currentChat);
+            if (found) chatInfo = found;
+        } else if (currentChatType === 'channel') {
+            const found = chats.find(c => c.type === 'channel' && c.id === currentChat);
+            if (found) chatInfo = found;
+        } else if (currentChatType === 'group') {
+            const found = chats.find(c => c.type === 'group' && c.id === currentChat);
+            if (found) chatInfo = found;
+        }
+        let avatarAttr = '';
+        if (currentChatType === 'user' && (chatInfo.name === 'Danumala' || chatInfo.name === 'RunFly')) {
+            avatarAttr = `data-avatar="${chatInfo.name}"`;
+        }
+        mainDiv.innerHTML = `
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-avatar" id="chatHeaderAvatar" ${avatarAttr}>${chatInfo.avatar}</div>
+                <div class="chat-header-info"><h3>${escapeHtml(chatInfo.name)}</h3></div>
+                <button id="stickerBtn" style="background:none; border:none; font-size:24px; cursor:pointer;">😜</button>
+                <button id="gifBtn" style="background:none; border:none; font-size:24px; cursor:pointer;">🎞️</button>
+            </div>
+            <div class="messages-area" id="messagesList"></div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Сообщение">
+                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                    <label class="file-btn" id="fileLabel">📎</label>
+                    <input type="file" id="fileInput" style="display:none">
+                </div>
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+            <div id="emojiPicker" class="emoji-picker" style="display:none; position:absolute; bottom:70px; left:20px; background:rgba(30,40,50,0.95); backdrop-filter:blur(20px); border-radius:20px; padding:12px; width:280px; z-index:1500;">
+                <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+            <div id="stickerPanel" class="sticker-panel" style="display:none;">
+                <div class="sticker-grid" id="stickerGrid"></div>
+            </div>
+            <div id="gifPanel" class="sticker-panel" style="display:none;">
+                <input type="text" id="gifSearchInput" class="gif-search" placeholder="Поиск GIF...">
+                <div class="sticker-grid" id="gifGrid"></div>
+            </div>
+        `;
+
+        renderMessages();
+        attachInputHandlers();
+
+        function attachInputHandlers() {
+            const msgInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const fileLabel = document.getElementById('fileLabel');
+            const fileInput = document.getElementById('fileInput');
+            const emojiBtn = document.getElementById('emojiBtn');
+            const emojiPicker = document.getElementById('emojiPicker');
+            const emojiGrid = document.getElementById('emojiGrid');
+            const stickerBtn = document.getElementById('stickerBtn');
+            const stickerPanel = document.getElementById('stickerPanel');
+            const stickerGrid = document.getElementById('stickerGrid');
+            const gifBtn = document.getElementById('gifBtn');
+            const gifPanel = document.getElementById('gifPanel');
+            const gifSearch = document.getElementById('gifSearchInput');
+            const gifGrid = document.getElementById('gifGrid');
+
+            if (emojiGrid && emojiGrid.children.length === 0) {
+                const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉','😍','🤔','😂','🥲','😭','😡','🥺','🤯','💀','👾','🎈','🍕','⚽','🎵','📷','🔒'];
+                emojis.forEach(e => {
+                    const div = document.createElement('div');
+                    div.className = 'emoji-option';
+                    div.textContent = e;
+                    div.onclick = () => {
+                        msgInput.value += e;
+                        msgInput.focus();
+                        emojiPicker.style.display = 'none';
+                    };
+                    emojiGrid.appendChild(div);
+                });
+            }
+            if (stickerGrid && stickerGrid.children.length === 0) {
+                const stickers = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
+                stickers.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'sticker';
+                    div.textContent = s;
+                    div.onclick = () => {
+                        msgInput.value += s;
+                        stickerPanel.style.display = 'none';
+                        msgInput.focus();
+                    };
+                    stickerGrid.appendChild(div);
+                });
+            }
+
+            async function searchGifs(query) {
+                if (!query) return;
+                const apiKey = 'YOUR_GIPHY_API_KEY'; // Замени на свой ключ (бесплатно на giphy.com)
+                const url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=12`;
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.data) {
+                        gifGrid.innerHTML = '';
+                        data.data.forEach(gif => {
+                            const img = document.createElement('img');
+                            img.src = gif.images.fixed_height_small.url;
+                            img.style.width = '100%';
+                            img.style.cursor = 'pointer';
+                            img.onclick = () => {
+                                sendMessage(null, gif.images.original.url, gif.title || 'GIF');
+                                gifPanel.style.display = 'none';
+                                gifSearch.value = '';
+                            };
+                            gifGrid.appendChild(img);
+                        });
+                    }
+                } catch(e) { console.error(e); }
+            }
+
+            if (gifSearch) {
+                gifSearch.addEventListener('input', (e) => searchGifs(e.target.value));
+            }
+            emojiBtn.onclick = (e) => {
+                e.stopPropagation();
+                emojiPicker.style.display = emojiPicker.style.display === 'flex' ? 'none' : 'flex';
+                stickerPanel.style.display = 'none';
+                gifPanel.style.display = 'none';
+            };
+            stickerBtn.onclick = () => {
+                stickerPanel.style.display = stickerPanel.style.display === 'flex' ? 'none' : 'flex';
+                emojiPicker.style.display = 'none';
+                gifPanel.style.display = 'none';
+            };
+            gifBtn.onclick = () => {
+                gifPanel.style.display = gifPanel.style.display === 'flex' ? 'none' : 'flex';
+                emojiPicker.style.display = 'none';
+                stickerPanel.style.display = 'none';
+                if (gifSearch && !gifSearch.value) searchGifs('funny');
+            };
+            document.addEventListener('click', (e) => {
+                if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.style.display = 'none';
+                if (stickerPanel && !stickerPanel.contains(e.target) && e.target !== stickerBtn) stickerPanel.style.display = 'none';
+                if (gifPanel && !gifPanel.contains(e.target) && e.target !== gifBtn) gifPanel.style.display = 'none';
+            });
+
+            const send = async () => {
+                const text = msgInput.value.trim();
+                if (fileInput.files.length) {
+                    const file = fileInput.files[0];
+                    const up = await uploadFile(file);
+                    if (up.success) {
+                        await sendMessage(text, up.fileUrl, up.fileName);
+                        fileInput.value = '';
+                    }
+                } else if (text) {
+                    await sendMessage(text);
+                }
+                msgInput.value = '';
+                saveDraftToServer(''); // очищаем черновик
+                msgInput.focus();
+            };
+
+            sendBtn.onclick = send;
+            msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+            fileLabel.onclick = () => fileInput.click();
+            fileInput.onchange = () => send();
+            msgInput.focus();
+
+            // Загружаем черновик для этого чата
+            const draftKey = `${currentChat}_${currentChatType}`;
+            if (drafts[draftKey]) msgInput.value = drafts[draftKey];
+            msgInput.addEventListener('input', () => {
+                saveDraftToServer(msgInput.value);
+            });
+        }
+    }
+
+    // ========== МОДАЛКИ И НАСТРОЙКИ ==========
+    function showAvatarModal() {
+        const modal = document.getElementById('avatarModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const grid = document.getElementById('avatarEmojiGrid');
+        if (grid && grid.children.length === 0) {
+            const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
+            emojis.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'emoji-option';
+                div.textContent = e;
+                div.style.fontSize = '32px';
+                div.style.cursor = 'pointer';
+                div.onclick = () => { updateAvatar(e); modal.style.display = 'none'; };
+                grid.appendChild(div);
+            });
+            const closeBtn = document.getElementById('closeAvatarModal');
+            if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+        }
+    }
+
+    function showSettingsModal() {
+        let modal = document.getElementById('settingsModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'settingsModal';
+            modal.className = 'modal settings-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Настройки</h3>
+                    <div class="settings-section">
+                        <h4>🎨 Тема оформления</h4>
+                        <div>
+                            <div class="theme-option dark-theme" data-theme="dark" style="background:#1a2a3a;">🌙</div>
+                            <div class="theme-option light-theme" data-theme="light" style="background:#f0f4f8;">☀️</div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h4>🖼️ Фон чата</h4>
+                        <div>
+                            <div class="chat-bg-option default" data-bg="default">По умолчанию</div>
+                            <div class="chat-bg-option" data-bg="https://www.transparenttextures.com/patterns/dark-mosaic.png">Тёмный узор</div>
+                            <div class="chat-bg-option" data-bg="https://www.transparenttextures.com/patterns/light-wool.png">Светлый узор</div>
+                            <div class="chat-bg-option" data-bg="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500">Градиент</div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h4>🔔 Уведомления</h4>
+                        <button id="enableNotificationsBtn" style="background:#3b82f6; border:none; padding:8px 16px; border-radius:20px;">Включить уведомления</button>
+                    </div>
+                    ${currentUser.role === 'admin' ? '<div class="settings-section"><h4>👑 Админ-панель</h4><button id="openAdminBtn" style="background:#8b5cf6; border:none; padding:8px 16px; border-radius:20px;">Управление пользователями</button></div>' : ''}
+                    <button id="closeSettingsBtn" class="close-modal" style="margin-top:20px;">Закрыть</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+
+        document.querySelectorAll('.theme-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newTheme = btn.dataset.theme;
+                theme = newTheme;
+                localStorage.setItem('theme', theme);
+                document.body.classList.remove('dark', 'light');
+                document.body.classList.add(theme);
+            });
+        });
+        document.querySelectorAll('.chat-bg-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const bg = btn.dataset.bg;
+                if (bg === 'default') {
+                    customChatBg = null;
+                    localStorage.removeItem('customChatBg');
+                    document.querySelector('.chat-main').style.backgroundImage = '';
+                } else {
+                    customChatBg = bg;
+                    localStorage.setItem('customChatBg', bg);
+                    document.querySelector('.chat-main').style.backgroundImage = `url(${bg})`;
+                }
+            });
+        });
+        document.getElementById('enableNotificationsBtn')?.addEventListener('click', requestNotificationPermission);
+        document.getElementById('openAdminBtn')?.addEventListener('click', () => {
+            openAdminPanel();
+            modal.style.display = 'none';
+        });
+        document.getElementById('closeSettingsBtn').onclick = () => modal.style.display = 'none';
+    }
+
+    async function openAdminPanel() {
+        const users = await api('GET', '/admin/users');
+        const modal = document.createElement('div');
+        modal.className = 'admin-panel';
+        modal.innerHTML = `<h3 style="color:white;">Админ-панель</h3><div id="adminUsersList"></div><button id="closeAdminBtn">Закрыть</button>`;
+        const listDiv = modal.querySelector('#adminUsersList');
+        users.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'admin-user';
+            div.innerHTML = `<span>${escapeHtml(u.username)} (${u.role})</span>
+                             <select data-user="${u.username}" class="role-select">
+                                 <option value="user" ${u.role === 'user' ? 'selected' : ''}>Пользователь</option>
+                                 <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
+                             </select>`;
+            listDiv.appendChild(div);
+        });
+        modal.querySelector('#closeAdminBtn').onclick = () => modal.remove();
+        document.body.appendChild(modal);
+
+        document.querySelectorAll('.role-select').forEach(select => {
+            select.addEventListener('change', async (e) => {
+                const targetUser = select.dataset.user;
+                const newRole = select.value;
+                await api('POST', '/admin/set-role', { adminUsername: currentUser.username, targetUsername: targetUser, role: newRole });
+                alert(`Роль ${targetUser} изменена на ${newRole}`);
+            });
+        });
+    }
+
+    function showCreateGroupModal() {
+        const modal = document.getElementById('groupModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const membersContainer = document.getElementById('groupMembersList');
+        if (membersContainer && membersContainer.children.length === 0 && allUsers.length) {
+            allUsers.forEach(u => {
+                if (u.username !== currentUser.username) {
+                    const div = document.createElement('div');
+                    div.className = 'member-item';
+                    div.innerHTML = `<input type="checkbox" value="${u.username}" id="member_${u.username}"> <label for="member_${u.username}">${escapeHtml(u.username)}</label>`;
+                    membersContainer.appendChild(div);
+                }
+            });
+        }
+        const createBtn = document.getElementById('confirmCreateGroup');
+        const cancelBtn = document.getElementById('cancelCreateGroup');
+        const groupNameInput = document.getElementById('groupNameInput');
+        const newCreateHandler = async () => {
+            const name = groupNameInput.value.trim();
+            if (!name) { alert('Введите название группы'); return; }
+            const selected = [];
+            document.querySelectorAll('#groupMembersList input:checked').forEach(cb => selected.push(cb.value));
+            await createGroup(name, selected);
+            modal.style.display = 'none';
+            groupNameInput.value = '';
+            document.querySelectorAll('#groupMembersList input').forEach(cb => cb.checked = false);
+            createBtn.removeEventListener('click', newCreateHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+        const cancelHandler = () => {
+            modal.style.display = 'none';
+            groupNameInput.value = '';
+            document.querySelectorAll('#groupMembersList input').forEach(cb => cb.checked = false);
+            createBtn.removeEventListener('click', newCreateHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+        createBtn.addEventListener('click', newCreateHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+    }
+
+    // ========== АВТОРИЗАЦИЯ ==========
+    function renderAuth() {
+        document.getElementById('app').innerHTML = `
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>DanuMes</h2>
+                    <div class="tabs">
+                        <div class="tab active" id="loginTab">Вход</div>
+                        <div class="tab" id="regTab">Регистрация</div>
+                    </div>
+                    <div id="loginPanel" class="auth-form">
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                        <div id="loginError" class="error-text"></div>
+                        <button id="doLogin" class="auth-btn">Войти</button>
+                    </div>
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+                        <div id="regError" class="error-text"></div>
+                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'flex';
+            document.getElementById('regPanel').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('regTab').classList.remove('active');
+        };
+        document.getElementById('regTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('regPanel').style.display = 'flex';
+            document.getElementById('regTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
+        document.getElementById('doLogin').onclick = async () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const res = await api('POST', '/login-attempt', { username, password });
+            if (res.success) {
+                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified, role: res.role };
+                await loadAllUsers();
+                await loadDrafts();
+                await loadChatsAndChannels();
+                startMessenger();
+            } else {
+                document.getElementById('loginError').innerText = res.error;
+            }
+        };
+        document.getElementById('doReg').onclick = async () => {
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const res = await api('POST', '/register-attempt', { username, password });
+            if (res.success) {
+                alert('Регистрация успешна! Теперь войдите.');
+                document.getElementById('loginTab').click();
+            } else {
+                document.getElementById('regError').innerText = res.error;
+            }
+        };
+    }
+
+    function startMessenger() {
+        document.getElementById('app').innerHTML = `
+            <div class="messenger">
+                <div class="sidebar" id="sidebar"></div>
+                <div class="chat-main" id="chatMain" style="${customChatBg ? `background-image: url(${customChatBg}); background-size: cover; background-position: center;` : ''}"></div>
+            </div>
+            <div id="avatarModal" class="modal">
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Выбери аватар</h3>
+                    <div class="emoji-grid" id="avatarEmojiGrid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px;"></div>
+                    <button id="closeAvatarModal" class="close-modal">Закрыть</button>
+                </div>
+            </div>
+            <div id="groupModal" class="modal group-modal">
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Создать группу</h3>
+                    <input type="text" id="groupNameInput" placeholder="Название группы">
+                    <div class="members-list" id="groupMembersList"></div>
+                    <button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button>
+                    <button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button>
+                </div>
+            </div>
+        `;
+        renderSidebar();
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            if (currentChat) loadMessages();
+            loadChatsAndChannels();
+            loadAllUsers();
+        }, 3000);
+        setTimeout(() => {
+            const profileBtn = document.getElementById('profileBtn');
+            if (profileBtn) profileBtn.onclick = showAvatarModal;
+        }, 100);
+    }
+
+    // Вспомогательные функции
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+    function isImageFile(fileName) { return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName); }
+
+    let activeMenu = null;
+    function showContextMenu(e, items) {
+        if (activeMenu) activeMenu.remove();
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        items.forEach(item => {
+            const option = document.createElement('div');
+            option.textContent = item.label;
+            option.onclick = (ev) => { ev.stopPropagation(); item.action(); menu.remove(); activeMenu = null; };
+            menu.appendChild(option);
+        });
+        document.body.appendChild(menu);
+        let left = e.clientX, top = e.clientY;
+        if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
+        if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        activeMenu = menu;
+        const closeMenu = () => { if(activeMenu) activeMenu.remove(); activeMenu = null; document.removeEventListener('click', closeMenu); };
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
+        e.preventDefault();
+    }
+
+    function showLightbox(url) {
+        let lb = document.getElementById('lightbox');
+        if (!lb) {
+            lb = document.createElement('div');
+            lb.id = 'lightbox';
+            lb.className = 'lightbox';
+            lb.innerHTML = '<img src="">';
+            lb.onclick = () => lb.style.display = 'none';
+            document.body.appendChild(lb);
+        }
+        lb.style.display = 'flex';
+        lb.querySelector('img').src = url;
+    }
+
+    function toggleTheme() {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', theme);
+        document.body.classList.remove('dark', 'light');
+        document.body.classList.add(theme);
+    }
+
+    initTheme();
+    renderAuth();
 </script>
 </body>
 </html>
