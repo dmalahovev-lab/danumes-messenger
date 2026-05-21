@@ -7,13 +7,11 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Конфигурация Supabase
 const SUPABASE_URL = 'https://uqlihmsrxmjeqlddztuq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxbGlobXNyeG1qZXFsZGR6dHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjQ3NTEsImV4cCI6MjA5NDg0MDc1MX0.NjTgmgL9SrW0taod0aEETjqe56BtyA7c8m7Hw_fyJu8';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Папка для временного хранения файлов
 const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
@@ -34,18 +32,18 @@ app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
     const { data: existing } = await supabase.from('users').select('username').eq('username', username);
-    if (existing && existing.length > 0) return res.json({ success: false, error: 'Пользователь уже существует' });
-    const { error } = await supabase.from('users').insert([{ username, password, avatar: '👤', online: false, verified: false }]);
+    if (existing && existing.length) return res.json({ success: false, error: 'Пользователь уже существует' });
+    const { error } = await supabase.from('users').insert([{ username, password, avatar: '👤', online: false, verified: false, role: 'user' }]);
     if (error) return res.json({ success: false, error: error.message });
     res.json({ success: true });
 });
 
 app.post('/login-attempt', async (req, res) => {
     const { username, password } = req.body;
-    const { data } = await supabase.from('users').select('username, avatar, verified').eq('username', username).eq('password', password);
+    const { data } = await supabase.from('users').select('username, avatar, verified, role').eq('username', username).eq('password', password);
     if (!data || data.length === 0) return res.json({ success: false, error: 'Неверные имя или пароль' });
     await supabase.from('users').update({ online: true }).eq('username', username);
-    res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
+    res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified, role: data[0].role });
 });
 
 app.post('/logout', async (req, res) => {
@@ -55,7 +53,7 @@ app.post('/logout', async (req, res) => {
 });
 
 app.get('/get-users', async (req, res) => {
-    const { data } = await supabase.from('users').select('username, avatar, online, verified');
+    const { data } = await supabase.from('users').select('username, avatar, online, verified, role');
     res.json(data || []);
 });
 
@@ -65,7 +63,18 @@ app.post('/update-avatar', async (req, res) => {
     res.json({ success: true, avatar });
 });
 
-// ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
+// Админ: изменить роль
+app.post('/admin/set-role', async (req, res) => {
+    const { adminUsername, targetUsername, role } = req.body;
+    const { data: admin } = await supabase.from('users').select('role').eq('username', adminUsername);
+    if (!admin || admin[0]?.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
+    const allowedRoles = ['user', 'admin'];
+    if (!allowedRoles.includes(role)) return res.status(400).json({ error: 'Недопустимая роль' });
+    await supabase.from('users').update({ role }).eq('username', targetUsername);
+    res.json({ success: true });
+});
+
+// ========== ЛИЧНЫЕ СООБЩЕНИЯ (с поддержкой редактирования) ==========
 app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -76,51 +85,96 @@ app.post('/send-message', async (req, res) => {
         text: text || '',
         file_url: fileUrl,
         file_name: fileName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('messages').insert([newMsg]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, message: newMsg });
 });
 
-// ИСПРАВЛЕННЫЙ МАРШРУТ ПОЛУЧЕНИЯ СООБЩЕНИЙ МЕЖДУ ДВУМЯ ПОЛЬЗОВАТЕЛЯМИ
 app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
     const { data } = await supabase
         .from('messages')
         .select('*')
-        .or(`and(from_user.eq.${user1},to_user.eq.${user2}),and(from_user.eq.${user2},to_user.eq.${user1})`)
+        .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
+        .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
         .order('id', { ascending: true });
     res.json(data || []);
 });
 
-app.get('/get-chats/:username', async (req, res) => {
-    const { username } = req.params;
-    const { data: users } = await supabase.from('users').select('username, avatar, online, verified');
-    const { data: messages } = await supabase.from('messages').select('*').or(`from_user.eq.${username},to_user.eq.${username}`);
-    const chatSet = new Set();
-    (messages || []).forEach(m => {
-        if (m.from_user === username) chatSet.add(m.to_user);
-        if (m.to_user === username) chatSet.add(m.from_user);
-    });
-    users.forEach(u => { if (u.username !== username) chatSet.add(u.username); });
-    const chatList = Array.from(chatSet).map(chatUsername => {
-        const user = users.find(u => u.username === chatUsername);
-        const lastMsg = (messages || []).filter(m => (m.from_user === username && m.to_user === chatUsername) || (m.from_user === chatUsername && m.to_user === username)).sort((a,b) => b.id - a.id)[0];
-        return {
-            username: chatUsername,
-            avatar: user ? user.avatar : '👤',
-            online: user ? user.online : false,
-            verified: user ? user.verified : false,
-            lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
-            lastTime: lastMsg ? lastMsg.timestamp : null
-        };
-    });
-    chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
-    res.json(chatList);
+// Редактирование сообщения
+app.put('/edit-message/:id', async (req, res) => {
+    const { id } = req.params;
+    const { text, messageType } = req.body; // messageType: 'user', 'channel', 'group'
+    if (!text) return res.status(400).json({ error: 'Текст не может быть пустым' });
+    let table;
+    if (messageType === 'user') table = 'messages';
+    else if (messageType === 'channel') table = 'channel_messages';
+    else if (messageType === 'group') table = 'group_messages';
+    else return res.status(400).json({ error: 'Неверный тип' });
+
+    // Получаем старое сообщение
+    const { data: oldMsg } = await supabase.from(table).select('text').eq('id', parseInt(id));
+    if (!oldMsg || oldMsg.length === 0) return res.status(404).json({ error: 'Сообщение не найдено' });
+
+    // Обновляем
+    const { error } = await supabase.from(table).update({ text, edited: true }).eq('id', parseInt(id));
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Сохраняем историю правок
+    await supabase.from('message_edits').insert([{
+        message_id: parseInt(id),
+        message_type: messageType,
+        old_text: oldMsg[0].text,
+        new_text: text
+    }]);
+    res.json({ success: true });
 });
 
-// ========== КАНАЛЫ ==========
+// Реакции
+app.post('/reaction', async (req, res) => {
+    const { messageId, messageType, username, reaction } = req.body;
+    if (!messageId || !messageType || !username || !reaction) return res.status(400).json({ error: 'Недостаточно данных' });
+    // Удаляем старую реакцию пользователя на это сообщение (если была)
+    await supabase.from('reactions').delete().eq('message_id', messageId).eq('message_type', messageType).eq('username', username);
+    // Вставляем новую
+    const { error } = await supabase.from('reactions').insert([{ message_id: messageId, message_type: messageType, username, reaction }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+app.delete('/reaction', async (req, res) => {
+    const { messageId, messageType, username } = req.body;
+    await supabase.from('reactions').delete().eq('message_id', messageId).eq('message_type', messageType).eq('username', username);
+    res.json({ success: true });
+});
+
+app.get('/get-reactions/:messageId/:messageType', async (req, res) => {
+    const { messageId, messageType } = req.params;
+    const { data } = await supabase.from('reactions').select('username, reaction').eq('message_id', parseInt(messageId)).eq('message_type', messageType);
+    res.json(data || []);
+});
+
+// ========== ЧЕРНОВИКИ ==========
+app.get('/drafts/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data } = await supabase.from('drafts').select('*').eq('username', username);
+    res.json(data || []);
+});
+
+app.post('/drafts', async (req, res) => {
+    const { username, chatId, chatType, draftText } = req.body;
+    if (!username || !chatId || !chatType) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { error } = await supabase.from('drafts').upsert([{ username, chat_id: chatId, chat_type: chatType, draft_text: draftText, updated_at: new Date() }], {
+        onConflict: 'username, chat_id, chat_type'
+    });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+// ========== КАНАЛЫ (с редактированием и реакциями) ==========
 app.get('/get-channels', async (req, res) => {
     const { data } = await supabase.from('channels').select('*');
     res.json(data || []);
@@ -146,14 +200,15 @@ app.post('/send-channel-message', async (req, res) => {
         text: text || '',
         file_url: fileUrl,
         file_name: fileName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('channel_messages').insert([newMsg]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, message: newMsg });
 });
 
-// ========== ГРУППЫ ==========
+// ========== ГРУППЫ (с редактированием и реакциями) ==========
 app.post('/create-group', async (req, res) => {
     const { name, createdBy, members } = req.body;
     if (!name || !createdBy) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -177,10 +232,7 @@ app.get('/get-groups/:username', async (req, res) => {
     const result = (groups || []).map(g => {
         const lastMsg = allGroupMessages?.find(m => m.group_id === g.id);
         return {
-            type: 'group',
-            id: g.id,
-            name: g.name,
-            avatar: g.avatar,
+            ...g,
             lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
             lastTime: lastMsg ? lastMsg.timestamp : null
         };
@@ -205,17 +257,12 @@ app.post('/send-group-message', async (req, res) => {
         text: text || '',
         file_url: fileUrl,
         file_name: fileName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('group_messages').insert([newMsg]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true, message: newMsg });
-});
-
-app.delete('/delete-group-message/:id', async (req, res) => {
-    const { id } = req.params;
-    await supabase.from('group_messages').delete().eq('id', parseInt(id));
-    res.json({ success: true });
 });
 
 // ========== ОБЩИЕ ==========
@@ -242,15 +289,16 @@ app.delete('/delete-channel-message/:id', async (req, res) => {
     res.json({ success: true });
 });
 
-// Админ-панель
-app.get('/admin', async (req, res) => {
-    const { data: users } = await supabase.from('users').select('username, password, avatar, verified');
-    let html = '<h1>Пользователи DanuMes</h1><table border="1">服务<th>Логин</th><th>Пароль</th><th>Аватар</th><th>Верифицирован</th></tr>';
-    (users || []).forEach(u => {
-        html += `<tr><td>${u.username}</td><td>${u.password}</td><td>${u.avatar}</td><td>${u.verified ? 'Да' : 'Нет'}</td></tr>`;
-    });
-    html += '</table><p><a href="/">Вернуться в чат</a></p>';
-    res.send(html);
+app.delete('/delete-group-message/:id', async (req, res) => {
+    const { id } = req.params;
+    await supabase.from('group_messages').delete().eq('id', parseInt(id));
+    res.json({ success: true });
+});
+
+// ========== АДМИН-ПАНЕЛЬ (список пользователей) ==========
+app.get('/admin/users', async (req, res) => {
+    const { data } = await supabase.from('users').select('username, avatar, verified, role');
+    res.json(data || []);
 });
 
 app.listen(PORT, () => console.log(`🚀 Сервер Supabase запущен на порту ${PORT}`));
