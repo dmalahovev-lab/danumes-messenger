@@ -150,7 +150,7 @@
         body.dark .bottom-btn { color: #e5e7eb; }
         body.light .bottom-btn { color: #1f2937; }
         .bottom-btn:hover { background: rgba(0,0,0,0.1); }
-        /* Средняя колонка: друзья */
+        /* Правая колонка: друзья */
         .friends-panel {
             width: 280px;
             display: flex;
@@ -390,7 +390,6 @@
             cursor: pointer;
             color: white;
         }
-        /* Контекстное меню */
         .context-menu {
             position: fixed;
             background: rgba(30,30,40,0.95);
@@ -421,7 +420,6 @@
             cursor: pointer;
         }
         .lightbox img { max-width: 90%; max-height: 90%; border-radius: 16px; }
-        /* Модалки */
         .modal {
             display: none;
             position: fixed;
@@ -462,7 +460,6 @@
             width: 100%;
             cursor: pointer;
         }
-        /* Стикеры */
         .sticker-panel {
             position: absolute;
             bottom: 70px;
@@ -483,7 +480,6 @@
             overflow-y: auto;
         }
         .sticker { font-size: 32px; cursor: pointer; text-align: center; padding: 4px; }
-        /* Шаг создания группы */
         .group-step { margin-bottom: 20px; }
         .group-step input {
             width: 100%;
@@ -570,8 +566,11 @@
             border-radius: 60px;
             font-size: 16px;
             outline: none;
+            color: #e5e7eb;
         }
         body.light .input-group input { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1f2937; }
+        .input-group input::placeholder { color: rgba(255,255,255,0.5); }
+        body.light .input-group input::placeholder { color: rgba(0,0,0,0.4); }
         .auth-btn {
             width: 100%;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
@@ -629,15 +628,17 @@
     let theme = localStorage.getItem('theme') || 'dark';
     let showFriendsPanel = false;
 
-    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-    function initTheme() {
-        document.body.classList.remove('dark', 'light');
-        document.body.classList.add(theme);
-        const chatMain = document.querySelector('.chat-main');
-        if (chatMain && customChatBg) {
-            chatMain.style.backgroundImage = `url(${customChatBg})`;
-            chatMain.classList.add('custom-chat-bg');
+    // ========== API ВЫЗОВЫ ==========
+    async function api(method, url, data = null) {
+        const opts = { method, headers: {} };
+        if (data && !(data instanceof FormData)) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(data);
+        } else if (data instanceof FormData) {
+            opts.body = data;
         }
+        const res = await fetch(url, opts);
+        return res.json();
     }
 
     function showToast(msg) {
@@ -646,16 +647,6 @@
         toast.textContent = msg;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
-    }
-
-    async function api(method, url, data = null) {
-        const opts = { method, headers: {} };
-        if (data && !(data instanceof FormData)) {
-            opts.headers['Content-Type'] = 'application/json';
-            opts.body = JSON.stringify(data);
-        } else if (data instanceof FormData) opts.body = data;
-        const res = await fetch(url, opts);
-        return res.json();
     }
 
     async function loadAllUsers() {
@@ -804,6 +795,16 @@
         } else showToast('Ошибка', true);
     }
 
+    async function loadDrafts() {
+        const res = await api('GET', `/drafts/${currentUser.username}`);
+        for (let d of res) drafts[`${d.chat_id}_${d.chat_type}`] = d.draft_text;
+    }
+
+    async function saveDraftToServer(text) {
+        if (!currentChat) return;
+        await api('POST', '/drafts', { username: currentUser.username, chatId: currentChat, chatType: currentChatType, draftText: text });
+    }
+
     function openChatWithUser(username) {
         currentChatType = 'user';
         currentChat = username;
@@ -811,10 +812,9 @@
         renderChat();
         loadMessages();
         renderSidebar();
-        renderFriendsPanel();
     }
 
-    // ========== РЕНДЕРЫ ==========
+    // ========== РЕНДЕР ФУНКЦИИ ==========
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -1073,33 +1073,32 @@
             <div class="auth-container"><div class="auth-card"><h2>DanuMes</h2><div class="tabs"><div class="tab active" id="loginTab">Вход</div><div class="tab" id="regTab">Регистрация</div></div>
             <div id="loginPanel" class="auth-form"><div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div><div id="loginError" class="error-text"></div><button id="doLogin" class="auth-btn">Войти</button></div>
             <div id="regPanel" class="auth-form" style="display:none;"><div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div><div id="regError" class="error-text"></div><button id="doReg" class="auth-btn">Зарегистрироваться</button></div></div></div>`;
-        document.getElementById('loginTab').onclick = () => { document.getElementById('loginPanel').style.display = 'flex'; document.getElementById('regPanel').style.display = 'none'; document.getElementById('loginTab').classList.add('active'); document.getElementById('regTab').classList.remove('active'); };
-        document.getElementById('regTab').onclick = () => { document.getElementById('loginPanel').style.display = 'none'; document.getElementById('regPanel').style.display = 'flex'; document.getElementById('regTab').classList.add('active'); document.getElementById('loginTab').classList.remove('active'); };
+        const loginTab = document.getElementById('loginTab');
+        const regTab = document.getElementById('regTab');
+        const loginPanel = document.getElementById('loginPanel');
+        const regPanel = document.getElementById('regPanel');
+        loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
+        regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
         document.getElementById('doLogin').onclick = async () => {
-            const username = document.getElementById('loginUsername').value, password = document.getElementById('loginPassword').value;
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
             const res = await api('POST', '/login-attempt', { username, password });
             if (res.success) {
                 currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
                 await loadAllUsers(); await loadFriends(); await loadChatsAndChannels(); await loadDrafts();
                 startMessenger();
                 showToast(`Добро пожаловать, ${username}!`);
-            } else document.getElementById('loginError').innerText = res.error;
+            } else {
+                document.getElementById('loginError').innerText = res.error;
+            }
         };
         document.getElementById('doReg').onclick = async () => {
-            const username = document.getElementById('regUsername').value, password = document.getElementById('regPassword').value;
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
             const res = await api('POST', '/register-attempt', { username, password });
-            if (res.success) { showToast('Регистрация успешна! Войдите.'); document.getElementById('loginTab').click(); }
+            if (res.success) { showToast('Регистрация успешна! Войдите.'); loginTab.click(); }
             else document.getElementById('regError').innerText = res.error;
         };
-    }
-
-    async function loadDrafts() {
-        const res = await api('GET', `/drafts/${currentUser.username}`);
-        for (let d of res) drafts[`${d.chat_id}_${d.chat_type}`] = d.draft_text;
-    }
-
-    async function saveDraftToServer(text) {
-        await api('POST', '/drafts', { username: currentUser.username, chatId: currentChat, chatType: currentChatType, draftText: text });
     }
 
     function startMessenger() {
@@ -1115,6 +1114,16 @@
         initTheme();
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadFriends(); }, 3000);
+    }
+
+    function initTheme() {
+        document.body.classList.remove('dark', 'light');
+        document.body.classList.add(theme);
+        const chatMain = document.querySelector('.chat-main');
+        if (chatMain && customChatBg) {
+            chatMain.style.backgroundImage = `url(${customChatBg})`;
+            chatMain.classList.add('custom-chat-bg');
+        }
     }
 
     let activeMenu = null;
