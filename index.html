@@ -20,10 +20,14 @@
             background: radial-gradient(circle at 20% 30%, #e0e7ff, #f0f4f8);
             color: #1f2937;
         }
-        .messenger { display: flex; height: 100vh; width: 100%; }
+        .messenger {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
         body.dark .messenger { background: rgba(15, 25, 35, 0.4); backdrop-filter: blur(10px); }
         body.light .messenger { background: rgba(245, 245, 255, 0.6); backdrop-filter: blur(10px); }
-        /* Левая колонка (чаты) */
+        /* Левая колонка чатов */
         .sidebar {
             width: 300px;
             display: flex;
@@ -41,8 +45,18 @@
             height: 70px;
             border-bottom: 1px solid;
         }
-        .logo { font-size: 1.7rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .header-buttons { display: flex; gap: 8px; }
+        .logo {
+            font-size: 1.7rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
         .icon-btn {
             background: rgba(0,0,0,0.2);
             border: none;
@@ -55,8 +69,19 @@
             height: 40px;
             font-size: 20px;
         }
-        .profile-btn { width: 48px; height: 48px; font-size: 32px; }
-        .search-box { padding: 12px 16px; border-bottom: 1px solid; }
+        .profile-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 32px;
+            background: rgba(0,0,0,0.2);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .search-box {
+            padding: 12px 16px;
+            border-bottom: 1px solid;
+        }
         .search-box input {
             width: 100%;
             background: rgba(0,0,0,0.2);
@@ -68,7 +93,10 @@
         }
         body.dark .search-box input { color: white; background: rgba(0,0,0,0.3); }
         body.light .search-box input { color: #1f2937; background: rgba(0,0,0,0.05); }
-        .chats-list { flex: 1; overflow-y: auto; }
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+        }
         .chat-item {
             display: flex;
             align-items: center;
@@ -93,7 +121,10 @@
         }
         .chat-avatar[data-avatar="Danumala"] { background: linear-gradient(135deg, #dc2626, #ef4444); }
         .chat-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
-        .chat-info { flex: 1; min-width: 0; }
+        .chat-info {
+            flex: 1;
+            min-width: 0;
+        }
         .chat-name {
             font-weight: 600;
             font-size: 16px;
@@ -102,14 +133,20 @@
             gap: 6px;
         }
         .verified-badge { font-size: 14px; color: #3b82f6; }
-        .chat-lastmsg { font-size: 13px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; margin-left: 6px; }
-        .bottom-actions {
-            padding: 12px 16px;
-            border-top: 1px solid;
-            display: flex;
-            gap: 12px;
-            justify-content: space-around;
+        .chat-lastmsg {
+            font-size: 13px;
+            opacity: 0.7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 6px;
         }
         /* Правая панель друзей */
         .friends-panel {
@@ -117,7 +154,6 @@
             display: flex;
             flex-direction: column;
             border-left: 1px solid;
-            transition: transform 0.2s ease;
             background: inherit;
         }
         body.dark .friends-panel { background: rgba(30, 40, 50, 0.5); border-color: rgba(255,255,255,0.1); }
@@ -131,8 +167,16 @@
             justify-content: space-between;
             align-items: center;
         }
-        .close-friends { background: none; border: none; font-size: 24px; cursor: pointer; }
-        .friends-list { flex: 1; overflow-y: auto; }
+        .close-friends {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .friends-list {
+            flex: 1;
+            overflow-y: auto;
+        }
         .friend-item {
             display: flex;
             align-items: center;
@@ -150,9 +194,16 @@
             justify-content: center;
             font-size: 24px;
         }
-        .friend-info { flex: 1; }
-        .friend-name { font-weight: 500; }
-        .friend-actions { display: flex; gap: 8px; }
+        .friend-info {
+            flex: 1;
+        }
+        .friend-name {
+            font-weight: 500;
+        }
+        .friend-actions {
+            display: flex;
+            gap: 8px;
+        }
         .friend-actions button {
             background: rgba(59,130,246,0.8);
             border: none;
@@ -186,7 +237,11 @@
             cursor: pointer;
         }
         /* Основной чат */
-        .chat-main { flex: 1; display: flex; flex-direction: column; }
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
         .chat-header {
             height: 70px;
             padding: 0 20px;
@@ -220,7 +275,10 @@
             max-width: 75%;
             position: relative;
         }
-        .message-own { align-self: flex-end; flex-direction: row-reverse; }
+        .message-own {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
         .message-bubble {
             padding: 10px 16px;
             border-radius: 22px;
@@ -237,8 +295,17 @@
         }
         body.dark .message-own .message-bubble { background: linear-gradient(135deg, rgba(59,130,246,0.8), rgba(139,92,246,0.8)); }
         body.light .message-own .message-bubble { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; }
-        .message-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
-        .message-time { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 6px; }
+        .message-sender {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        .message-time {
+            font-size: 10px;
+            opacity: 0.6;
+            text-align: right;
+            margin-top: 6px;
+        }
         .file-attach {
             display: inline-block;
             margin-top: 6px;
@@ -298,6 +365,7 @@
             cursor: pointer;
             color: white;
         }
+        /* Контекстное меню */
         .context-menu {
             position: fixed;
             background: rgba(30,30,40,0.95);
@@ -319,20 +387,29 @@
         .lightbox {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0,0,0,0.9);
             justify-content: center;
             align-items: center;
             z-index: 3000;
             cursor: pointer;
         }
-        .lightbox img { max-width: 90%; max-height: 90%; border-radius: 16px; }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 16px;
+        }
+        /* Модалки */
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0,0,0,0.7);
             backdrop-filter: blur(8px);
             align-items: center;
@@ -367,7 +444,9 @@
             width: 100%;
             cursor: pointer;
         }
-        .group-modal .modal-content { width: 400px; }
+        .group-modal .modal-content {
+            width: 400px;
+        }
         .group-modal input {
             width: 100%;
             padding: 12px;
@@ -378,7 +457,12 @@
             color: white;
             outline: none;
         }
-        .members-list { max-height: 200px; overflow-y: auto; text-align: left; margin-bottom: 20px; }
+        .members-list {
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            margin-bottom: 20px;
+        }
         .member-item {
             display: flex;
             align-items: center;
@@ -386,8 +470,11 @@
             padding: 8px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .member-item input { width: auto; margin: 0; }
-        /* Auth */
+        .member-item input {
+            width: auto;
+            margin: 0;
+        }
+        /* Аuth */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -435,13 +522,19 @@
             background: transparent;
             color: rgba(255,255,255,0.7);
         }
-        body.light .tab { color: rgba(0,0,0,0.6); }
+        body.light .tab {
+            color: rgba(0,0,0,0.6);
+        }
         .tab.active {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
             box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
-        .auth-form { display: flex; flex-direction: column; gap: 20px; }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
         .input-group input {
             width: 100%;
             background: rgba(0,0,0,0.3);
@@ -452,7 +545,11 @@
             outline: none;
             color: #e5e7eb;
         }
-        body.light .input-group input { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1f2937; }
+        body.light .input-group input {
+            background: rgba(0,0,0,0.05);
+            border-color: rgba(0,0,0,0.1);
+            color: #1f2937;
+        }
         .auth-btn {
             width: 100%;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
@@ -463,7 +560,12 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
+        .error-text {
+            color: #f87171;
+            font-size: 13px;
+            text-align: center;
+            margin-top: -8px;
+        }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -483,7 +585,11 @@
             85% { opacity: 1; }
             100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
         }
-        @media (max-width: 800px) { .friends-panel { width: 260px; } }
+        @media (max-width: 800px) {
+            .friends-panel {
+                width: 260px;
+            }
+        }
     </style>
 </head>
 <body class="dark">
@@ -651,9 +757,12 @@
         renderChat();
         loadMessages();
         renderSidebar();
+        // скрыть панель друзей
+        showFriendsPanel = false;
+        renderFriendsPanel();
     }
 
-    // ========== РЕНДЕР ФУНКЦИИ ==========
+    // ========== РЕНДЕРЫ ==========
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -815,7 +924,6 @@
         }
         document.getElementById('changeUsernameBtn')?.addEventListener('click', () => { const newName = prompt('Новое имя:', currentUser.username); if (newName && newName !== currentUser.username) updateUsername(newName); });
         document.getElementById('closeSettingsModal')?.addEventListener('click', () => modal.style.display = 'none');
-        // Админ-панель для Danumala
         if (currentUser.username === 'Danumala') {
             const adminBtn = document.getElementById('adminPanelBtn');
             if (adminBtn) adminBtn.onclick = () => openAdminPanel();
@@ -887,9 +995,28 @@
 
     function renderAuth() {
         document.getElementById('app').innerHTML = `
-            <div class="auth-container"><div class="auth-card"><h2>DanuMes</h2><div class="tabs"><div class="tab active" id="loginTab">Вход</div><div class="tab" id="regTab">Регистрация</div></div>
-            <div id="loginPanel" class="auth-form"><div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div><div id="loginError" class="error-text"></div><button id="doLogin" class="auth-btn">Войти</button></div>
-            <div id="regPanel" class="auth-form" style="display:none;"><div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div><div id="regError" class="error-text"></div><button id="doReg" class="auth-btn">Зарегистрироваться</button></div></div></div>`;
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>DanuMes</h2>
+                    <div class="tabs">
+                        <div class="tab active" id="loginTab">Вход</div>
+                        <div class="tab" id="regTab">Регистрация</div>
+                    </div>
+                    <div id="loginPanel" class="auth-form">
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                        <div id="loginError" class="error-text"></div>
+                        <button id="doLogin" class="auth-btn">Войти</button>
+                    </div>
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+                        <div id="regError" class="error-text"></div>
+                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
+                    </div>
+                </div>
+            </div>
+        `;
         const loginTab = document.getElementById('loginTab');
         const regTab = document.getElementById('regTab');
         const loginPanel = document.getElementById('loginPanel');
@@ -947,11 +1074,7 @@
         }
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadFriends(); }, 3000);
-        // Тема из localStorage
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') document.body.classList.add('light');
-        else document.body.classList.add('dark');
-        // Переключатель темы (кнопка смены темы в шапке)
+        // Кнопка переключения темы в шапку
         const themeToggle = document.createElement('button');
         themeToggle.className = 'icon-btn';
         themeToggle.textContent = '🌓';
@@ -965,6 +1088,10 @@
             themeToggle.id = 'themeToggleBtn';
             headerButtons.insertBefore(themeToggle, headerButtons.firstChild);
         }
+        // Инициализация темы
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') document.body.classList.add('light');
+        else document.body.classList.add('dark');
     }
 
     // Общие вспомогательные функции
