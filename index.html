@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
+        /* ===== ТВОИ ОСНОВНЫЕ СТИЛИ (оставь как есть) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -142,7 +143,6 @@
         }
         .friend-info { flex: 1; }
         .friend-name { font-weight: 500; }
-        .friend-actions { display: flex; gap: 8px; }
         .friend-actions button {
             background: rgba(59,130,246,0.8);
             border: none;
@@ -151,6 +151,7 @@
             color: white;
             cursor: pointer;
             font-size: 12px;
+            margin-left: 5px;
         }
         .add-friend {
             padding: 12px;
@@ -664,6 +665,7 @@
                     <button class="icon-btn" id="createGroupBtn">👥+</button>
                     <button class="icon-btn" id="friendsBtn">👥</button>
                     <button class="icon-btn" id="settingsBtn">⚙️</button>
+                    <button class="icon-btn" id="themeToggleBtn">🌓</button>
                     <button class="profile-btn" id="profileBtn">${currentUser.avatar}</button>
                 </div>
             </div>
@@ -698,6 +700,11 @@
         document.getElementById('createGroupBtn').onclick = showCreateGroupModal;
         document.getElementById('friendsBtn').onclick = () => { showFriendsPanel = !showFriendsPanel; renderFriendsPanel(); };
         document.getElementById('settingsBtn').onclick = showSettingsModal;
+        document.getElementById('themeToggleBtn').onclick = () => {
+            const isDark = document.body.classList.contains('dark');
+            if (isDark) { document.body.classList.remove('dark'); document.body.classList.add('light'); localStorage.setItem('theme', 'light'); }
+            else { document.body.classList.remove('light'); document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
+        };
     }
 
     function renderFriendsPanel() {
@@ -866,7 +873,7 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth (скопирована без изменений) ==========
+    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth ==========
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
@@ -945,21 +952,6 @@
         renderSidebar();
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadFriends(); }, 3000);
-        
-        // Кнопка смены темы
-        if (!document.getElementById('themeToggleBtn')) {
-            const themeToggle = document.createElement('button');
-            themeToggle.className = 'icon-btn';
-            themeToggle.textContent = '🌓';
-            themeToggle.id = 'themeToggleBtn';
-            themeToggle.onclick = () => {
-                const isDark = document.body.classList.contains('dark');
-                if (isDark) { document.body.classList.remove('dark'); document.body.classList.add('light'); localStorage.setItem('theme', 'light'); }
-                else { document.body.classList.remove('light'); document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-            };
-            const headerButtons = document.querySelector('.header-buttons');
-            if (headerButtons) headerButtons.insertBefore(themeToggle, headerButtons.firstChild);
-        }
         
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') document.body.classList.add('light');
