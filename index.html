@@ -20,15 +20,9 @@
             background: radial-gradient(circle at 20% 30%, #e0e7ff, #f0f4f8);
             color: #1f2937;
         }
-        /* Контейнер с тремя колонками */
-        .messenger {
-            display: flex;
-            height: 100vh;
-            width: 100%;
-        }
+        .messenger { display: flex; height: 100vh; width: 100%; }
         body.dark .messenger { background: rgba(15, 25, 35, 0.4); backdrop-filter: blur(10px); }
         body.light .messenger { background: rgba(245, 245, 255, 0.6); backdrop-filter: blur(10px); }
-        /* Левая колонка: чаты */
         .sidebar {
             width: 320px;
             display: flex;
@@ -38,7 +32,6 @@
         }
         body.dark .sidebar { background: rgba(30, 40, 50, 0.5); border-color: rgba(255,255,255,0.1); }
         body.light .sidebar { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.05); }
-        /* Верхняя часть с аватаром и именем */
         .profile-header {
             padding: 20px;
             display: flex;
@@ -61,11 +54,7 @@
         .profile-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
         .profile-info h3 { font-size: 18px; margin-bottom: 4px; }
         .profile-info p { font-size: 12px; opacity: 0.7; }
-        /* Поиск */
-        .search-box {
-            padding: 12px 16px;
-            border-bottom: 1px solid;
-        }
+        .search-box { padding: 12px 16px; border-bottom: 1px solid; }
         .search-box input {
             width: 100%;
             background: rgba(0,0,0,0.2);
@@ -77,11 +66,7 @@
         }
         body.dark .search-box input { color: white; background: rgba(0,0,0,0.3); }
         body.light .search-box input { color: #1f2937; background: rgba(0,0,0,0.05); }
-        /* Список чатов */
-        .chats-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+        .chats-list { flex: 1; overflow-y: auto; }
         .chat-item {
             display: flex;
             align-items: center;
@@ -130,7 +115,6 @@
             display: inline-block;
             margin-left: 6px;
         }
-        /* Нижняя панель */
         .bottom-actions {
             padding: 12px 16px;
             border-top: 1px solid;
@@ -150,7 +134,6 @@
         body.dark .bottom-btn { color: #e5e7eb; }
         body.light .bottom-btn { color: #1f2937; }
         .bottom-btn:hover { background: rgba(0,0,0,0.1); }
-        /* Правая колонка: друзья */
         .friends-panel {
             width: 280px;
             display: flex;
@@ -170,16 +153,8 @@
             justify-content: space-between;
             align-items: center;
         }
-        .close-friends {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .friends-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+        .close-friends { background: none; border: none; font-size: 24px; cursor: pointer; }
+        .friends-list { flex: 1; overflow-y: auto; }
         .friend-item {
             display: flex;
             align-items: center;
@@ -199,10 +174,7 @@
         }
         .friend-info { flex: 1; }
         .friend-name { font-weight: 500; }
-        .friend-actions {
-            display: flex;
-            gap: 8px;
-        }
+        .friend-actions { display: flex; gap: 8px; }
         .friend-actions button {
             background: rgba(59,130,246,0.8);
             border: none;
@@ -212,11 +184,7 @@
             cursor: pointer;
             font-size: 12px;
         }
-        .friend-actions button.outline {
-            background: transparent;
-            border: 1px solid #3b82f6;
-            color: #3b82f6;
-        }
+        .friend-actions button.outline { background: transparent; border: 1px solid #3b82f6; color: #3b82f6; }
         .add-friend {
             padding: 12px;
             border-top: 1px solid;
@@ -240,18 +208,8 @@
             color: white;
             cursor: pointer;
         }
-        /* Основной чат */
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            transition: background-image 0.2s;
-        }
-        .custom-chat-bg {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
+        .chat-main { flex: 1; display: flex; flex-direction: column; transition: background-image 0.2s; }
+        .custom-chat-bg { background-size: cover; background-position: center; background-repeat: no-repeat; }
         .chat-header {
             height: 70px;
             padding: 0 20px;
@@ -303,24 +261,10 @@
         }
         body.dark .message-own .message-bubble { background: linear-gradient(135deg, rgba(59,130,246,0.8), rgba(139,92,246,0.8)); }
         body.light .message-own .message-bubble { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; }
-        .message-sender {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-        .message-time {
-            font-size: 10px;
-            opacity: 0.6;
-            text-align: right;
-            margin-top: 6px;
-        }
+        .message-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+        .message-time { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 6px; }
         .edited-badge { font-size: 9px; opacity: 0.5; margin-left: 6px; }
-        .reactions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
+        .reactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
         .reaction-badge {
             display: inline-flex;
             align-items: center;
@@ -507,7 +451,6 @@
             margin: 5px;
             cursor: pointer;
         }
-        /* Auth */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -601,9 +544,7 @@
             85% { opacity: 1; }
             100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
         }
-        @media (max-width: 800px) {
-            .friends-panel { width: 260px; }
-        }
+        @media (max-width: 800px) { .friends-panel { width: 260px; } }
     </style>
 </head>
 <body class="dark">
@@ -628,7 +569,7 @@
     let theme = localStorage.getItem('theme') || 'dark';
     let showFriendsPanel = false;
 
-    // ========== API ВЫЗОВЫ ==========
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
     async function api(method, url, data = null) {
         const opts = { method, headers: {} };
         if (data && !(data instanceof FormData)) {
@@ -1073,32 +1014,69 @@
             <div class="auth-container"><div class="auth-card"><h2>DanuMes</h2><div class="tabs"><div class="tab active" id="loginTab">Вход</div><div class="tab" id="regTab">Регистрация</div></div>
             <div id="loginPanel" class="auth-form"><div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div><div id="loginError" class="error-text"></div><button id="doLogin" class="auth-btn">Войти</button></div>
             <div id="regPanel" class="auth-form" style="display:none;"><div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div><div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div><div id="regError" class="error-text"></div><button id="doReg" class="auth-btn">Зарегистрироваться</button></div></div></div>`;
+        
+        // ПРИНУДИТЕЛЬНО НАВЕШИВАЕМ ОБРАБОТЧИКИ
         const loginTab = document.getElementById('loginTab');
         const regTab = document.getElementById('regTab');
         const loginPanel = document.getElementById('loginPanel');
         const regPanel = document.getElementById('regPanel');
-        loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
-        regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
-        document.getElementById('doLogin').onclick = async () => {
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            const res = await api('POST', '/login-attempt', { username, password });
-            if (res.success) {
-                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
-                await loadAllUsers(); await loadFriends(); await loadChatsAndChannels(); await loadDrafts();
-                startMessenger();
-                showToast(`Добро пожаловать, ${username}!`);
-            } else {
-                document.getElementById('loginError').innerText = res.error;
-            }
-        };
-        document.getElementById('doReg').onclick = async () => {
-            const username = document.getElementById('regUsername').value;
-            const password = document.getElementById('regPassword').value;
-            const res = await api('POST', '/register-attempt', { username, password });
-            if (res.success) { showToast('Регистрация успешна! Войдите.'); loginTab.click(); }
-            else document.getElementById('regError').innerText = res.error;
-        };
+        
+        if (loginTab && regTab) {
+            loginTab.onclick = () => {
+                loginPanel.style.display = 'flex';
+                regPanel.style.display = 'none';
+                loginTab.classList.add('active');
+                regTab.classList.remove('active');
+            };
+            regTab.onclick = () => {
+                loginPanel.style.display = 'none';
+                regPanel.style.display = 'flex';
+                regTab.classList.add('active');
+                loginTab.classList.remove('active');
+            };
+        }
+        
+        const loginBtn = document.getElementById('doLogin');
+        if (loginBtn) {
+            loginBtn.onclick = async () => {
+                console.log('Кнопка Войти нажата');
+                const username = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+                console.log('Логин:', username);
+                const res = await api('POST', '/login-attempt', { username, password });
+                console.log('Ответ сервера:', res);
+                if (res.success) {
+                    currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
+                    await loadAllUsers();
+                    await loadFriends();
+                    await loadChatsAndChannels();
+                    await loadDrafts();
+                    startMessenger();
+                    showToast(`Добро пожаловать, ${username}!`);
+                } else {
+                    const errorDiv = document.getElementById('loginError');
+                    if (errorDiv) errorDiv.innerText = res.error;
+                }
+            };
+        }
+        
+        const regBtn = document.getElementById('doReg');
+        if (regBtn) {
+            regBtn.onclick = async () => {
+                console.log('Кнопка Регистрации нажата');
+                const username = document.getElementById('regUsername').value;
+                const password = document.getElementById('regPassword').value;
+                const res = await api('POST', '/register-attempt', { username, password });
+                if (res.success) {
+                    showToast('Регистрация успешна! Войдите.');
+                    const loginTabBtn = document.getElementById('loginTab');
+                    if (loginTabBtn) loginTabBtn.click();
+                } else {
+                    const errorDiv = document.getElementById('regError');
+                    if (errorDiv) errorDiv.innerText = res.error;
+                }
+            };
+        }
     }
 
     function startMessenger() {
@@ -1126,7 +1104,6 @@
         }
     }
 
-    let activeMenu = null;
     function showContextMenu(e, items) {
         if (activeMenu) activeMenu.remove();
         const menu = document.createElement('div'); menu.className = 'context-menu';
@@ -1148,6 +1125,8 @@
         lb.style.display = 'flex';
         lb.querySelector('img').src = url;
     }
+    
+    let activeMenu = null;
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
 
     renderAuth();
