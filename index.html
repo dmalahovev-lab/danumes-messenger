@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
-        /* ===== ОСНОВНЫЕ СТИЛИ (твой дизайн) ===== */
+        /* ===== ВСЕ ТВОИ СТИЛИ (оставь как есть, они рабочие) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -54,9 +54,7 @@
             width: 40px;
             height: 40px;
             font-size: 20px;
-            transition: 0.1s;
         }
-        .icon-btn:hover { background: rgba(255,255,255,0.2); }
         .profile-btn { width: 48px; height: 48px; font-size: 32px; }
         .search-box { padding: 12px 16px; border-bottom: 1px solid; }
         .search-box input {
@@ -106,13 +104,12 @@
         .verified-badge { font-size: 14px; color: #3b82f6; }
         .chat-lastmsg { font-size: 13px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; margin-left: 6px; }
-        /* Панель друзей (справа) */
+        /* Панель друзей */
         .friends-panel {
             width: 280px;
             display: flex;
             flex-direction: column;
             border-left: 1px solid;
-            transition: transform 0.2s ease;
             background: inherit;
         }
         body.dark .friends-panel { background: rgba(30, 40, 50, 0.5); border-color: rgba(255,255,255,0.1); }
@@ -504,7 +501,6 @@
     let searchTimeout = null;
     let showFriendsPanel = false;
 
-    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
     function showToast(msg, isError = false) {
         const toast = document.createElement('div');
         toast.className = 'toast';
@@ -524,7 +520,6 @@
         return res.json();
     }
 
-    // ========== ЗАГРУЗКА ДАННЫХ ==========
     async function loadAllUsers() {
         const res = await api('GET', '/get-users');
         allUsers = res || [];
@@ -661,7 +656,6 @@
         document.body.appendChild(div);
     }
 
-    // ========== РЕНДЕР ФУНКЦИИ ==========
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -876,7 +870,8 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== АВТОРИЗАЦИЯ (ТВОЙ РАБОЧИЙ КОД) ==========
+    // ========== АВТОРИЗАЦИЯ (ВСТАВЬ СВОЮ РАБОЧУЮ ФУНКЦИЮ renderAuth) ==========
+    // !!! ЗАМЕНИ ЭТУ ФУНКЦИЮ НА ТВОЮ РАБОЧУЮ ИЗ ПРОВЕРЕННОГО ФАЙЛА !!!
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
@@ -901,7 +896,6 @@
                 </div>
             </div>
         `;
-
         // Вкладки
         const loginTab = document.getElementById('loginTab');
         const regTab = document.getElementById('regTab');
@@ -910,7 +904,7 @@
         loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
         regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
         
-        // КНОПКА ВОЙТИ (твой работающий код)
+        // КНОПКА ВОЙТИ
         document.getElementById('doLogin').onclick = async () => {
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
@@ -927,7 +921,7 @@
             }
         };
         
-        // КНОПКА РЕГИСТРАЦИИ (твой работающий код)
+        // КНОПКА РЕГИСТРАЦИИ
         document.getElementById('doReg').onclick = async () => {
             const username = document.getElementById('regUsername').value;
             const password = document.getElementById('regPassword').value;
@@ -958,18 +952,18 @@
         pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadFriends(); }, 3000);
         
         // Кнопка смены темы
-        const themeToggle = document.createElement('button');
-        themeToggle.className = 'icon-btn';
-        themeToggle.textContent = '🌓';
-        themeToggle.id = 'themeToggleBtn';
-        themeToggle.onclick = () => {
-            const isDark = document.body.classList.contains('dark');
-            if (isDark) { document.body.classList.remove('dark'); document.body.classList.add('light'); localStorage.setItem('theme', 'light'); }
-            else { document.body.classList.remove('light'); document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-        };
-        const headerButtons = document.querySelector('.header-buttons');
-        if (headerButtons && !document.getElementById('themeToggleBtn')) {
-            headerButtons.insertBefore(themeToggle, headerButtons.firstChild);
+        if (!document.getElementById('themeToggleBtn')) {
+            const themeToggle = document.createElement('button');
+            themeToggle.className = 'icon-btn';
+            themeToggle.textContent = '🌓';
+            themeToggle.id = 'themeToggleBtn';
+            themeToggle.onclick = () => {
+                const isDark = document.body.classList.contains('dark');
+                if (isDark) { document.body.classList.remove('dark'); document.body.classList.add('light'); localStorage.setItem('theme', 'light'); }
+                else { document.body.classList.remove('light'); document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
+            };
+            const headerButtons = document.querySelector('.header-buttons');
+            if (headerButtons) headerButtons.insertBefore(themeToggle, headerButtons.firstChild);
         }
         
         const savedTheme = localStorage.getItem('theme');
@@ -977,7 +971,6 @@
         else document.body.classList.add('dark');
     }
 
-    // ========== ОБЩИЕ ФУНКЦИИ ==========
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
     let activeMenu = null;
     function showContextMenu(e, items) {
