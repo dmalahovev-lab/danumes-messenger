@@ -63,18 +63,52 @@ app.post('/update-avatar', async (req, res) => {
     res.json({ success: true, avatar });
 });
 
-// Админ: изменить роль
-app.post('/admin/set-role', async (req, res) => {
-    const { adminUsername, targetUsername, role } = req.body;
-    const { data: admin } = await supabase.from('users').select('role').eq('username', adminUsername);
-    if (!admin || admin[0]?.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
-    const allowedRoles = ['user', 'admin'];
-    if (!allowedRoles.includes(role)) return res.status(400).json({ error: 'Недопустимая роль' });
-    await supabase.from('users').update({ role }).eq('username', targetUsername);
+app.post('/update-username', async (req, res) => {
+    const { oldUsername, newUsername } = req.body;
+    if (!oldUsername || !newUsername) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { data: existing } = await supabase.from('users').select('username').eq('username', newUsername);
+    if (existing && existing.length) return res.status(400).json({ error: 'Имя уже занято' });
+    await supabase.from('users').update({ username: newUsername }).eq('username', oldUsername);
+    res.json({ success: true, newUsername });
+});
+
+// ========== ДРУЗЬЯ ==========
+app.post('/send-friend-request', async (req, res) => {
+    const { from, to } = req.body;
+    if (!from || !to) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { error } = await supabase.from('friend_requests').insert([{ from_user: from, to_user: to, status: 'pending' }]);
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
 });
 
-// ========== ЛИЧНЫЕ СООБЩЕНИЯ (с поддержкой редактирования) ==========
+app.get('/friend-requests/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data: received } = await supabase.from('friend_requests').select('*').eq('to_user', username).eq('status', 'pending');
+    const { data: sent } = await supabase.from('friend_requests').select('*').eq('from_user', username).eq('status', 'pending');
+    res.json({ received: received || [], sent: sent || [] });
+});
+
+app.post('/friend-request/accept', async (req, res) => {
+    const { from, to } = req.body;
+    await supabase.from('friend_requests').update({ status: 'accepted' }).eq('from_user', from).eq('to_user', to);
+    await supabase.from('friends').insert([{ user1: from, user2: to }]);
+    res.json({ success: true });
+});
+
+app.post('/friend-request/reject', async (req, res) => {
+    const { from, to } = req.body;
+    await supabase.from('friend_requests').delete().eq('from_user', from).eq('to_user', to);
+    res.json({ success: true });
+});
+
+app.get('/friends/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data } = await supabase.from('friends').select('*').or(`user1.eq.${username},user2.eq.${username}`);
+    const friends = (data || []).map(f => f.user1 === username ? f.user2 : f.user1);
+    res.json(friends);
+});
+
+// ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
 app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -104,42 +138,27 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
     res.json(data || []);
 });
 
-// Редактирование сообщения
 app.put('/edit-message/:id', async (req, res) => {
     const { id } = req.params;
-    const { text, messageType } = req.body; // messageType: 'user', 'channel', 'group'
+    const { text, messageType } = req.body;
     if (!text) return res.status(400).json({ error: 'Текст не может быть пустым' });
     let table;
     if (messageType === 'user') table = 'messages';
     else if (messageType === 'channel') table = 'channel_messages';
     else if (messageType === 'group') table = 'group_messages';
     else return res.status(400).json({ error: 'Неверный тип' });
-
-    // Получаем старое сообщение
     const { data: oldMsg } = await supabase.from(table).select('text').eq('id', parseInt(id));
     if (!oldMsg || oldMsg.length === 0) return res.status(404).json({ error: 'Сообщение не найдено' });
-
-    // Обновляем
     const { error } = await supabase.from(table).update({ text, edited: true }).eq('id', parseInt(id));
     if (error) return res.status(500).json({ error: error.message });
-
-    // Сохраняем историю правок
-    await supabase.from('message_edits').insert([{
-        message_id: parseInt(id),
-        message_type: messageType,
-        old_text: oldMsg[0].text,
-        new_text: text
-    }]);
+    await supabase.from('message_edits').insert([{ message_id: parseInt(id), message_type: messageType, old_text: oldMsg[0].text, new_text: text }]);
     res.json({ success: true });
 });
 
-// Реакции
 app.post('/reaction', async (req, res) => {
     const { messageId, messageType, username, reaction } = req.body;
     if (!messageId || !messageType || !username || !reaction) return res.status(400).json({ error: 'Недостаточно данных' });
-    // Удаляем старую реакцию пользователя на это сообщение (если была)
     await supabase.from('reactions').delete().eq('message_id', messageId).eq('message_type', messageType).eq('username', username);
-    // Вставляем новую
     const { error } = await supabase.from('reactions').insert([{ message_id: messageId, message_type: messageType, username, reaction }]);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
@@ -174,7 +193,7 @@ app.post('/drafts', async (req, res) => {
     res.json({ success: true });
 });
 
-// ========== КАНАЛЫ (с редактированием и реакциями) ==========
+// ========== КАНАЛЫ ==========
 app.get('/get-channels', async (req, res) => {
     const { data } = await supabase.from('channels').select('*');
     res.json(data || []);
@@ -208,7 +227,7 @@ app.post('/send-channel-message', async (req, res) => {
     res.json({ success: true, message: newMsg });
 });
 
-// ========== ГРУППЫ (с редактированием и реакциями) ==========
+// ========== ГРУППЫ ==========
 app.post('/create-group', async (req, res) => {
     const { name, createdBy, members } = req.body;
     if (!name || !createdBy) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -295,10 +314,17 @@ app.delete('/delete-group-message/:id', async (req, res) => {
     res.json({ success: true });
 });
 
-// ========== АДМИН-ПАНЕЛЬ (список пользователей) ==========
 app.get('/admin/users', async (req, res) => {
     const { data } = await supabase.from('users').select('username, avatar, verified, role');
     res.json(data || []);
+});
+
+app.post('/admin/set-role', async (req, res) => {
+    const { adminUsername, targetUsername, role } = req.body;
+    const { data: admin } = await supabase.from('users').select('role').eq('username', adminUsername);
+    if (!admin || admin[0]?.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
+    await supabase.from('users').update({ role }).eq('username', targetUsername);
+    res.json({ success: true });
 });
 
 app.listen(PORT, () => console.log(`🚀 Сервер Supabase запущен на порту ${PORT}`));
