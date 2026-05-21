@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
-        /* ===== ВСЕ ТВОИ СТИЛИ (оставь как есть, они рабочие) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -104,7 +103,6 @@
         .verified-badge { font-size: 14px; color: #3b82f6; }
         .chat-lastmsg { font-size: 13px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; margin-left: 6px; }
-        /* Панель друзей */
         .friends-panel {
             width: 280px;
             display: flex;
@@ -177,7 +175,6 @@
             color: white;
             cursor: pointer;
         }
-        /* Основной чат */
         .chat-main { flex: 1; display: flex; flex-direction: column; }
         .chat-header {
             height: 70px;
@@ -383,7 +380,6 @@
         .member-item input { width: auto; margin: 0; }
         .settings-section { margin-bottom: 20px; }
         .admin-btn { background: #ef4444; margin-top: 10px; }
-        /* Auth */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -870,8 +866,7 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== АВТОРИЗАЦИЯ (ВСТАВЬ СВОЮ РАБОЧУЮ ФУНКЦИЮ renderAuth) ==========
-    // !!! ЗАМЕНИ ЭТУ ФУНКЦИЮ НА ТВОЮ РАБОЧУЮ ИЗ ПРОВЕРЕННОГО ФАЙЛА !!!
+    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth (скопирована без изменений) ==========
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
@@ -896,39 +891,39 @@
                 </div>
             </div>
         `;
-        // Вкладки
-        const loginTab = document.getElementById('loginTab');
-        const regTab = document.getElementById('regTab');
-        const loginPanel = document.getElementById('loginPanel');
-        const regPanel = document.getElementById('regPanel');
-        loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
-        regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
-        
-        // КНОПКА ВОЙТИ
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'flex';
+            document.getElementById('regPanel').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('regTab').classList.remove('active');
+        };
+        document.getElementById('regTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('regPanel').style.display = 'flex';
+            document.getElementById('regTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
         document.getElementById('doLogin').onclick = async () => {
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
             const res = await api('POST', '/login-attempt', { username, password });
             if (res.success) {
-                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified, role: res.role };
+                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
                 await loadAllUsers();
                 await loadFriends();
                 await loadChatsAndChannels();
                 startMessenger();
-                showToast(`Добро пожаловать, ${username}!`);
             } else {
                 document.getElementById('loginError').innerText = res.error;
             }
         };
-        
-        // КНОПКА РЕГИСТРАЦИИ
         document.getElementById('doReg').onclick = async () => {
             const username = document.getElementById('regUsername').value;
             const password = document.getElementById('regPassword').value;
             const res = await api('POST', '/register-attempt', { username, password });
             if (res.success) {
-                showToast('Регистрация успешна! Теперь войдите.');
-                loginTab.click();
+                alert('Регистрация успешна! Теперь войдите.');
+                document.getElementById('loginTab').click();
             } else {
                 document.getElementById('regError').innerText = res.error;
             }
