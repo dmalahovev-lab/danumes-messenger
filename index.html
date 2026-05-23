@@ -459,9 +459,8 @@
 <body class="dark">
 <div id="app"></div>
 <script>
-    // ========== ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ (только одно объявление) ==========
+    // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
     let activeMenu = null;
-    
     let currentUser = null;
     let currentChat = null;
     let currentChatType = 'user';
@@ -841,21 +840,61 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
+    // ========== ТВОЯ ФУНКЦИЯ renderAuth (ВСТАВЛЕНА БЕЗ ИЗМЕНЕНИЙ) ==========
+    function renderAuth() {
+        document.getElementById('app').innerHTML = `
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>DanuMes</h2>
+                    <div class="tabs">
+                        <div class="tab active" id="loginTab">Вход</div>
+                        <div class="tab" id="regTab">Регистрация</div>
+                    </div>
+                    <div id="loginPanel" class="auth-form">
+                        <input type="text" id="loginUsername" placeholder="Логин">
+                        <input type="password" id="loginPassword" placeholder="Пароль">
+                        <div id="loginError" class="error-text"></div>
+                        <button id="doLogin" class="auth-btn">Войти</button>
+                    </div>
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <input type="text" id="regUsername" placeholder="Логин">
+                        <input type="password" id="regPassword" placeholder="Пароль">
+                        <div id="regError" class="error-text"></div>
+                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const loginTab = document.getElementById('loginTab'), regTab = document.getElementById('regTab');
+        const loginPanel = document.getElementById('loginPanel'), regPanel = document.getElementById('regPanel');
+        loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
+        regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
+        document.getElementById('doLogin').onclick = async () => {
+            const username = document.getElementById('loginUsername').value, password = document.getElementById('loginPassword').value;
+            const res = await api('POST', '/login-attempt', { username, password });
+            if (res.success) {
+                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
+                await loadAllUsers(); await loadChatsAndChannels();
+                startMessenger();
+                showToast(`Добро пожаловать, ${username}!`);
+            } else { document.getElementById('loginError').innerText = res.error; }
+        };
+        document.getElementById('doReg').onclick = async () => {
+            const username = document.getElementById('regUsername').value, password = document.getElementById('regPassword').value;
+            const res = await api('POST', '/register-attempt', { username, password });
+            if (res.success) { alert('Регистрация успешна! Теперь войдите.'); loginTab.click(); }
+            else { document.getElementById('regError').innerText = res.error; }
+        };
+    }
+
+    // ========== ФУНКЦИЯ startMessenger (ТВОЯ, НО ВЫНЕСЕНА ВВЕРХ ДЛЯ ДОСТУПА) ==========
     function startMessenger() {
         document.getElementById('app').innerHTML = `
             <div class="messenger">
                 <div class="sidebar" id="sidebar"></div>
                 <div class="chat-main" id="chatMain"></div>
             </div>
-            <div id="groupModal" class="modal group-modal">
-                <div class="modal-content">
-                    <h3>Создать группу</h3>
-                    <input type="text" id="groupNameInput" placeholder="Название группы">
-                    <div class="members-list" id="groupMembersList"></div>
-                    <button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button>
-                    <button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button>
-                </div>
-            </div>
+            <div id="groupModal" class="modal group-modal"><div class="modal-content"><h3>Создать группу</h3><input type="text" id="groupNameInput" placeholder="Название"><div class="members-list" id="groupMembersList"></div><button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button><button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button></div></div>
             <div id="lightbox" class="lightbox"><img src=""></div>
         `;
         renderSidebar();
@@ -889,11 +928,7 @@
         lb.onclick = () => lb.style.display = 'none';
     }
 
-    // ========== ТВОЯ ФУНКЦИЯ renderAuth() ==========
-    // Вставь сюда свою рабочую функцию renderAuth()
-    // Не забудь в конце вызвать renderAuth();
-    
-    // renderAuth();
+    renderAuth();
 </script>
 </body>
 </html>
