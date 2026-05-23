@@ -18,7 +18,7 @@
             background: radial-gradient(ellipse at 20% 30%, #f0eefc, #e8e5f5);
             color: #1a1a2e;
         }
-        /* ===== СТИЛИ ДЛЯ АВТОРИЗАЦИИ ===== */
+        /* Auth styles */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -94,12 +94,8 @@
             cursor: pointer;
         }
         .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
-        /* ===== ОСНОВНЫЕ СТИЛИ ДЛЯ МЕССЕНДЖЕРА ===== */
-        .messenger {
-            display: flex;
-            height: 100vh;
-            width: 100%;
-        }
+        /* Main messenger styles */
+        .messenger { display: flex; height: 100vh; width: 100%; }
         .sidebar {
             width: 320px;
             display: flex;
@@ -131,19 +127,9 @@
             font-size: 28px;
             background: linear-gradient(135deg, #6c5ce7, #a855f7);
         }
-        .profile-info h3 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .profile-info p {
-            font-size: 12px;
-            opacity: 0.7;
-            margin-top: 4px;
-        }
-        .search-box {
-            padding: 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
+        .profile-info h3 { font-size: 18px; font-weight: 600; }
+        .profile-info p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+        .search-box { padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
         .search-box input {
             width: 100%;
             background: rgba(10, 12, 21, 0.6);
@@ -155,10 +141,7 @@
         }
         body.dark .search-box input { color: white; background: rgba(0,0,0,0.3); }
         body.light .search-box input { color: #1f2937; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); }
-        .chats-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+        .chats-list { flex: 1; overflow-y: auto; }
         .chat-item {
             display: flex;
             align-items: center;
@@ -201,14 +184,7 @@
             text-overflow: ellipsis;
             margin-top: 4px;
         }
-        .online-dot {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            margin-left: 6px;
-        }
+        .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: 6px; }
         .bottom-bar {
             padding: 16px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -289,17 +265,8 @@
             border-bottom-left-radius: 24px;
             color: white;
         }
-        .message-sender {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-        .message-time {
-            font-size: 10px;
-            opacity: 0.6;
-            text-align: right;
-            margin-top: 6px;
-        }
+        .message-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+        .message-time { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 6px; }
         .file-attach {
             display: inline-block;
             margin-top: 6px;
@@ -383,10 +350,8 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(12px);
             align-items: center;
@@ -406,9 +371,7 @@
             background: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
-        .modal-content h3 {
-            margin-bottom: 20px;
-        }
+        .modal-content h3 { margin-bottom: 20px; }
         .emoji-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -435,9 +398,7 @@
             margin-bottom: 20px;
             text-align: left;
         }
-        .settings-section h4 {
-            margin-bottom: 10px;
-        }
+        .settings-section h4 { margin-bottom: 10px; }
         .settings-section input {
             width: 100%;
             padding: 10px;
@@ -479,10 +440,8 @@
         .lightbox {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.95);
             justify-content: center;
             align-items: center;
@@ -879,70 +838,6 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth ==========
-    function renderAuth() {
-        document.getElementById('app').innerHTML = `
-            <div class="auth-container">
-                <div class="auth-card">
-                    <h2>DanuMes</h2>
-                    <div class="tabs">
-                        <div class="tab active" id="loginTab">Вход</div>
-                        <div class="tab" id="regTab">Регистрация</div>
-                    </div>
-                    <div id="loginPanel" class="auth-form">
-                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
-                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
-                        <div id="loginError" class="error-text"></div>
-                        <button id="doLogin" class="auth-btn">Войти</button>
-                    </div>
-                    <div id="regPanel" class="auth-form" style="display:none;">
-                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
-                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
-                        <div id="regError" class="error-text"></div>
-                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.getElementById('loginTab').onclick = () => {
-            document.getElementById('loginPanel').style.display = 'flex';
-            document.getElementById('regPanel').style.display = 'none';
-            document.getElementById('loginTab').classList.add('active');
-            document.getElementById('regTab').classList.remove('active');
-        };
-        document.getElementById('regTab').onclick = () => {
-            document.getElementById('loginPanel').style.display = 'none';
-            document.getElementById('regPanel').style.display = 'flex';
-            document.getElementById('regTab').classList.add('active');
-            document.getElementById('loginTab').classList.remove('active');
-        };
-        document.getElementById('doLogin').onclick = async () => {
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            const res = await api('POST', '/login-attempt', { username, password });
-            if (res.success) {
-                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
-                await loadAllUsers();
-                await loadChatsAndChannels();
-                startMessenger();
-                showToast(`Добро пожаловать, ${username}!`);
-            } else {
-                document.getElementById('loginError').innerText = res.error;
-            }
-        };
-        document.getElementById('doReg').onclick = async () => {
-            const username = document.getElementById('regUsername').value;
-            const password = document.getElementById('regPassword').value;
-            const res = await api('POST', '/register-attempt', { username, password });
-            if (res.success) {
-                alert('Регистрация успешна! Теперь войдите.');
-                document.getElementById('loginTab').click();
-            } else {
-                document.getElementById('regError').innerText = res.error;
-            }
-        };
-    }
-
     function startMessenger() {
         document.getElementById('app').innerHTML = `
             <div class="messenger">
@@ -990,7 +885,11 @@
         lb.onclick = () => lb.style.display = 'none';
     }
 
-    renderAuth();
+    // ========== ВСТАВЬ СВОЮ РАБОЧУЮ renderAuth() СЮДА ==========
+    // Твоя функция renderAuth() должна быть здесь, перед вызовом renderAuth();
+    
+    // renderAuth(); // ← раскомментируй эту строку после вставки своей функции
+
 </script>
 </body>
 </html>
