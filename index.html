@@ -53,9 +53,8 @@
         .header-buttons {
             display: flex;
             gap: 8px;
-            align-items: center;
         }
-        .create-group-btn {
+        .icon-btn {
             background: rgba(0,0,0,0.2);
             border: none;
             cursor: pointer;
@@ -65,24 +64,12 @@
             justify-content: center;
             width: 40px;
             height: 40px;
-            font-size: 24px;
-            font-weight: bold;
-            transition: 0.1s;
+            font-size: 20px;
         }
-        body.dark .create-group-btn { color: white; background: rgba(255,255,255,0.2); }
-        body.light .create-group-btn { color: #1f2937; background: rgba(0,0,0,0.1); }
-        .create-group-btn:hover { background: rgba(0,0,0,0.3); }
         .profile-btn {
             width: 48px;
             height: 48px;
             font-size: 32px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .search-box {
             padding: 12px 16px;
@@ -512,6 +499,21 @@
             .chat-avatar { width: 48px; height: 48px; font-size: 26px; }
             .auth-card { width: 90%; padding: 32px 24px; }
         }
+        .create-group-btn {
+            background: rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        body.dark .create-group-btn { color: white; background: rgba(255,255,255,0.2); }
+        body.light .create-group-btn { color: #1f2937; background: rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="dark">
@@ -552,11 +554,6 @@
             document.body.classList.remove('light');
             document.body.classList.add('dark');
             localStorage.setItem('theme', 'dark');
-        }
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal && settingsModal.style.display === 'flex') {
-            settingsModal.style.display = 'none';
-            showSettingsModal();
         }
     }
 
