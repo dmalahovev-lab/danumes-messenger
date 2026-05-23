@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
+        /* ===== ПОЛНЫЙ ДИЗАЙН (как в предыдущей версии) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -497,6 +498,7 @@
     let searchTimeout = null;
     let showFriendsPanel = false;
 
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (API, TOAST и т.д.) ==========
     function showToast(msg, isError = false) {
         const toast = document.createElement('div');
         toast.className = 'toast';
@@ -872,7 +874,7 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth (НЕ ТРОГАЕМ) ==========
+    // ========== ТВОЙ ТЕСТОВЫЙ КОД ВХОДА (НЕ ИЗМЕНЁН) ==========
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
@@ -918,7 +920,7 @@
                 await loadAllUsers();
                 await loadFriends();
                 await loadChatsAndChannels();
-                startMessenger();
+                startMessenger(); // ← ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: вместо приветствия запускаем мессенджер
                 showToast(`Добро пожаловать, ${username}!`);
             } else {
                 document.getElementById('loginError').innerText = res.error;
