@@ -18,6 +18,83 @@
             background: radial-gradient(ellipse at 20% 30%, #f0eefc, #e8e5f5);
             color: #1a1a2e;
         }
+        /* ===== СТИЛИ ДЛЯ АВТОРИЗАЦИИ ===== */
+        .auth-container {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-card {
+            background: rgba(18, 22, 35, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            padding: 48px 40px;
+            width: 460px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body.light .auth-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .auth-card h2 {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 32px;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 60px;
+            padding: 4px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            border-radius: 56px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            background: transparent;
+        }
+        body.dark .tab { color: rgba(255, 255, 255, 0.7); }
+        body.light .tab { color: rgba(0, 0, 0, 0.6); }
+        .tab.active {
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            color: white;
+        }
+        .auth-form { display: flex; flex-direction: column; gap: 20px; }
+        .auth-form input {
+            width: 100%;
+            background: rgba(10, 12, 21, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 20px;
+            border-radius: 60px;
+            font-size: 16px;
+            outline: none;
+        }
+        body.dark .auth-form input { color: white; }
+        body.light .auth-form input { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #1f2937; }
+        .auth-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            border: none;
+            padding: 16px;
+            border-radius: 60px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
+        /* ===== ОСНОВНЫЕ СТИЛИ ДЛЯ МЕССЕНДЖЕРА ===== */
         .messenger {
             display: flex;
             height: 100vh;
@@ -802,6 +879,70 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
+    // ========== ТВОЯ РАБОЧАЯ ФУНКЦИЯ renderAuth ==========
+    function renderAuth() {
+        document.getElementById('app').innerHTML = `
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>DanuMes</h2>
+                    <div class="tabs">
+                        <div class="tab active" id="loginTab">Вход</div>
+                        <div class="tab" id="regTab">Регистрация</div>
+                    </div>
+                    <div id="loginPanel" class="auth-form">
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                        <div id="loginError" class="error-text"></div>
+                        <button id="doLogin" class="auth-btn">Войти</button>
+                    </div>
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+                        <div id="regError" class="error-text"></div>
+                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'flex';
+            document.getElementById('regPanel').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('regTab').classList.remove('active');
+        };
+        document.getElementById('regTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('regPanel').style.display = 'flex';
+            document.getElementById('regTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
+        document.getElementById('doLogin').onclick = async () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const res = await api('POST', '/login-attempt', { username, password });
+            if (res.success) {
+                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
+                await loadAllUsers();
+                await loadChatsAndChannels();
+                startMessenger();
+                showToast(`Добро пожаловать, ${username}!`);
+            } else {
+                document.getElementById('loginError').innerText = res.error;
+            }
+        };
+        document.getElementById('doReg').onclick = async () => {
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const res = await api('POST', '/register-attempt', { username, password });
+            if (res.success) {
+                alert('Регистрация успешна! Теперь войдите.');
+                document.getElementById('loginTab').click();
+            } else {
+                document.getElementById('regError').innerText = res.error;
+            }
+        };
+    }
+
     function startMessenger() {
         document.getElementById('app').innerHTML = `
             <div class="messenger">
@@ -849,31 +990,7 @@
         lb.onclick = () => lb.style.display = 'none';
     }
 
-    // ========== ВСТАВЬ СВОЮ РАБОЧУЮ renderAuth() ЗДЕСЬ ==========
-    function renderAuth() {
-        document.getElementById('app').innerHTML = `
-            <div class="auth-container">
-                <div class="auth-card">
-                    <h2>DanuMes</h2>
-                    <div class="tabs">
-                        <div class="tab active" id="loginTab">Вход</div>
-                        <div class="tab" id="regTab">Регистрация</div>
-                    </div>
-                    <div id="loginPanel" class="auth-form">
-                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
-                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
-                        <div id="loginError" class="error-text"></div>
-                        <button id="doLogin" class="auth-btn">Войти</button>
-                    </div>
-                    <div id="regPanel" class="auth-form" style="display:none;">
-                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
-                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
-                        <div id="regError" class="error-text"></div>
-                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
-                    </div>
-                </div>
-            </div>
-        `;
+    renderAuth();
 </script>
 </body>
 </html>
