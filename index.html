@@ -70,6 +70,13 @@
             width: 48px;
             height: 48px;
             font-size: 32px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .search-box {
             padding: 12px 16px;
@@ -86,7 +93,10 @@
         }
         body.dark .search-box input { color: white; background: rgba(0,0,0,0.3); }
         body.light .search-box input { color: #1f2937; background: rgba(0,0,0,0.05); }
-        .chats-list { flex: 1; overflow-y: auto; }
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+        }
         .chat-item {
             display: flex;
             align-items: center;
@@ -107,10 +117,10 @@
             justify-content: center;
             font-size: 28px;
             flex-shrink: 0;
+            background: linear-gradient(135deg, #4b5563, #6b7280);
         }
         .chat-avatar[data-avatar="Danumala"] { background: linear-gradient(135deg, #dc2626, #ef4444); }
         .chat-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
-        .chat-avatar[data-default] { background: linear-gradient(135deg, #4b5563, #6b7280); }
         .chat-info { flex: 1; min-width: 0; }
         .chat-name {
             font-weight: 600;
@@ -135,6 +145,25 @@
             display: inline-block;
             margin-left: 6px;
         }
+        .bottom-actions {
+            padding: 12px 16px;
+            border-top: 1px solid;
+            display: flex;
+            gap: 12px;
+            justify-content: space-around;
+        }
+        .bottom-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: 0.1s;
+        }
+        body.dark .bottom-btn { color: #e5e7eb; }
+        body.light .bottom-btn { color: #1f2937; }
+        .bottom-btn:hover { background: rgba(0,0,0,0.1); }
         .chat-main { flex: 1; display: flex; flex-direction: column; }
         .chat-header {
             height: 70px;
@@ -155,10 +184,10 @@
             justify-content: center;
             font-size: 28px;
             cursor: pointer;
+            background: linear-gradient(135deg, #4b5563, #6b7280);
         }
         .chat-header-avatar[data-avatar="Danumala"] { background: linear-gradient(135deg, #dc2626, #ef4444); }
         .chat-header-avatar[data-avatar="RunFly"] { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
-        .chat-header-avatar[data-default] { background: linear-gradient(135deg, #4b5563, #6b7280); }
         .chat-header-info { flex: 1; }
         .messages-area {
             flex: 1;
@@ -518,7 +547,6 @@
             document.body.classList.add('dark');
             localStorage.setItem('theme', 'dark');
         }
-        // Обновляем интерфейс настроек, если открыт
         const settingsModal = document.getElementById('settingsModal');
         if (settingsModal && settingsModal.style.display === 'flex') {
             settingsModal.style.display = 'none';
@@ -656,13 +684,31 @@
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
-        let filtered = chats.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        // Поиск по всем пользователям + чатам
+        let filtered = chats;
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = chats.filter(c => c.name.toLowerCase().includes(query));
+            // Добавляем всех пользователей, у кого имя содержит запрос
+            const matchingUsers = allUsers.filter(u => u.username.toLowerCase().includes(query) && !chats.some(c => c.type === 'user' && c.id === u.username));
+            matchingUsers.forEach(u => {
+                filtered.push({
+                    type: 'user',
+                    id: u.username,
+                    name: u.username,
+                    avatar: u.avatar,
+                    online: u.online,
+                    verified: u.verified,
+                    lastMessage: 'Нет сообщений',
+                    lastTime: null
+                });
+            });
+        }
         let html = `
             <div class="sidebar-header">
                 <div class="logo">DanuMes</div>
                 <div class="header-buttons">
-                    <button class="icon-btn" id="createGroupBtn">👥+</button>
-                    <button class="icon-btn" id="settingsBtn">⚙️</button>
+                    <button class="icon-btn" id="createGroupBtn">+</button>
                     <button class="profile-btn" id="profileBtn">${currentUser.avatar}</button>
                 </div>
             </div>
@@ -679,8 +725,6 @@
             let avatarAttr = '';
             if (chat.type === 'user' && (chat.name === 'Danumala' || chat.name === 'RunFly')) {
                 avatarAttr = `data-avatar="${chat.name}"`;
-            } else {
-                avatarAttr = `data-default="true"`;
             }
             html += `<div class="chat-item ${activeClass}" data-type="${chat.type}" data-id="${chat.id}">
                         <div class="chat-avatar" ${avatarAttr}>${chat.avatar}</div>
@@ -690,7 +734,11 @@
                         </div>
                     </div>`;
         });
-        html += `</div>`;
+        html += `</div>
+            <div class="bottom-actions">
+                <button class="bottom-btn" id="settingsBtn">⚙️</button>
+            </div>
+        `;
         sidebarDiv.innerHTML = html;
 
         document.querySelectorAll('.chat-item').forEach(el => {
@@ -799,8 +847,6 @@
         let avatarAttr = '';
         if (currentChatType === 'user' && (chatInfo.name === 'Danumala' || chatInfo.name === 'RunFly')) {
             avatarAttr = `data-avatar="${chatInfo.name}"`;
-        } else {
-            avatarAttr = `data-default="true"`;
         }
         mainDiv.innerHTML = `
             <div class="chat-header" id="chatHeader">
@@ -907,7 +953,6 @@
             </div>
         `;
         
-        // Аватары
         const avatarGrid = document.getElementById('settingsAvatarGrid');
         if (avatarGrid && avatarGrid.children.length === 0) {
             const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
@@ -920,14 +965,11 @@
             });
         }
         
-        // Смена имени
         document.getElementById('changeUsernameBtn').onclick = () => {
             const newName = document.getElementById('newUsernameInput').value.trim();
             if (newName) updateUsername(newName);
             modal.style.display = 'none';
         };
-        
-        // Темы
         document.getElementById('darkThemeBtn').onclick = () => {
             if (document.body.classList.contains('light')) {
                 document.body.classList.remove('light');
@@ -944,7 +986,6 @@
             }
             modal.style.display = 'none';
         };
-        
         document.getElementById('closeSettingsModal').onclick = () => modal.style.display = 'none';
     }
 
