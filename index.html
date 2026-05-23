@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
-        /* ===== ПОЛНЫЙ ДИЗАЙН (как в предыдущей версии) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -104,78 +103,6 @@
         .verified-badge { font-size: 14px; color: #3b82f6; }
         .chat-lastmsg { font-size: 13px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .online-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; margin-left: 6px; }
-        .friends-panel {
-            width: 280px;
-            display: flex;
-            flex-direction: column;
-            border-left: 1px solid;
-            background: inherit;
-        }
-        body.dark .friends-panel { background: rgba(30, 40, 50, 0.5); border-color: rgba(255,255,255,0.1); }
-        body.light .friends-panel { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.05); }
-        .friends-header {
-            padding: 18px 20px;
-            font-size: 18px;
-            font-weight: 600;
-            border-bottom: 1px solid;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .close-friends { background: none; border: none; font-size: 24px; cursor: pointer; }
-        .friends-list { flex: 1; overflow-y: auto; }
-        .friend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        .friend-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4b5563, #6b7280);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-        .friend-info { flex: 1; }
-        .friend-name { font-weight: 500; }
-        .friend-actions { display: flex; gap: 8px; }
-        .friend-actions button {
-            background: rgba(59,130,246,0.8);
-            border: none;
-            padding: 6px 12px;
-            border-radius: 20px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .add-friend {
-            padding: 12px;
-            border-top: 1px solid;
-            display: flex;
-            gap: 8px;
-        }
-        .add-friend input {
-            flex: 1;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid rgba(0,0,0,0.1);
-            padding: 10px 16px;
-            border-radius: 40px;
-            font-size: 14px;
-            outline: none;
-        }
-        .add-friend button {
-            background: #3b82f6;
-            border: none;
-            padding: 0 16px;
-            border-radius: 40px;
-            color: white;
-            cursor: pointer;
-        }
         .chat-main { flex: 1; display: flex; flex-direction: column; }
         .chat-header {
             height: 70px;
@@ -379,8 +306,6 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .member-item input { width: auto; margin: 0; }
-        .settings-section { margin-bottom: 20px; }
-        .admin-btn { background: #ef4444; margin-top: 10px; }
         .auth-container {
             height: 100vh;
             display: flex;
@@ -476,7 +401,7 @@
             85% { opacity: 1; }
             100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
         }
-        @media (max-width: 800px) { .friends-panel { width: 260px; } }
+        @media (max-width: 800px) { .sidebar { width: 260px; } }
     </style>
 </head>
 <body class="dark">
@@ -491,14 +416,10 @@
     let groups = [];
     let channels = [];
     let allUsers = [];
-    let friendsList = [];
-    let friendRequests = { received: [], sent: [] };
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
-    let showFriendsPanel = false;
 
-    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (API, TOAST и т.д.) ==========
     function showToast(msg, isError = false) {
         const toast = document.createElement('div');
         toast.className = 'toast';
@@ -521,15 +442,6 @@
     async function loadAllUsers() {
         const res = await api('GET', '/get-users');
         allUsers = res || [];
-    }
-
-    async function loadFriends() {
-        if (!currentUser) return;
-        const friendsRes = await api('GET', `/friends/${currentUser.username}`);
-        friendsList = friendsRes || [];
-        const requestsRes = await api('GET', `/friend-requests/${currentUser.username}`);
-        friendRequests = requestsRes;
-        renderFriendsPanel();
     }
 
     async function loadChatsAndChannels() {
@@ -582,39 +494,12 @@
         showToast('Аватар обновлён');
     }
 
-    async function updateUsername(newUsername) {
-        const res = await api('POST', '/update-username', { oldUsername: currentUser.username, newUsername });
-        if (res.success) {
-            currentUser.username = newUsername;
-            renderSidebar();
-            showToast('Имя изменено');
-        } else showToast(res.error || 'Ошибка', true);
-    }
-
     async function deleteMessage(msgId) {
         if (currentChatType === 'user') await api('DELETE', `/delete-message/${msgId}`);
         else if (currentChatType === 'channel') await api('DELETE', `/delete-channel-message/${msgId}`);
         else await api('DELETE', `/delete-group-message/${msgId}`);
         await loadMessages(); await loadChatsAndChannels();
         showToast('Сообщение удалено');
-    }
-
-    async function sendFriendRequest(to) {
-        const res = await api('POST', '/send-friend-request', { from: currentUser.username, to });
-        if (res.success) { showToast(`Заявка отправлена ${to}`); loadFriends(); }
-        else showToast('Ошибка', true);
-    }
-
-    async function acceptFriendRequest(from) {
-        await api('POST', '/friend-request/accept', { from, to: currentUser.username });
-        showToast(`Вы друзья с ${from}`);
-        loadFriends(); loadChatsAndChannels();
-    }
-
-    async function rejectFriendRequest(from) {
-        await api('POST', '/friend-request/reject', { from, to: currentUser.username });
-        showToast(`Заявка отклонена`);
-        loadFriends();
     }
 
     async function createGroup(name, memberUsernames) {
@@ -627,33 +512,6 @@
         } else showToast('Ошибка', true);
     }
 
-    function openChatWithUser(username) {
-        currentChatType = 'user'; currentChat = username; messages = [];
-        renderChat(); loadMessages(); renderSidebar();
-    }
-
-    async function setUserRole(username, role) {
-        await api('POST', '/admin/set-role', { adminUsername: currentUser.username, targetUsername: username, role });
-        showToast('Роль изменена');
-    }
-
-    async function openAdminPanel() {
-        const users = await api('GET', '/admin/users');
-        let html = '<div class="modal-content"><h3>Админ-панель</h3>';
-        users.forEach(u => {
-            html += `<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid gray;">
-                        <span>${escapeHtml(u.username)}</span>
-                        <select onchange="setUserRole('${u.username}', this.value)">
-                            <option value="user" ${(u.role || 'user') === 'user' ? 'selected' : ''}>Пользователь</option>
-                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
-                        </select>
-                     </div>`;
-        });
-        html += `<button class="close-modal" onclick="this.parentElement.parentElement.remove()">Закрыть</button></div>`;
-        const div = document.createElement('div'); div.className = 'modal'; div.style.display = 'flex'; div.innerHTML = html;
-        document.body.appendChild(div);
-    }
-
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
@@ -664,8 +522,6 @@
                 <div class="logo">DanuMes</div>
                 <div class="header-buttons">
                     <button class="icon-btn" id="createGroupBtn">👥+</button>
-                    <button class="icon-btn" id="friendsBtn">👥</button>
-                    <button class="icon-btn" id="settingsBtn">⚙️</button>
                     <button class="icon-btn" id="themeToggleBtn">🌓</button>
                     <button class="profile-btn" id="profileBtn">${currentUser.avatar}</button>
                 </div>
@@ -699,38 +555,11 @@
         });
         document.getElementById('profileBtn').onclick = () => { document.getElementById('avatarModal').style.display = 'flex'; };
         document.getElementById('createGroupBtn').onclick = showCreateGroupModal;
-        document.getElementById('friendsBtn').onclick = () => { showFriendsPanel = !showFriendsPanel; renderFriendsPanel(); };
-        document.getElementById('settingsBtn').onclick = showSettingsModal;
         document.getElementById('themeToggleBtn').onclick = () => {
             const isDark = document.body.classList.contains('dark');
             if (isDark) { document.body.classList.remove('dark'); document.body.classList.add('light'); localStorage.setItem('theme', 'light'); }
             else { document.body.classList.remove('light'); document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
         };
-    }
-
-    function renderFriendsPanel() {
-        const container = document.getElementById('friendsPanelContainer');
-        if (!container) return;
-        if (!showFriendsPanel) { container.innerHTML = ''; container.style.display = 'none'; return; }
-        container.style.display = 'flex';
-        let html = `<div class="friends-header"><span>Друзья</span><button class="close-friends" id="closeFriendsBtn">✕</button></div>
-                    <div class="friends-list">`;
-        (friendRequests.received || []).forEach(req => {
-            html += `<div class="friend-item"><div class="friend-avatar">👤</div><div class="friend-info"><div class="friend-name">${escapeHtml(req.from_user)}</div><div>Заявка</div></div>
-                        <div class="friend-actions"><button onclick="acceptFriendRequest('${req.from_user}')">Принять</button><button onclick="rejectFriendRequest('${req.from_user}')">Отклонить</button></div></div>`;
-        });
-        friendsList.forEach(f => {
-            html += `<div class="friend-item"><div class="friend-avatar">👤</div><div class="friend-info"><div class="friend-name">${escapeHtml(f)}</div></div>
-                        <div class="friend-actions"><button onclick="openChatWithUser('${f}')">💬</button></div></div>`;
-        });
-        if (!friendsList.length && !friendRequests.received?.length) html += `<div style="padding:20px;text-align:center;">Нет друзей</div>`;
-        html += `</div><div class="add-friend"><input type="text" id="newFriendName" placeholder="Имя пользователя"><button id="addFriendBtn">➕ Добавить</button></div>`;
-        container.innerHTML = html;
-        document.getElementById('closeFriendsBtn')?.addEventListener('click', () => { showFriendsPanel = false; renderFriendsPanel(); });
-        document.getElementById('addFriendBtn')?.addEventListener('click', () => {
-            const name = document.getElementById('newFriendName').value.trim();
-            if (name) sendFriendRequest(name);
-        });
     }
 
     function renderMessages() {
@@ -803,23 +632,6 @@
         fileLabel.onclick = () => fileInput.click();
         fileInput.onchange = () => send();
         msgInput.focus();
-    }
-
-    function showSettingsModal() {
-        const modal = document.getElementById('settingsModal');
-        if (!modal) return;
-        modal.style.display = 'flex';
-        const avatarGrid = document.getElementById('settingsAvatarGrid');
-        if (avatarGrid && !avatarGrid.children.length) {
-            const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
-            emojis.forEach(e => { const div = document.createElement('div'); div.className = 'emoji-option'; div.textContent = e; div.onclick = () => { updateAvatar(e); modal.style.display = 'none'; }; avatarGrid.appendChild(div); });
-        }
-        document.getElementById('changeUsernameBtn').onclick = () => { const newName = prompt('Новое имя:', currentUser.username); if (newName && newName !== currentUser.username) updateUsername(newName); };
-        document.getElementById('closeSettingsModal').onclick = () => modal.style.display = 'none';
-        if (currentUser.username === 'Danumala') {
-            document.getElementById('adminPanelBtn').style.display = 'block';
-            document.getElementById('adminPanelBtn').onclick = () => { openAdminPanel(); modal.style.display = 'none'; };
-        }
     }
 
     function showAvatarModal() {
@@ -918,9 +730,8 @@
             if (res.success) {
                 currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
                 await loadAllUsers();
-                await loadFriends();
                 await loadChatsAndChannels();
-                startMessenger(); // ← ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: вместо приветствия запускаем мессенджер
+                startMessenger();
                 showToast(`Добро пожаловать, ${username}!`);
             } else {
                 document.getElementById('loginError').innerText = res.error;
@@ -943,17 +754,15 @@
         document.getElementById('app').innerHTML = `
             <div class="messenger">
                 <div class="sidebar" id="sidebar"></div>
-                <div class="friends-panel" id="friendsPanelContainer" style="display:none;"></div>
                 <div class="chat-main" id="chatMain"></div>
             </div>
             <div id="avatarModal" class="modal"><div class="modal-content"><h3>Выбери аватар</h3><div class="emoji-grid" id="avatarEmojiGrid"></div><button id="closeAvatarModal" class="close-modal">Закрыть</button></div></div>
             <div id="groupModal" class="modal group-modal"><div class="modal-content"><h3>Создать группу</h3><input type="text" id="groupNameInput" placeholder="Название"><div class="members-list" id="groupMembersList"></div><button id="confirmCreateGroup" class="close-modal">Создать</button><button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button></div></div>
-            <div id="settingsModal" class="modal"><div class="modal-content"><h3>Настройки</h3><div class="emoji-grid" id="settingsAvatarGrid"></div><button id="changeUsernameBtn" class="close-modal">Изменить имя</button><div id="adminPanelBtn" style="display:none;"><button class="close-modal admin-btn">Админ-панель</button></div><button id="closeSettingsModal" class="close-modal">Закрыть</button></div></div>
             <div id="lightbox" class="lightbox"><img src=""></div>
         `;
         renderSidebar();
         if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadFriends(); }, 3000);
+        pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadAllUsers(); }, 3000);
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') document.body.classList.add('light');
         else document.body.classList.add('dark');
