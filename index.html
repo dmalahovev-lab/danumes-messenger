@@ -686,11 +686,26 @@
         }
     }
 
+    async function acceptFriend(from) {
+        await api('POST', '/friend-request/accept', { from, to: currentUser.username });
+        showToast(`Вы друзья с ${from}`);
+        const modal = document.getElementById('friendsModal');
+        if (modal) modal.style.display = 'none';
+        showFriendsPanel();
+    }
+
+    async function rejectFriend(from) {
+        await api('POST', '/friend-request/reject', { from, to: currentUser.username });
+        showToast(`Заявка отклонена`);
+        const modal = document.getElementById('friendsModal');
+        if (modal) modal.style.display = 'none';
+        showFriendsPanel();
+    }
+
     function renderSidebar() {
         const sidebarDiv = document.getElementById('sidebar');
         if (!sidebarDiv) return;
         
-        // Поиск с добавлением всех пользователей
         let filtered = chats;
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
@@ -834,7 +849,7 @@
     
     async function loadFriendsData() {
         const requests = await api('GET', `/friend-requests/${currentUser.username}`);
-        const friendsList = await api('GET', `/friends/${currentUser.username}`);
+        const friendsListData = await api('GET', `/friends/${currentUser.username}`);
         
         const requestsDiv = document.getElementById('friendRequestsList');
         const friendsDiv = document.getElementById('friendsList');
@@ -856,6 +871,429 @@
         }
         
         if (friendsDiv) {
-            if (friendsList && friendsList.length) {
-                friendsDiv.innerHTML = friendsList.map(f => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px;
+            if (friendsListData && friendsListData.length) {
+                friendsDiv.innerHTML = friendsListData.map(f => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <span>${escapeHtml(f)}</span>
+                        <button onclick="openChatWithUser('${f}')" style="background:#3b82f6; border:none; padding:4px 12px; border-radius:20px; cursor:pointer;">💬</button>
+                    </div>
+                `).join('');
+            } else {
+                friendsDiv.innerHTML = '<div style="padding:8px; opacity:0.7;">Нет друзей</div>';
+            }
+        }
+    }
+    
+    function openChatWithUser(username) {
+        const modal = document.getElementById('friendsModal');
+        if (modal) modal.style.display = 'none';
+        currentChatType = 'user';
+        currentChat = username;
+        messages = [];
+        renderChat();
+        loadMessages();
+        renderSidebar();
+    }
+
+    function renderMessages() {
+        const container = document.getElementById('messagesList');
+        if (!container) return;
+        if (!currentChat) {
+            container.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Выберите чат</div>`;
+            return;
+        }
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px;">Нет сообщений. Напишите первое!</div>`;
+            return;
+        }
+        let html = '';
+        messages.forEach(msg => {
+            const isOwn = msg.from_user === currentUser.username;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            let content = '';
+            if (msg.file_url && isImageFile(msg.file_name)) {
+                content += `<img src="${msg.file_url}" class="message-image" data-url="${msg.file_url}">`;
+            } else if (msg.file_url) {
+                content += `<a href="${msg.file_url}" download class="file-attach" data-url="${msg.file_url}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
+            }
+            if (msg.text) {
+                content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+            }
+            let senderName = '';
+            if (currentChatType === 'group' && !isOwn) {
+                senderName = `<div class="message-sender">${escapeHtml(msg.from_user)}</div>`;
+            }
+            html += `<div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from_user}" data-file-url="${msg.file_url || ''}">
+                        <div class="message-bubble">
+                            ${senderName}
+                            ${content}
+                            <div class="message-time">${time}</div>
+                        </div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+        
+        document.querySelectorAll('.message-image').forEach(img => {
+            img.addEventListener('click', (e) => { e.stopPropagation(); showLightbox(img.src); });
+        });
+        document.querySelectorAll('.message').forEach(msgEl => {
+            msgEl.addEventListener('contextmenu', (e) => {
+                const msgId = msgEl.dataset.msgId;
+                const msgFrom = msgEl.dataset.msgFrom;
+                const fileUrl = msgEl.dataset.fileUrl;
+                const isOwn = msgFrom === currentUser.username;
+                const items = [];
+                if (fileUrl) items.push({ label: '📥 Скачать файл', action: () => window.open(fileUrl, '_blank') });
+                if (isOwn) items.push({ label: '🗑 Удалить сообщение', action: () => deleteMessage(msgId) });
+                if (items.length) showContextMenu(e, items);
+            });
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function renderChat() {
+        const mainDiv = document.getElementById('chatMain');
+        if (!mainDiv) return;
+        if (!currentChat) {
+            mainDiv.innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center; opacity:0.6;">✨ Выберите чат ✨</div>`;
+            return;
+        }
+        let chatInfo = { name: currentChat, avatar: '💬' };
+        if (currentChatType === 'user') {
+            const found = chats.find(c => c.type === 'user' && c.id === currentChat);
+            if (found) chatInfo = found;
+        } else if (currentChatType === 'channel') {
+            const found = chats.find(c => c.type === 'channel' && c.id === currentChat);
+            if (found) chatInfo = found;
+        } else if (currentChatType === 'group') {
+            const found = chats.find(c => c.type === 'group' && c.id === currentChat);
+            if (found) chatInfo = found;
+        }
+        let avatarAttr = '';
+        if (currentChatType === 'user' && (chatInfo.name === 'Danumala' || chatInfo.name === 'RunFly')) {
+            avatarAttr = `data-avatar="${chatInfo.name}"`;
+        } else {
+            avatarAttr = `data-default="true"`;
+        }
+        mainDiv.innerHTML = `
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-avatar" id="chatHeaderAvatar" ${avatarAttr}>${chatInfo.avatar}</div>
+                <div class="chat-header-info"><h3>${escapeHtml(chatInfo.name)}</h3></div>
+            </div>
+            <div class="messages-area" id="messagesList"></div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Сообщение">
+                    <button class="emoji-btn" id="emojiBtn">😊</button>
+                    <label class="file-btn" id="fileLabel">📎</label>
+                    <input type="file" id="fileInput" style="display:none">
+                </div>
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+            <div id="emojiPicker" class="emoji-picker" style="display:none; position:absolute; bottom:70px; left:20px; background:rgba(30,40,50,0.95); backdrop-filter:blur(20px); border-radius:20px; padding:12px; width:280px; z-index:1500; border:1px solid rgba(255,255,255,0.2);">
+                <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+        `;
+        
+        renderMessages();
+        
+        const msgInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileInput = document.getElementById('fileInput');
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emojiPicker = document.getElementById('emojiPicker');
+        const emojiGrid = document.getElementById('emojiGrid');
+        
+        if (emojiGrid && emojiGrid.children.length === 0) {
+            const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉','😍','🤔','😂','🥲','😭','😡','🥺','🤯','💀','👾','🎈','🍕','⚽','🎵','📷','🔒'];
+            emojis.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'emoji-option';
+                div.textContent = e;
+                div.onclick = () => {
+                    msgInput.value += e;
+                    msgInput.focus();
+                    emojiPicker.style.display = 'none';
+                };
+                emojiGrid.appendChild(div);
+            });
+        }
+        emojiBtn.onclick = (e) => {
+            e.stopPropagation();
+            emojiPicker.style.display = emojiPicker.style.display === 'flex' ? 'none' : 'flex';
+        };
+        document.addEventListener('click', (e) => {
+            if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.style.display = 'none';
+        });
+        
+        const send = async () => {
+            const text = msgInput.value.trim();
+            if (fileInput.files.length) {
+                const file = fileInput.files[0];
+                const up = await uploadFile(file);
+                if (up.success) {
+                    await sendMessage(text, up.fileUrl, up.fileName);
+                    fileInput.value = '';
+                }
+            } else if (text) {
+                await sendMessage(text);
+            }
+            msgInput.value = '';
+            msgInput.focus();
+        };
+        
+        sendBtn.onclick = send;
+        msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+        fileLabel.onclick = () => fileInput.click();
+        fileInput.onchange = () => send();
+        msgInput.focus();
+    }
+
+    function showSettingsModal() {
+        let modal = document.getElementById('settingsModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'settingsModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Настройки</h3>
+                <div class="settings-section">
+                    <h4>Аватар</h4>
+                    <div class="emoji-grid" id="settingsAvatarGrid"></div>
+                </div>
+                <div class="settings-section">
+                    <h4>Имя пользователя</h4>
+                    <input type="text" id="newUsernameInput" placeholder="Новое имя">
+                    <button id="changeUsernameBtn" class="close-modal" style="margin-top:10px;">Изменить</button>
+                </div>
+                <button id="closeSettingsModal" class="close-modal">Закрыть</button>
+            </div>
+        `;
+        const avatarGrid = document.getElementById('settingsAvatarGrid');
+        if (avatarGrid && avatarGrid.children.length === 0) {
+            const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
+            emojis.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'emoji-option';
+                div.textContent = e;
+                div.onclick = () => { updateAvatar(e); modal.style.display = 'none'; };
+                avatarGrid.appendChild(div);
+            });
+        }
+        document.getElementById('changeUsernameBtn').onclick = () => {
+            const newName = document.getElementById('newUsernameInput').value.trim();
+            if (newName) updateUsername(newName);
+            modal.style.display = 'none';
+        };
+        document.getElementById('closeSettingsModal').onclick = () => modal.style.display = 'none';
+    }
+
+    function showAvatarModal() {
+        const modal = document.getElementById('avatarModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const grid = document.getElementById('avatarEmojiGrid');
+        if (grid && grid.children.length === 0) {
+            const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉'];
+            emojis.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'emoji-option';
+                div.textContent = e;
+                div.style.fontSize = '32px';
+                div.style.cursor = 'pointer';
+                div.onclick = () => { updateAvatar(e); modal.style.display = 'none'; };
+                grid.appendChild(div);
+            });
+            const closeBtn = document.getElementById('closeAvatarModal');
+            if (closeBtn) closeBtn.onclick = () => modal.style.display = 'none';
+        }
+    }
+
+    function showCreateGroupModal() {
+        const modal = document.getElementById('groupModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const membersContainer = document.getElementById('groupMembersList');
+        if (membersContainer && membersContainer.children.length === 0 && allUsers.length) {
+            allUsers.forEach(u => {
+                if (u.username !== currentUser.username) {
+                    const div = document.createElement('div');
+                    div.className = 'member-item';
+                    div.innerHTML = `<input type="checkbox" value="${u.username}" id="member_${u.username}"> <label for="member_${u.username}">${escapeHtml(u.username)}</label>`;
+                    membersContainer.appendChild(div);
+                }
+            });
+        }
+        const createBtn = document.getElementById('confirmCreateGroup');
+        const cancelBtn = document.getElementById('cancelCreateGroup');
+        const groupNameInput = document.getElementById('groupNameInput');
+        const newCreateHandler = async () => {
+            const name = groupNameInput.value.trim();
+            if (!name) { showToast('Введите название группы', true); return; }
+            const selected = [];
+            document.querySelectorAll('#groupMembersList input:checked').forEach(cb => selected.push(cb.value));
+            await createGroup(name, selected);
+            modal.style.display = 'none';
+            groupNameInput.value = '';
+            document.querySelectorAll('#groupMembersList input').forEach(cb => cb.checked = false);
+            createBtn.removeEventListener('click', newCreateHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+        const cancelHandler = () => {
+            modal.style.display = 'none';
+            groupNameInput.value = '';
+            document.querySelectorAll('#groupMembersList input').forEach(cb => cb.checked = false);
+            createBtn.removeEventListener('click', newCreateHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+        createBtn.addEventListener('click', newCreateHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+    }
+
+    function renderAuth() {
+        document.getElementById('app').innerHTML = `
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h2>DanuMes</h2>
+                    <div class="tabs">
+                        <div class="tab active" id="loginTab">Вход</div>
+                        <div class="tab" id="regTab">Регистрация</div>
+                    </div>
+                    <div id="loginPanel" class="auth-form">
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                        <div id="loginError" class="error-text"></div>
+                        <button id="doLogin" class="auth-btn">Войти</button>
+                    </div>
+                    <div id="regPanel" class="auth-form" style="display:none;">
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+                        <div id="regError" class="error-text"></div>
+                        <button id="doReg" class="auth-btn">Зарегистрироваться</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'flex';
+            document.getElementById('regPanel').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('regTab').classList.remove('active');
+        };
+        document.getElementById('regTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('regPanel').style.display = 'flex';
+            document.getElementById('regTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
+        document.getElementById('doLogin').onclick = async () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const res = await api('POST', '/login-attempt', { username, password });
+            if (res.success) {
+                currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
+                await loadAllUsers();
+                await loadChatsAndChannels();
+                startMessenger();
+            } else {
+                document.getElementById('loginError').innerText = res.error;
+            }
+        };
+        document.getElementById('doReg').onclick = async () => {
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const res = await api('POST', '/register-attempt', { username, password });
+            if (res.success) {
+                alert('Регистрация успешна! Теперь войдите.');
+                document.getElementById('loginTab').click();
+            } else {
+                document.getElementById('regError').innerText = res.error;
+            }
+        };
+    }
+
+    function startMessenger() {
+        document.getElementById('app').innerHTML = `
+            <div class="messenger">
+                <div class="sidebar" id="sidebar"></div>
+                <div class="chat-main" id="chatMain"></div>
+            </div>
+            <div id="avatarModal" class="modal">
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Выбери аватар</h3>
+                    <div class="emoji-grid" id="avatarEmojiGrid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px;"></div>
+                    <button id="closeAvatarModal" class="close-modal">Закрыть</button>
+                </div>
+            </div>
+            <div id="groupModal" class="modal group-modal">
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Создать группу</h3>
+                    <input type="text" id="groupNameInput" placeholder="Название группы">
+                    <div class="members-list" id="groupMembersList"></div>
+                    <button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button>
+                    <button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button>
+                </div>
+            </div>
+        `;
+        renderSidebar();
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            if (currentChat) loadMessages();
+            loadChatsAndChannels();
+            loadAllUsers();
+        }, 3000);
+        setTimeout(() => {
+            const profileBtn = document.getElementById('profileBtn');
+            if (profileBtn) profileBtn.onclick = showAvatarModal;
+        }, 100);
+    }
+
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+    function isImageFile(fileName) { return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName); }
+
+    function showContextMenu(e, items) {
+        if (activeMenu) activeMenu.remove();
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        items.forEach(item => {
+            const option = document.createElement('div');
+            option.textContent = item.label;
+            option.onclick = (ev) => { ev.stopPropagation(); item.action(); menu.remove(); activeMenu = null; };
+            menu.appendChild(option);
+        });
+        document.body.appendChild(menu);
+        let left = e.clientX, top = e.clientY;
+        if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
+        if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        activeMenu = menu;
+        const closeMenu = () => { if(activeMenu) activeMenu.remove(); activeMenu = null; document.removeEventListener('click', closeMenu); };
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
+        e.preventDefault();
+    }
+
+    function showLightbox(url) {
+        let lb = document.getElementById('lightbox');
+        if (!lb) {
+            lb = document.createElement('div');
+            lb.id = 'lightbox';
+            lb.className = 'lightbox';
+            lb.innerHTML = '<img src="">';
+            lb.onclick = () => lb.style.display = 'none';
+            document.body.appendChild(lb);
+        }
+        lb.style.display = 'flex';
+        lb.querySelector('img').src = url;
+    }
+
+    initTheme();
+    renderAuth();
+</script>
+</body>
+</html>
