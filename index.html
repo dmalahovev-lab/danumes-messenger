@@ -840,8 +840,7 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-  // ========== ВХОД И СТАРТ ==========
-    function renderAuth() {
+  function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
                 <div class="auth-card">
@@ -851,14 +850,14 @@
                         <div class="tab" id="regTab">Регистрация</div>
                     </div>
                     <div id="loginPanel" class="auth-form">
-                        <input type="text" id="loginUsername" placeholder="Логин">
-                        <input type="password" id="loginPassword" placeholder="Пароль">
+                        <div class="input-group"><input type="text" id="loginUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
                         <div id="loginError" class="error-text"></div>
                         <button id="doLogin" class="auth-btn">Войти</button>
                     </div>
                     <div id="regPanel" class="auth-form" style="display:none;">
-                        <input type="text" id="regUsername" placeholder="Логин">
-                        <input type="password" id="regPassword" placeholder="Пароль">
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Логин"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
                         <div id="regError" class="error-text"></div>
                         <button id="doReg" class="auth-btn">Зарегистрироваться</button>
                     </div>
@@ -886,7 +885,6 @@
                 await loadAllUsers();
                 await loadChatsAndChannels();
                 startMessenger();
-                showToast(`Добро пожаловать, ${username}!`);
             } else {
                 document.getElementById('loginError').innerText = res.error;
             }
@@ -906,53 +904,81 @@
 
     function startMessenger() {
         document.getElementById('app').innerHTML = `
-            <div class="app">
+            <div class="messenger">
                 <div class="sidebar" id="sidebar"></div>
                 <div class="chat-main" id="chatMain"></div>
             </div>
+            <div id="avatarModal" class="modal">
+                <div class="modal-content">
+                    <h3 style="color:white; margin-bottom:16px;">Выбери аватар</h3>
+                    <div class="emoji-grid" id="avatarEmojiGrid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px;"></div>
+                    <button id="closeAvatarModal" class="close-modal">Закрыть</button>
+                </div>
+            </div>
             <div id="groupModal" class="modal group-modal">
                 <div class="modal-content">
-                    <h3>Создать группу</h3>
-                    <input type="text" id="groupNameInput" placeholder="Название">
+                    <h3 style="color:white; margin-bottom:16px;">Создать группу</h3>
+                    <input type="text" id="groupNameInput" placeholder="Название группы">
                     <div class="members-list" id="groupMembersList"></div>
                     <button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button>
                     <button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button>
                 </div>
             </div>
-            <div id="lightbox" class="lightbox"><img src=""></div>
         `;
         renderSidebar();
         if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(() => { if (currentChat) loadMessages(); loadChatsAndChannels(); loadAllUsers(); }, 3000);
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') document.body.classList.add('light');
-        else document.body.classList.add('dark');
+        pollInterval = setInterval(() => {
+            if (currentChat) loadMessages();
+            loadChatsAndChannels();
+            loadAllUsers();
+        }, 3000);
+        setTimeout(() => {
+            const profileBtn = document.getElementById('profileBtn');
+            if (profileBtn) profileBtn.onclick = showAvatarModal;
+        }, 100);
     }
 
-    // ========== ОБЩИЕ ВСПОМОГАТЕЛЬНЫЕ ==========
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+    function isImageFile(fileName) { return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName); }
+
     let activeMenu = null;
     function showContextMenu(e, items) {
         if (activeMenu) activeMenu.remove();
-        const menu = document.createElement('div'); menu.className = 'context-menu';
-        items.forEach(item => { const option = document.createElement('div'); option.textContent = item.label; option.onclick = (ev) => { ev.stopPropagation(); item.action(); menu.remove(); activeMenu = null; }; menu.appendChild(option); });
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        items.forEach(item => {
+            const option = document.createElement('div');
+            option.textContent = item.label;
+            option.onclick = (ev) => { ev.stopPropagation(); item.action(); menu.remove(); activeMenu = null; };
+            menu.appendChild(option);
+        });
         document.body.appendChild(menu);
         let left = e.clientX, top = e.clientY;
         if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
         if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
-        menu.style.left = left + 'px'; menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
         activeMenu = menu;
         const closeMenu = () => { if(activeMenu) activeMenu.remove(); activeMenu = null; document.removeEventListener('click', closeMenu); };
         setTimeout(() => document.addEventListener('click', closeMenu), 10);
         e.preventDefault();
     }
+
     function showLightbox(url) {
         let lb = document.getElementById('lightbox');
-        if (!lb) return;
-        lb.style.display = 'flex'; lb.querySelector('img').src = url;
-        lb.onclick = () => lb.style.display = 'none';
+        if (!lb) {
+            lb = document.createElement('div');
+            lb.id = 'lightbox';
+            lb.className = 'lightbox';
+            lb.innerHTML = '<img src="">';
+            lb.onclick = () => lb.style.display = 'none';
+            document.body.appendChild(lb);
+        }
+        lb.style.display = 'flex';
+        lb.querySelector('img').src = url;
     }
 
+    initTheme();
     renderAuth();
 </script>
 </body>
