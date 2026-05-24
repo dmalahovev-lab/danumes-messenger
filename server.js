@@ -75,29 +75,40 @@ app.post('/update-username', async (req, res) => {
 // ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
 app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
-    if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
+    console.log('📨 Получен запрос на отправку:', { from, to, text, fileUrl });
+    if (!from || !to || (!text && !fileUrl)) {
+        return res.status(400).json({ error: 'Недостаточно данных' });
+    }
     const newMsg = {
         id: Date.now(),
         from_user: from,
         to_user: to,
         text: text || '',
-        file_url: fileUrl,
-        file_name: fileName,
-        timestamp: new Date().toISOString()
+        file_url: fileUrl || null,
+        file_name: fileName || null,
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('messages').insert([newMsg]);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error('❌ Ошибка Supabase:', error);
+        return res.status(500).json({ error: error.message });
+    }
+    console.log('✅ Сообщение сохранено:', newMsg.id);
     res.json({ success: true, message: newMsg });
 });
 
 app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
-    const { data } = await supabase
+    console.log(`📥 Запрос сообщений между ${user1} и ${user2}`);
+    const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`from_user.eq.${user1},to_user.eq.${user2}`)
         .or(`from_user.eq.${user2},to_user.eq.${user1}`)
         .order('id', { ascending: true });
+    if (error) console.error('❌ Ошибка:', error);
+    console.log(`📦 Найдено сообщений: ${data?.length || 0}`);
     res.json(data || []);
 });
 
@@ -212,7 +223,8 @@ app.post('/send-group-message', async (req, res) => {
         text: text || '',
         file_url: fileUrl,
         file_name: fileName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('group_messages').insert([newMsg]);
     if (error) return res.status(500).json({ error: error.message });
@@ -245,7 +257,8 @@ app.post('/send-channel-message', async (req, res) => {
         text: text || '',
         file_url: fileUrl,
         file_name: fileName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        edited: false
     };
     const { error } = await supabase.from('channel_messages').insert([newMsg]);
     if (error) return res.status(500).json({ error: error.message });
@@ -280,12 +293,6 @@ app.delete('/delete-channel-message/:id', async (req, res) => {
     const { id } = req.params;
     await supabase.from('channel_messages').delete().eq('id', parseInt(id));
     res.json({ success: true });
-});
-
-// ========== АДМИН ==========
-app.get('/admin/users', async (req, res) => {
-    const { data } = await supabase.from('users').select('username, avatar, verified');
-    res.json(data || []);
 });
 
 app.listen(PORT, () => console.log(`🚀 Сервер запущен на порту ${PORT}`));
