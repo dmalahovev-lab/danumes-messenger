@@ -95,8 +95,8 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { data } = await supabase
         .from('messages')
         .select('*')
-        .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
-        .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
+        .or(`from_user.eq.${user1},to_user.eq.${user2}`)
+        .or(`from_user.eq.${user2},to_user.eq.${user1}`)
         .order('id', { ascending: true });
     res.json(data || []);
 });
@@ -125,6 +125,42 @@ app.get('/get-chats/:username', async (req, res) => {
     });
     chatList.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
     res.json(chatList);
+});
+
+// ========== ДРУЗЬЯ ==========
+app.post('/send-friend-request', async (req, res) => {
+    const { from, to } = req.body;
+    if (!from || !to) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { error } = await supabase.from('friend_requests').insert([{ from_user: from, to_user: to, status: 'pending' }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+app.get('/friend-requests/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data: received } = await supabase.from('friend_requests').select('*').eq('to_user', username).eq('status', 'pending');
+    const { data: sent } = await supabase.from('friend_requests').select('*').eq('from_user', username).eq('status', 'pending');
+    res.json({ received: received || [], sent: sent || [] });
+});
+
+app.post('/friend-request/accept', async (req, res) => {
+    const { from, to } = req.body;
+    await supabase.from('friend_requests').update({ status: 'accepted' }).eq('from_user', from).eq('to_user', to);
+    await supabase.from('friends').insert([{ user1: from, user2: to }]);
+    res.json({ success: true });
+});
+
+app.post('/friend-request/reject', async (req, res) => {
+    const { from, to } = req.body;
+    await supabase.from('friend_requests').delete().eq('from_user', from).eq('to_user', to);
+    res.json({ success: true });
+});
+
+app.get('/friends/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data } = await supabase.from('friends').select('*').or(`user1.eq.${username},user2.eq.${username}`);
+    const friends = (data || []).map(f => f.user1 === username ? f.user2 : f.user1);
+    res.json(friends);
 });
 
 // ========== ГРУППЫ ==========
@@ -183,6 +219,39 @@ app.post('/send-group-message', async (req, res) => {
     res.json({ success: true, message: newMsg });
 });
 
+// ========== КАНАЛЫ ==========
+app.get('/get-channels', async (req, res) => {
+    const { data } = await supabase.from('channels').select('*');
+    res.json(data || []);
+});
+
+app.get('/get-channel-messages/:channelId', async (req, res) => {
+    const { channelId } = req.params;
+    const { data } = await supabase.from('channel_messages').select('*').eq('channel_id', channelId).order('id', { ascending: true });
+    res.json(data || []);
+});
+
+app.post('/send-channel-message', async (req, res) => {
+    const { channelId, from, text, fileUrl, fileName } = req.body;
+    if (!channelId || !from || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { data: channel } = await supabase.from('channels').select('owner, only_owner_can_post').eq('id', channelId);
+    if (channel && channel[0] && channel[0].only_owner_can_post && from !== channel[0].owner) {
+        return res.status(403).json({ error: 'Только владелец канала может отправлять сообщения' });
+    }
+    const newMsg = {
+        id: Date.now(),
+        channel_id: channelId,
+        from_user: from,
+        text: text || '',
+        file_url: fileUrl,
+        file_name: fileName,
+        timestamp: new Date().toISOString()
+    };
+    const { error } = await supabase.from('channel_messages').insert([newMsg]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, message: newMsg });
+});
+
 // ========== ОБЩИЕ ==========
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
@@ -205,6 +274,18 @@ app.delete('/delete-group-message/:id', async (req, res) => {
     const { id } = req.params;
     await supabase.from('group_messages').delete().eq('id', parseInt(id));
     res.json({ success: true });
+});
+
+app.delete('/delete-channel-message/:id', async (req, res) => {
+    const { id } = req.params;
+    await supabase.from('channel_messages').delete().eq('id', parseInt(id));
+    res.json({ success: true });
+});
+
+// ========== АДМИН ==========
+app.get('/admin/users', async (req, res) => {
+    const { data } = await supabase.from('users').select('username, avatar, verified');
+    res.json(data || []);
 });
 
 app.listen(PORT, () => console.log(`🚀 Сервер запущен на порту ${PORT}`));
