@@ -72,9 +72,10 @@ app.post('/update-username', async (req, res) => {
     res.json({ success: true, newUsername });
 });
 
-// ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
+// ========== ЛИЧНЫЕ СООБЩЕНИЯ (с правильными колонками) ==========
 app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
+    console.log('📨 Отправка:', { from, to, text });
     if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
     const newMsg = {
         id: Date.now(),
@@ -86,7 +87,11 @@ app.post('/send-message', async (req, res) => {
         timestamp: new Date().toISOString()
     };
     const { error } = await supabase.from('messages').insert([newMsg]);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error('❌ Ошибка Supabase:', error);
+        return res.status(500).json({ error: error.message });
+    }
+    console.log('✅ Сообщение сохранено, id:', newMsg.id);
     res.json({ success: true, message: newMsg });
 });
 
@@ -98,6 +103,7 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
         .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
         .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
         .order('id', { ascending: true });
+    console.log(`📥 Диалог ${user1}/${user2}: ${data?.length || 0} сообщений`);
     res.json(data || []);
 });
 
@@ -127,7 +133,7 @@ app.get('/get-chats/:username', async (req, res) => {
     res.json(chatList);
 });
 
-// ========== ДРУЗЬЯ ==========
+// ========== ДРУЗЬЯ, ГРУППЫ (остальное без изменений) ==========
 app.post('/send-friend-request', async (req, res) => {
     const { from, to } = req.body;
     if (!from || !to) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -163,7 +169,6 @@ app.get('/friends/:username', async (req, res) => {
     res.json(friends);
 });
 
-// ========== ГРУППЫ ==========
 app.post('/create-group', async (req, res) => {
     const { name, createdBy, members } = req.body;
     if (!name || !createdBy) return res.status(400).json({ error: 'Недостаточно данных' });
@@ -219,7 +224,6 @@ app.post('/send-group-message', async (req, res) => {
     res.json({ success: true, message: newMsg });
 });
 
-// ========== ОБЩИЕ ==========
 app.post('/upload-file', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
     res.json({ success: true, fileUrl: `/file/${req.file.filename}`, fileName: req.file.originalname });
