@@ -840,7 +840,7 @@
         cancelBtn.addEventListener('click', cancelHandler);
     }
 
-    // ========== ТВОЯ ФУНКЦИЯ renderAuth (ВСТАВЛЕНА БЕЗ ИЗМЕНЕНИЙ) ==========
+  // ========== ВХОД И СТАРТ ==========
     function renderAuth() {
         document.getElementById('app').innerHTML = `
             <div class="auth-container">
@@ -865,36 +865,60 @@
                 </div>
             </div>
         `;
-        const loginTab = document.getElementById('loginTab'), regTab = document.getElementById('regTab');
-        const loginPanel = document.getElementById('loginPanel'), regPanel = document.getElementById('regPanel');
-        loginTab.onclick = () => { loginPanel.style.display = 'flex'; regPanel.style.display = 'none'; loginTab.classList.add('active'); regTab.classList.remove('active'); };
-        regTab.onclick = () => { loginPanel.style.display = 'none'; regPanel.style.display = 'flex'; regTab.classList.add('active'); loginTab.classList.remove('active'); };
+        document.getElementById('loginTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'flex';
+            document.getElementById('regPanel').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('regTab').classList.remove('active');
+        };
+        document.getElementById('regTab').onclick = () => {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('regPanel').style.display = 'flex';
+            document.getElementById('regTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
         document.getElementById('doLogin').onclick = async () => {
-            const username = document.getElementById('loginUsername').value, password = document.getElementById('loginPassword').value;
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
             const res = await api('POST', '/login-attempt', { username, password });
             if (res.success) {
                 currentUser = { username: res.username, avatar: res.avatar, verified: res.verified };
-                await loadAllUsers(); await loadChatsAndChannels();
+                await loadAllUsers();
+                await loadChatsAndChannels();
                 startMessenger();
                 showToast(`Добро пожаловать, ${username}!`);
-            } else { document.getElementById('loginError').innerText = res.error; }
+            } else {
+                document.getElementById('loginError').innerText = res.error;
+            }
         };
         document.getElementById('doReg').onclick = async () => {
-            const username = document.getElementById('regUsername').value, password = document.getElementById('regPassword').value;
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
             const res = await api('POST', '/register-attempt', { username, password });
-            if (res.success) { alert('Регистрация успешна! Теперь войдите.'); loginTab.click(); }
-            else { document.getElementById('regError').innerText = res.error; }
+            if (res.success) {
+                alert('Регистрация успешна! Теперь войдите.');
+                document.getElementById('loginTab').click();
+            } else {
+                document.getElementById('regError').innerText = res.error;
+            }
         };
     }
 
-    // ========== ФУНКЦИЯ startMessenger (ТВОЯ, НО ВЫНЕСЕНА ВВЕРХ ДЛЯ ДОСТУПА) ==========
     function startMessenger() {
         document.getElementById('app').innerHTML = `
-            <div class="messenger">
+            <div class="app">
                 <div class="sidebar" id="sidebar"></div>
                 <div class="chat-main" id="chatMain"></div>
             </div>
-            <div id="groupModal" class="modal group-modal"><div class="modal-content"><h3>Создать группу</h3><input type="text" id="groupNameInput" placeholder="Название"><div class="members-list" id="groupMembersList"></div><button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button><button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button></div></div>
+            <div id="groupModal" class="modal group-modal">
+                <div class="modal-content">
+                    <h3>Создать группу</h3>
+                    <input type="text" id="groupNameInput" placeholder="Название">
+                    <div class="members-list" id="groupMembersList"></div>
+                    <button id="confirmCreateGroup" class="close-modal" style="margin-bottom:8px;">Создать</button>
+                    <button id="cancelCreateGroup" class="close-modal" style="background:#6b7280;">Отмена</button>
+                </div>
+            </div>
             <div id="lightbox" class="lightbox"><img src=""></div>
         `;
         renderSidebar();
@@ -905,8 +929,9 @@
         else document.body.classList.add('dark');
     }
 
+    // ========== ОБЩИЕ ВСПОМОГАТЕЛЬНЫЕ ==========
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
-    
+    let activeMenu = null;
     function showContextMenu(e, items) {
         if (activeMenu) activeMenu.remove();
         const menu = document.createElement('div'); menu.className = 'context-menu';
@@ -921,9 +946,9 @@
         setTimeout(() => document.addEventListener('click', closeMenu), 10);
         e.preventDefault();
     }
-    
     function showLightbox(url) {
-        let lb = document.getElementById('lightbox'); if (!lb) return;
+        let lb = document.getElementById('lightbox');
+        if (!lb) return;
         lb.style.display = 'flex'; lb.querySelector('img').src = url;
         lb.onclick = () => lb.style.display = 'none';
     }
