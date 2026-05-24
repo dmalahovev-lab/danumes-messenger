@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
-        /* ===== ТВОЙ ДИЗАЙН (оставь как есть) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
@@ -523,31 +522,36 @@
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) return;
+        if (!currentUser || !currentChat) {
+            console.log('❌ loadMessages: нет currentUser или currentChat');
+            return;
+        }
         try {
             let data;
             if (currentChatType === 'user') {
                 const url = `/get-messages/${currentUser.username}/${currentChat}`;
-                console.log('📥 Загрузка сообщений:', url);
+                console.log('📥 Запрос сообщений:', url);
                 const res = await fetch(url);
                 data = await res.json();
-                console.log('📦 Получено сообщений:', data?.length || 0);
+                console.log('📦 Ответ сервера (сообщения):', data);
                 messages = data || [];
             } else if (currentChatType === 'group') {
                 const res = await fetch(`/get-group-messages/${currentChat}`);
                 data = await res.json();
                 messages = data || [];
             }
+            console.log('✅ messages после загрузки:', messages.length, 'сообщений');
             renderMessages();
         } catch(e) { console.error('Ошибка загрузки сообщений:', e); }
     }
 
     async function sendMessage(text, fileUrl = null, fileName = null) {
         if ((!text && !fileUrl)) return;
+        console.log('📨 Отправка сообщения:', text);
         try {
             if (currentChatType === 'user') {
                 const res = await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
-                console.log('📨 Отправка ответ:', res);
+                console.log('Ответ сервера на отправку:', res);
             } else if (currentChatType === 'group') {
                 await api('POST', '/send-group-message', { groupId: currentChat, from: currentUser.username, text: text || '', fileUrl, fileName });
             }
@@ -749,19 +753,37 @@
     function renderMessages() {
         const container = document.getElementById('messagesList');
         if (!container) return;
-        if (!currentChat) { container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Выберите чат</div>`; return; }
-        if (!messages.length) { container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Нет сообщений</div>`; return; }
+        if (!currentChat) {
+            container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Выберите чат</div>`;
+            return;
+        }
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Нет сообщений. Напишите первое!</div>`;
+            return;
+        }
         let html = '';
         messages.forEach(msg => {
             const isOwn = msg.from_user === currentUser.username;
-            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             let content = '';
-            if (msg.file_url && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(msg.file_name)) content += `<img src="${msg.file_url}" class="message-image" data-url="${msg.file_url}">`;
-            else if (msg.file_url) content += `<a href="${msg.file_url}" download class="file-attach">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
-            if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-            let senderName = (currentChatType === 'group' && !isOwn) ? `<div class="message-sender">${escapeHtml(msg.from_user)}</div>` : '';
+            if (msg.file_url && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(msg.file_name)) {
+                content += `<img src="${msg.file_url}" class="message-image" data-url="${msg.file_url}">`;
+            } else if (msg.file_url) {
+                content += `<a href="${msg.file_url}" download class="file-attach" data-url="${msg.file_url}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a>`;
+            }
+            if (msg.text) {
+                content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+            }
+            let senderName = '';
+            if (currentChatType === 'group' && !isOwn) {
+                senderName = `<div class="message-sender">${escapeHtml(msg.from_user)}</div>`;
+            }
             html += `<div class="message ${isOwn ? 'message-own' : ''}" data-msg-id="${msg.id}" data-msg-from="${msg.from_user}" data-file-url="${msg.file_url || ''}">
-                        <div class="message-bubble">${senderName}${content}<div class="message-time">${time}</div></div>
+                        <div class="message-bubble">
+                            ${senderName}
+                            ${content}
+                            <div class="message-time">${time}</div>
+                        </div>
                     </div>`;
         });
         container.innerHTML = html;
