@@ -142,24 +142,20 @@ app.get('/get-groups/:username', async (req, res) => {
     if (!memberships || memberships.length === 0) return res.json([]);
     const groupIds = memberships.map(m => m.group_id);
     const { data: groups } = await supabase.from('groups').select('*').in('id', groupIds);
-    const { data: allGroupMessages } = await supabase.from('group_messages').select('*').in('group_id', groupIds).order('id', { ascending: false });
     const result = (groups || []).map(g => {
-        const lastMsg = allGroupMessages?.find(m => m.group_id === g.id);
         const membership = memberships.find(m => m.group_id === g.id);
-        return {
-            ...g,
-            role: membership?.role || 'member',
-            lastMessage: lastMsg ? (lastMsg.text || 'Файл') : 'Нет сообщений',
-            lastTime: lastMsg ? lastMsg.timestamp : null
-        };
+        return { ...g, role: membership?.role || 'member', lastMessage: 'Нет сообщений', lastTime: null };
     });
-    result.sort((a,b) => (b.lastTime || 0) - (a.lastTime || 0));
     res.json(result);
 });
 
 app.get('/get-group-messages/:groupId', async (req, res) => {
     const { groupId } = req.params;
     const { data } = await supabase.from('group_messages').select('*').eq('group_id', groupId).order('id', { ascending: true });
+    for (let msg of data || []) {
+        const { data: reactions } = await supabase.from('group_reactions').select('username, reaction').eq('message_id', msg.id);
+        msg.reactions = reactions || [];
+    }
     res.json(data || []);
 });
 
@@ -230,25 +226,17 @@ app.put('/edit-message/:id', async (req, res) => {
 app.post('/pin-message', async (req, res) => {
     const { groupId, messageId, pinnedBy } = req.body;
     if (!groupId || !messageId || !pinnedBy) return res.status(400).json({ error: 'Недостаточно данных' });
-    const { error } = await supabase.from('group_pinned_messages').insert([{ group_id: groupId, message_id: messageId, pinned_by: pinnedBy }]);
-    if (error) return res.status(500).json({ error: error.message });
+    await supabase.from('group_pinned_messages').upsert([{ group_id: groupId, message_id: messageId, pinned_by: pinnedBy }]);
     res.json({ success: true });
-});
-
-app.get('/get-pinned-messages/:groupId', async (req, res) => {
-    const { groupId } = req.params;
-    const { data } = await supabase.from('group_pinned_messages').select('message_id').eq('group_id', groupId);
-    res.json(data || []);
 });
 
 // ========== ЧЕРНОВИКИ ==========
 app.post('/save-draft', async (req, res) => {
     const { username, chatId, chatType, draftText } = req.body;
     if (!username || !chatId || !chatType) return res.status(400).json({ error: 'Недостаточно данных' });
-    const { error } = await supabase.from('drafts').upsert([{ username, chat_id: chatId, chat_type: chatType, draft_text: draftText, updated_at: new Date() }], {
+    await supabase.from('drafts').upsert([{ username, chat_id: chatId, chat_type: chatType, draft_text: draftText, updated_at: new Date() }], {
         onConflict: 'username, chat_id, chat_type'
     });
-    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
 });
 
@@ -269,8 +257,7 @@ app.post('/admin/set-role', async (req, res) => {
     if (!adminUsername || !targetUsername || !role) return res.status(400).json({ error: 'Недостаточно данных' });
     const { data: admin } = await supabase.from('users').select('role').eq('username', adminUsername);
     if (!admin || admin[0]?.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
-    const { error } = await supabase.from('users').update({ role }).eq('username', targetUsername);
-    if (error) return res.status(500).json({ error: error.message });
+    await supabase.from('users').update({ role }).eq('username', targetUsername);
     res.json({ success: true });
 });
 
