@@ -13,7 +13,6 @@
             height: 100vh;
             overflow: hidden;
         }
-        /* Auth styles */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -89,11 +88,7 @@
         }
         .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(108,92,231,0.4); }
         .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
-        
-        /* Messenger styles */
         .messenger { display: flex; height: 100vh; width: 100%; background: #0f1117; }
-        
-        /* Sidebar */
         .sidebar {
             width: 320px;
             display: flex;
@@ -122,7 +117,6 @@
         }
         .profile-info h3 { font-size: 18px; font-weight: 600; }
         .profile-info p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
-        
         .search-box { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .search-box input {
             width: 100%;
@@ -134,7 +128,6 @@
             outline: none;
             color: white;
         }
-        
         .chats-list { flex: 1; overflow-y: auto; }
         .chat-item {
             display: flex;
@@ -165,8 +158,6 @@
         .verified-badge { font-size: 12px; color: #6c5ce7; }
         .chat-lastmsg { font-size: 12px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
         .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: 6px; }
-        
-        /* Bottom bar */
         .bottom-bar {
             padding: 16px;
             border-top: 1px solid rgba(255,255,255,0.08);
@@ -186,8 +177,6 @@
             color: #a0a5c0;
         }
         .bottom-btn:hover { background: rgba(108, 92, 231, 0.2); color: #c084fc; }
-        
-        /* Chat main */
         .chat-main {
             flex: 1;
             display: flex;
@@ -461,25 +450,37 @@
     }
 
     async function loadMessages() {
-        if (!currentUser || !currentChat) return;
+        if (!currentUser || !currentChat) {
+            console.log('❌ loadMessages: нет currentUser или currentChat');
+            return;
+        }
         try {
             if (currentChatType === 'user') {
-                const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
-                messages = res || [];
-                console.log('Загружено сообщений:', messages.length);
+                const url = `/get-messages/${currentUser.username}/${currentChat}`;
+                console.log('📥 Запрос сообщений:', url);
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log('📦 Получено от сервера:', data);
+                messages = data || [];
+                console.log('✅ messages после загрузки:', messages.length);
+                renderMessages();
             }
-            renderMessages();
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error('Ошибка загрузки сообщений:', e); }
     }
 
     async function sendMessage(text, fileUrl = null, fileName = null) {
         if ((!text && !fileUrl)) return;
         try {
             if (currentChatType === 'user') {
-                await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
+                const res = await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
+                console.log('📨 Ответ на отправку:', res);
+                if (res.success) {
+                    await loadMessages();
+                    await loadChatsAndChannels();
+                } else {
+                    showToast('Ошибка отправки', true);
+                }
             }
-            await loadMessages();
-            await loadChatsAndChannels();
         } catch(e) { console.error(e); showToast('Ошибка отправки', true); }
     }
 
@@ -602,7 +603,7 @@
         document.querySelectorAll('.message-image').forEach(img => img.addEventListener('click', (e) => { e.stopPropagation(); showLightbox(img.src); }));
         document.querySelectorAll('.message').forEach(el => {
             el.addEventListener('contextmenu', (e) => {
-                const msgId = el.dataset.msgId, isOwn = el.dataset.msgFrom === currentUser.username;
+                const msgId = el.dataset.msgId, msgFrom = el.dataset.msgFrom, isOwn = msgFrom === currentUser.username;
                 const items = [];
                 if (isOwn) items.push({ label: '🗑 Удалить', action: () => deleteMessage(msgId) });
                 if (items.length) showContextMenu(e, items);
