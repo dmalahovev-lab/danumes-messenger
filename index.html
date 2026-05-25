@@ -35,7 +35,7 @@
             --accent-hover: #3a6b99;
             --online: #4caf50;
             --toast-bg: #2b2b3a;
-            --chat-bg-pattern: none;
+            --verified: #4caf50;
         }
 
         body[data-theme="light"] {
@@ -52,7 +52,7 @@
             --accent: #0088cc;
             --online: #31a24c;
             --toast-bg: #ffffff;
-            --chat-bg-pattern: none;
+            --verified: #31a24c;
         }
 
         body[data-theme="ocean"] {
@@ -66,6 +66,7 @@
             --accent: #3498db;
             --online: #2ecc71;
             --toast-bg: #0f2742;
+            --verified: #2ecc71;
         }
 
         body[data-theme="forest"] {
@@ -79,6 +80,7 @@
             --accent: #27ae60;
             --online: #2ecc71;
             --toast-bg: #1a4428;
+            --verified: #2ecc71;
         }
 
         body[data-theme="sunset"] {
@@ -92,13 +94,14 @@
             --accent: #e67e22;
             --online: #f39c12;
             --toast-bg: #3d1a2e;
+            --verified: #f39c12;
         }
 
-        /* Фоновые паттерны для чата */
-        body[data-chat-bg="dots"] { --chat-bg-pattern: radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 1px); background-size: 20px 20px; }
-        body[data-chat-bg="lines"] { --chat-bg-pattern: linear-gradient(var(--border) 1px, transparent 1px); background-size: 100% 20px; }
-        body[data-chat-bg="grid"] { --chat-bg-pattern: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 20px 20px; }
-        body[data-chat-bg="none"] { --chat-bg-pattern: none; }
+        /* Фоновые паттерны */
+        body[data-chat-bg="dots"] { background-image: radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 1px); background-size: 20px 20px; }
+        body[data-chat-bg="lines"] { background-image: linear-gradient(var(--border) 1px, transparent 1px); background-size: 100% 20px; }
+        body[data-chat-bg="grid"] { background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 20px 20px; }
+        body[data-chat-bg="none"] { background-image: none; }
 
         .app {
             display: flex;
@@ -113,7 +116,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: all 0.3s ease;
         }
 
         .sidebar-header {
@@ -154,11 +156,20 @@
             font-weight: 700;
             font-size: 18px;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .verified-badge {
+            color: var(--verified);
+            font-size: 16px;
         }
 
         .user-status {
             font-size: 12px;
             color: var(--online);
+            margin-top: 4px;
         }
 
         .admin-badge {
@@ -203,7 +214,6 @@
             border-radius: 12px;
             color: var(--text-primary);
             font-size: 14px;
-            transition: all 0.2s;
         }
 
         .search-input:focus {
@@ -253,6 +263,7 @@
             justify-content: center;
             font-size: 24px;
             position: relative;
+            flex-shrink: 0;
         }
 
         .online-indicator {
@@ -303,8 +314,6 @@
             display: flex;
             flex-direction: column;
             background: var(--bg-chat);
-            background-image: var(--chat-bg-pattern);
-            position: relative;
         }
 
         .chat-header {
@@ -342,11 +351,15 @@
             font-weight: 700;
             font-size: 18px;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .chat-header-status {
             font-size: 12px;
             color: var(--text-secondary);
+            margin-top: 3px;
         }
 
         /* Сообщения */
@@ -383,7 +396,6 @@
             padding: 10px 14px;
             border-radius: 18px;
             cursor: pointer;
-            position: relative;
         }
 
         .message-own .message-bubble {
@@ -440,7 +452,7 @@
             cursor: pointer;
         }
 
-        /* Реакции - только выбранные */
+        /* Реакции */
         .reactions {
             display: flex;
             gap: 6px;
@@ -658,7 +670,7 @@
             font-size: 14px;
         }
 
-        /* Уведомления (toast) */
+        /* Уведомления */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -806,14 +818,6 @@
             font-weight: 600;
         }
 
-        .admin-role-select {
-            padding: 6px 10px;
-            background: var(--bg-page);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-        }
-
         /* Скроллбар */
         ::-webkit-scrollbar {
             width: 6px;
@@ -867,7 +871,7 @@
         let lastMessageIds = new Set();
         
         const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
-        const ADMINS = ['Danumala', 'RunFly'];
+        const VERIFIED_USERS = ['Danumala', 'RunFly'];
         
         // ===== УВЕДОМЛЕНИЯ =====
         function showToast(message, type = 'info') {
@@ -984,6 +988,7 @@
                 await loadMessages();
                 const container = document.getElementById('messagesContainer');
                 if (container) container.scrollTop = container.scrollHeight;
+                showToast('Сообщение отправлено', 'success');
             } else {
                 showToast('Ошибка отправки: ' + (result.error || 'Неизвестная ошибка'), 'error');
             }
@@ -997,7 +1002,7 @@
                 await loadMessages();
                 showToast('Сообщение изменено', 'success');
             } else {
-                showToast('Ошибка редактирования', 'error');
+                showToast('Ошибка редактирования: ' + (result.error || 'Неизвестная ошибка'), 'error');
             }
         }
         
@@ -1007,7 +1012,7 @@
                 await loadMessages();
                 showToast('Сообщение удалено', 'success');
             } else {
-                showToast('Ошибка удаления', 'error');
+                showToast('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'), 'error');
             }
         }
         
@@ -1021,19 +1026,6 @@
             });
             if (result.success) {
                 await loadMessages();
-            }
-        }
-        
-        async function removeReaction(messageId, reaction, type) {
-            // Сначала получаем реакцию пользователя
-            const reactions = await api('GET', `/get-reactions/${messageId}/${type}`);
-            const userReaction = reactions.find(r => r.user_id === currentUser.username && r.reaction === reaction);
-            if (userReaction) {
-                // Удаляем через специальный эндпоинт (нужно добавить на сервер)
-                const result = await api('DELETE', `/remove-reaction/${userReaction.id}`);
-                if (result.success) {
-                    await loadMessages();
-                }
             }
         }
         
@@ -1120,28 +1112,23 @@
         }
         
         // ===== АДМИН ПАНЕЛЬ =====
-        async function openAdminPanel() {
-            if (!ADMINS.includes(currentUser.username)) {
+        function openAdminPanel() {
+            if (!VERIFIED_USERS.includes(currentUser.username)) {
                 showToast('У вас нет прав администратора', 'error');
                 return;
             }
             
-            const users = await api('GET', '/get-users');
-            
             showModal(`
                 <div class="modal-title">👑 Админ панель</div>
                 <div class="admin-panel">
-                    ${users.map(user => `
+                    ${allUsers.map(user => `
                         <div class="admin-user">
                             <div class="admin-user-info">
                                 <div class="admin-user-avatar">${user.avatar || '👤'}</div>
-                                <div class="admin-user-name">${escapeHtml(user.username)}</div>
-                            </div>
-                            <div>
-                                <select class="admin-role-select" data-username="${user.username}" onchange="changeUserRole('${user.username}', this.value)">
-                                    <option value="user" ${!ADMINS.includes(user.username) ? 'selected' : ''}>👤 Пользователь</option>
-                                    <option value="admin" ${ADMINS.includes(user.username) ? 'selected' : ''}>👑 Админ</option>
-                                </select>
+                                <div class="admin-user-name">
+                                    ${escapeHtml(user.username)}
+                                    ${user.verified ? '<span style="color: var(--verified);">✓</span>' : ''}
+                                </div>
                             </div>
                         </div>
                     `).join('')}
@@ -1150,15 +1137,6 @@
                     <button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button>
                 </div>
             `);
-        }
-        
-        async function changeUserRole(username, role) {
-            // Здесь можно добавить API для изменения роли
-            if (role === 'admin') {
-                showToast(`${username} повышен до администратора`, 'success');
-            } else {
-                showToast(`${username} понижен до пользователя`, 'success');
-            }
         }
         
         // ===== НАСТРОЙКИ =====
@@ -1234,6 +1212,8 @@
                 currentUser.avatar = avatar;
                 renderSidebar();
                 if (currentChatType === 'user') {
+                    const user = allUsers.find(u => u.username === currentChat);
+                    if (user) user.avatar = avatar;
                     currentChatAvatar = avatar;
                     renderChatArea();
                 }
@@ -1425,7 +1405,7 @@
                         <div style="padding: 8px 0;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                 <input type="checkbox" class="user-select" value="${user.username}">
-                                <span>${escapeHtml(user.username)}</span>
+                                <span>${escapeHtml(user.username)} ${user.verified ? '✓' : ''}</span>
                             </label>
                         </div>
                     `).join('')}
@@ -1445,7 +1425,7 @@
             const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
             const filteredGroups = allGroups.filter(g => g.name.toLowerCase().includes(searchTerm));
             const filteredUsers = allUsers.filter(u => u.username.toLowerCase().includes(searchTerm));
-            const isAdmin = ADMINS.includes(currentUser?.username);
+            const isVerified = VERIFIED_USERS.includes(currentUser?.username);
             
             sidebar.innerHTML = `
                 <div class="sidebar-header">
@@ -1454,7 +1434,8 @@
                         <div class="user-info">
                             <div class="username">
                                 ${escapeHtml(currentUser?.username || '')}
-                                ${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}
+                                ${isVerified ? '<span class="verified-badge">✓</span>' : ''}
+                                ${currentUser?.username === 'Danumala' ? '<span class="admin-badge">ADMIN</span>' : ''}
                             </div>
                             <div class="user-status">● В сети</div>
                         </div>
@@ -1462,7 +1443,7 @@
                     <div class="action-buttons">
                         <button class="action-btn" onclick="openSettings()">⚙️</button>
                         <button class="action-btn" onclick="showCreateGroupModal()">➕</button>
-                        ${isAdmin ? '<button class="action-btn" onclick="openAdminPanel()">👑</button>' : ''}
+                        ${VERIFIED_USERS.includes(currentUser?.username) ? '<button class="action-btn" onclick="openAdminPanel()">👑</button>' : ''}
                     </div>
                 </div>
                 <div class="search-container">
@@ -1490,7 +1471,10 @@
                                     ${user.online ? '<div class="online-indicator"></div>' : ''}
                                 </div>
                                 <div class="chat-info">
-                                    <div class="chat-name">${escapeHtml(user.username)}</div>
+                                    <div class="chat-name">
+                                        ${escapeHtml(user.username)}
+                                        ${user.verified ? '<span class="verified-badge">✓</span>' : ''}
+                                    </div>
                                     <div class="chat-preview">${user.online ? 'В сети' : 'Не в сети'}</div>
                                 </div>
                             </div>
@@ -1528,6 +1512,7 @@
                 const hasFile = msg.file_url;
                 const reactions = reactionsMap.get(msg.id) || [];
                 const userReaction = reactions.find(r => r.user_id === currentUser.username);
+                const senderIsVerified = VERIFIED_USERS.includes(msg.from_user);
                 
                 // Группируем реакции по типу
                 const reactionGroups = {};
@@ -1547,7 +1532,11 @@
                 
                 return `
                     <div class="message ${isOwn ? 'message-own' : 'message-other'}" data-message-id="${msg.id}">
-                        ${!isOwn && currentChatType === 'group' ? `<div class="message-sender">${escapeHtml(msg.from_user)}</div>` : ''}
+                        ${!isOwn && currentChatType === 'group' ? 
+                            `<div class="message-sender">
+                                ${escapeHtml(msg.from_user)}
+                                ${senderIsVerified ? '<span style="color: var(--verified);">✓</span>' : ''}
+                            </div>` : ''}
                         <div class="message-bubble" oncontextmenu="showContextMenu(event, ${msg.id}, '${msg.from_user}', '${escapeHtml(msg.text || '').replace(/'/g, "\\'")}', '${msg.file_url || ''}')">
                             <div class="message-text">${escapeHtml(msg.text || '')}</div>
                             ${fileHtml}
@@ -1579,11 +1568,14 @@
             if (!chatArea) return;
             
             let statusText = '';
+            let isVerified = false;
+            
             if (currentChatType === 'group') {
                 statusText = 'Группа';
             } else if (currentChat && currentChatType === 'user') {
                 const user = allUsers.find(u => u.username === currentChat);
                 statusText = user?.online ? '🟢 В сети' : '⚫ Не в сети';
+                isVerified = user?.verified || false;
             }
             
             chatArea.innerHTML = `
@@ -1591,7 +1583,10 @@
                     <div class="chat-header-left">
                         <div class="chat-header-avatar">${currentChatAvatar || '👤'}</div>
                         <div class="chat-header-info">
-                            <div class="chat-header-name">${escapeHtml(currentChat || 'Выберите чат')}</div>
+                            <div class="chat-header-name">
+                                ${escapeHtml(currentChat || 'Выберите чат')}
+                                ${isVerified ? '<span class="verified-badge">✓</span>' : ''}
+                            </div>
                             <div class="chat-header-status">${statusText}</div>
                         </div>
                     </div>
@@ -1721,7 +1716,6 @@
         window.deleteMessage = deleteMessage;
         window.openSettings = openSettings;
         window.openAdminPanel = openAdminPanel;
-        window.changeUserRole = changeUserRole;
         window.showToast = showToast;
         
         // Запуск
