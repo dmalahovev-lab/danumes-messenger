@@ -31,10 +31,8 @@ app.use(express.static(__dirname));
 app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
-    
     const { data: existing } = await supabase.from('users').select('username').eq('username', username);
     if (existing && existing.length) return res.json({ success: false, error: 'Пользователь уже существует' });
-    
     const { error } = await supabase.from('users').insert([{ username, password, avatar: '👤', online: false, verified: false }]);
     if (error) return res.json({ success: false, error: error.message });
     res.json({ success: true });
@@ -43,9 +41,7 @@ app.post('/register-attempt', async (req, res) => {
 app.post('/login-attempt', async (req, res) => {
     const { username, password } = req.body;
     const { data } = await supabase.from('users').select('username, avatar, verified').eq('username', username).eq('password', password);
-    
     if (!data || data.length === 0) return res.json({ success: false, error: 'Неверные имя или пароль' });
-    
     await supabase.from('users').update({ online: true }).eq('username', username);
     res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
 });
@@ -61,36 +57,39 @@ app.post('/update-avatar', async (req, res) => {
     res.json({ success: true, avatar });
 });
 
-// ========== СООБЩЕНИЯ ==========
+app.post('/update-username', async (req, res) => {
+    const { oldUsername, newUsername } = req.body;
+    if (!oldUsername || !newUsername) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { data: existing } = await supabase.from('users').select('username').eq('username', newUsername);
+    if (existing && existing.length) return res.status(400).json({ error: 'Имя уже занято' });
+    await supabase.from('users').update({ username: newUsername }).eq('username', oldUsername);
+    res.json({ success: true, newUsername });
+});
+
+// ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
 app.post('/send-message', async (req, res) => {
     const { from, to, text, fileUrl, fileName } = req.body;
-    console.log('📨 Получен запрос на отправку:', { from, to, text });
-    
-    if (!from || !to || (!text && !fileUrl)) {
-        return res.status(400).json({ error: 'Недостаточно данных' });
-    }
-    
+    console.log('📨 Отправка:', { from, to, text });
+    if (!from || !to || (!text && !fileUrl)) return res.status(400).json({ error: 'Недостаточно данных' });
     const newMsg = {
         id: Date.now(),
         from_user: from,
         to_user: to,
         text: text || '',
-        file_url: fileUrl || null,
-        file_name: fileName || null,
+        file_url: fileUrl,
+        file_name: fileName,
         timestamp: new Date().toISOString()
     };
-    
     const { error } = await supabase.from('messages').insert([newMsg]);
-    
     if (error) {
         console.error('❌ Ошибка Supabase:', error);
         return res.status(500).json({ error: error.message });
     }
-    
     console.log('✅ Сообщение сохранено, id:', newMsg.id);
     res.json({ success: true, message: newMsg });
 });
 
+// ТВОЙ РАБОЧИЙ ЗАПРОС
 app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
     console.log(`📥 Запрос сообщений между ${user1} и ${user2}`);
