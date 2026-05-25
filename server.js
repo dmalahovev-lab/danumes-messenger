@@ -18,9 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// File upload configuration
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// File upload configuration - using /tmp for Render
+const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -30,6 +32,11 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 // Helper function to handle database errors
 const handleDbError = (res, error, customMessage = 'Database error') => {
@@ -208,7 +215,6 @@ app.post('/add-reaction', async (req, res) => {
     const table = type === 'group' ? 'group_reactions' : 'reactions';
     
     try {
-        // Check if reaction already exists
         const { data: existing } = await supabase
             .from(table)
             .select('*')
@@ -216,7 +222,6 @@ app.post('/add-reaction', async (req, res) => {
             .eq('user_id', userId);
         
         if (existing && existing.length > 0) {
-            // Update existing reaction
             const { error } = await supabase
                 .from(table)
                 .update({ reaction, timestamp: new Date().toISOString() })
@@ -225,7 +230,6 @@ app.post('/add-reaction', async (req, res) => {
             
             if (error) throw error;
         } else {
-            // Add new reaction
             const { error } = await supabase
                 .from(table)
                 .insert([{ message_id: messageId, user_id: userId, reaction, timestamp: new Date().toISOString() }]);
@@ -261,7 +265,6 @@ app.post('/create-group', async (req, res) => {
     const { name, creator, members } = req.body;
     
     try {
-        // Create group
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert([{ name, created_by: creator, created_at: new Date().toISOString() }])
@@ -271,7 +274,6 @@ app.post('/create-group', async (req, res) => {
         
         const groupId = group[0].id;
         
-        // Add members
         const allMembers = [...new Set([creator, ...members])];
         const memberInserts = allMembers.map(username => ({
             group_id: groupId,
@@ -353,7 +355,6 @@ app.post('/send-group-message', async (req, res) => {
         
         if (error) throw error;
         
-        // Get all group members for notifications
         const { data: members } = await supabase
             .from('group_members')
             .select('user_id')
@@ -388,7 +389,6 @@ app.post('/pin-group-message', async (req, res) => {
     const { groupId, messageId, pinnedBy } = req.body;
     
     try {
-        // Check if already pinned
         const { data: existing } = await supabase
             .from('group_pinned_messages')
             .select('*')
@@ -396,7 +396,6 @@ app.post('/pin-group-message', async (req, res) => {
             .eq('message_id', messageId);
         
         if (existing && existing.length > 0) {
-            // Unpin
             const { error } = await supabase
                 .from('group_pinned_messages')
                 .delete()
@@ -406,7 +405,6 @@ app.post('/pin-group-message', async (req, res) => {
             if (error) throw error;
             res.json({ success: true, action: 'unpinned' });
         } else {
-            // Pin
             const { error } = await supabase
                 .from('group_pinned_messages')
                 .insert([{ group_id: groupId, message_id: messageId, pinned_by: pinnedBy, pinned_at: new Date().toISOString() }]);
@@ -448,7 +446,6 @@ app.post('/save-draft', async (req, res) => {
             .eq('chat_type', chatType);
         
         if (data && data.length > 0) {
-            // Update existing draft
             const { error: updateError } = await supabase
                 .from('drafts')
                 .update({ text, updated_at: new Date().toISOString() })
@@ -456,7 +453,6 @@ app.post('/save-draft', async (req, res) => {
             
             if (updateError) throw updateError;
         } else {
-            // Insert new draft
             const { error: insertError } = await supabase
                 .from('drafts')
                 .insert([{ user_id: userId, chat_id: chatId, chat_type: chatType, text, updated_at: new Date().toISOString() }]);
@@ -482,7 +478,7 @@ app.get('/get-draft/:userId/:chatId/:chatType', async (req, res) => {
             .eq('chat_type', chatType)
             .single();
         
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
+        if (error && error.code !== 'PGRST116') throw error;
         
         res.json({ text: data?.text || '' });
     } catch (error) {
@@ -516,6 +512,8 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`📁 Uploads directory: ${UPLOADS_DIR}`);
 });
