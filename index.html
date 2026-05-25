@@ -93,7 +93,9 @@
     let searchQuery = '';
     let pollInterval = null;
     let searchTimeout = null;
+    (function() {
     let activeMenu = null;
+})();
     let replyToMessage = null;      // для цитирования
     let notificationSound = new Audio('/notification.mp3'); // нужно добавить файл
     let soundEnabled = true;
