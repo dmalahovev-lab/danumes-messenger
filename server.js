@@ -12,13 +12,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
+// Официальные аккаунты (с галочкой)
+const VERIFIED_USERS = ['Danumala', 'RunFly'];
+
 // Health check
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
 // ========== USER AUTHENTICATION ==========
 app.post('/register-attempt', async (req, res) => {
@@ -39,12 +40,21 @@ app.post('/register-attempt', async (req, res) => {
             return res.json({ success: false, error: 'Пользователь уже существует' });
         }
 
+        // Проверяем, является ли пользователь официальным
+        const isVerified = VERIFIED_USERS.includes(username);
+
         const { error } = await supabase
             .from('users')
-            .insert([{ username, password, avatar: '👤', online: true, verified: false }]);
+            .insert([{ 
+                username, 
+                password, 
+                avatar: '👤', 
+                online: true, 
+                verified: isVerified 
+            }]);
 
         if (error) throw error;
-        console.log('User registered:', username);
+        console.log('User registered:', username, 'Verified:', isVerified);
         res.json({ success: true });
     } catch (error) {
         console.error('Registration error:', error);
@@ -69,9 +79,16 @@ app.post('/login-attempt', async (req, res) => {
             return res.json({ success: false, error: 'Неверное имя пользователя или пароль' });
         }
 
+        // Обновляем статус онлайн
         await supabase.from('users').update({ online: true }).eq('username', username);
-        console.log('User logged in:', username);
-        res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
+        
+        console.log('User logged in:', username, 'Verified:', data[0].verified);
+        res.json({ 
+            success: true, 
+            username: data[0].username, 
+            avatar: data[0].avatar || '👤', 
+            verified: data[0].verified || false 
+        });
     } catch (error) {
         console.error('Login error:', error);
         res.json({ success: false, error: error.message });
@@ -116,10 +133,10 @@ app.post('/update-avatar', async (req, res) => {
 
 // ========== PRIVATE MESSAGES ==========
 app.post('/send-message', async (req, res) => {
-    const { from, to, text } = req.body;
-    console.log('Send message:', { from, to, text });
+    const { from, to, text, fileUrl, fileName, fileType } = req.body;
+    console.log('Send message:', { from, to, text: text?.substring(0, 50) });
     
-    if (!from || !to || !text) {
+    if (!from || !to || (!text && !fileUrl)) {
         return res.status(400).json({ success: false, error: 'Недостаточно данных' });
     }
 
@@ -127,7 +144,10 @@ app.post('/send-message', async (req, res) => {
         const newMessage = {
             from_user: from,
             to_user: to,
-            text: text,
+            text: text || '',
+            file_url: fileUrl || null,
+            file_name: fileName || null,
+            file_type: fileType || null,
             timestamp: new Date().toISOString()
         };
 
@@ -138,7 +158,7 @@ app.post('/send-message', async (req, res) => {
 
         if (error) throw error;
         
-        console.log('Message sent successfully');
+        console.log('Message sent successfully, id:', data[0]?.id);
         res.json({ success: true, message: data[0] });
     } catch (error) {
         console.error('Error sending message:', error);
@@ -166,6 +186,45 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
     }
 });
 
+app.put('/edit-message/:id', async (req, res) => {
+    const { id } = req.params;
+    const { text } = req.body;
+    console.log('Edit message:', id, text);
+    
+    try {
+        const { error } = await supabase
+            .from('messages')
+            .update({ text, edited: true, edited_at: new Date().toISOString() })
+            .eq('id', parseInt(id));
+        
+        if (error) throw error;
+        console.log('Message edited successfully');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error editing message:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/delete-message/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log('Delete message:', id);
+    
+    try {
+        const { error } = await supabase
+            .from('messages')
+            .delete()
+            .eq('id', parseInt(id));
+        
+        if (error) throw error;
+        console.log('Message deleted successfully');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ========== REACTIONS ==========
 app.post('/add-reaction', async (req, res) => {
     const { messageId, userId, reaction, type } = req.body;
@@ -174,6 +233,7 @@ app.post('/add-reaction', async (req, res) => {
     const table = type === 'group' ? 'group_reactions' : 'reactions';
     
     try {
+        // Проверяем, есть ли уже такая реакция
         const { data: existing } = await supabase
             .from(table)
             .select('*')
@@ -181,22 +241,25 @@ app.post('/add-reaction', async (req, res) => {
             .eq('user_id', userId);
         
         if (existing && existing.length > 0) {
+            // Если реакция уже есть, удаляем (toggle)
             const { error } = await supabase
                 .from(table)
-                .update({ reaction, timestamp: new Date().toISOString() })
+                .delete()
                 .eq('message_id', messageId)
                 .eq('user_id', userId);
             
             if (error) throw error;
+            console.log('Reaction removed');
         } else {
+            // Добавляем новую реакцию
             const { error } = await supabase
                 .from(table)
                 .insert([{ message_id: messageId, user_id: userId, reaction, timestamp: new Date().toISOString() }]);
             
             if (error) throw error;
+            console.log('Reaction added');
         }
         
-        console.log('Reaction added successfully');
         res.json({ success: true });
     } catch (error) {
         console.error('Error adding reaction:', error);
@@ -232,7 +295,7 @@ app.post('/create-group', async (req, res) => {
     }
     
     try {
-        // Create group
+        // Создаём группу
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert([{ name, created_by: creator, created_at: new Date().toISOString() }])
@@ -242,7 +305,7 @@ app.post('/create-group', async (req, res) => {
         
         const groupId = group[0].id;
         
-        // Add creator as admin
+        // Добавляем участников
         const allMembers = [...new Set([creator, ...(members || [])])];
         const memberInserts = allMembers.map(username => ({
             group_id: groupId,
@@ -257,7 +320,7 @@ app.post('/create-group', async (req, res) => {
         
         if (memberError) throw memberError;
         
-        console.log('Group created successfully:', groupId);
+        console.log('Group created successfully, id:', groupId);
         res.json({ success: true, group: group[0] });
     } catch (error) {
         console.error('Error creating group:', error);
@@ -305,10 +368,10 @@ app.get('/get-groups/:username', async (req, res) => {
 });
 
 app.post('/send-group-message', async (req, res) => {
-    const { groupId, from, text } = req.body;
-    console.log('Send group message:', { groupId, from, text });
+    const { groupId, from, text, fileUrl, fileName, fileType } = req.body;
+    console.log('Send group message:', { groupId, from, text: text?.substring(0, 50) });
     
-    if (!groupId || !from || !text) {
+    if (!groupId || !from || (!text && !fileUrl)) {
         return res.status(400).json({ success: false, error: 'Недостаточно данных' });
     }
     
@@ -316,7 +379,10 @@ app.post('/send-group-message', async (req, res) => {
         const newMessage = {
             group_id: parseInt(groupId),
             from_user: from,
-            text: text,
+            text: text || '',
+            file_url: fileUrl || null,
+            file_name: fileName || null,
+            file_type: fileType || null,
             timestamp: new Date().toISOString()
         };
         
@@ -363,4 +429,5 @@ app.get('/', (req, res) => {
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`✅ Verified users: ${VERIFIED_USERS.join(', ')}`);
 });
