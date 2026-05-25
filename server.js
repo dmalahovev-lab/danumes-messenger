@@ -15,20 +15,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Health check endpoint for Render
+// Health check
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Helper function
-const handleDbError = (res, error, customMessage = 'Database error') => {
-    console.error(customMessage, error);
-    return res.status(500).json({ success: false, error: customMessage });
-};
-
 // ========== USER AUTHENTICATION ==========
 app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
+    console.log('Register attempt:', username);
+    
     if (!username || !password) {
         return res.json({ success: false, error: 'Заполните все поля' });
     }
@@ -48,14 +44,18 @@ app.post('/register-attempt', async (req, res) => {
             .insert([{ username, password, avatar: '👤', online: true, verified: false }]);
 
         if (error) throw error;
+        console.log('User registered:', username);
         res.json({ success: true });
     } catch (error) {
-        handleDbError(res, error, 'Registration error');
+        console.error('Registration error:', error);
+        res.json({ success: false, error: error.message });
     }
 });
 
 app.post('/login-attempt', async (req, res) => {
     const { username, password } = req.body;
+    console.log('Login attempt:', username);
+    
     try {
         const { data, error } = await supabase
             .from('users')
@@ -64,14 +64,17 @@ app.post('/login-attempt', async (req, res) => {
             .eq('password', password);
 
         if (error) throw error;
+        
         if (!data || data.length === 0) {
             return res.json({ success: false, error: 'Неверное имя пользователя или пароль' });
         }
 
         await supabase.from('users').update({ online: true }).eq('username', username);
+        console.log('User logged in:', username);
         res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
     } catch (error) {
-        handleDbError(res, error, 'Login error');
+        console.error('Login error:', error);
+        res.json({ success: false, error: error.message });
     }
 });
 
@@ -91,7 +94,8 @@ app.get('/get-users', async (req, res) => {
         if (error) throw error;
         res.json(data || []);
     } catch (error) {
-        handleDbError(res, error, 'Error fetching users');
+        console.error('Error fetching users:', error);
+        res.json([]);
     }
 });
 
@@ -105,15 +109,17 @@ app.post('/update-avatar', async (req, res) => {
         if (error) throw error;
         res.json({ success: true, avatar });
     } catch (error) {
-        handleDbError(res, error, 'Error updating avatar');
+        console.error('Error updating avatar:', error);
+        res.json({ success: false, error: error.message });
     }
 });
 
 // ========== PRIVATE MESSAGES ==========
 app.post('/send-message', async (req, res) => {
-    const { from, to, text, fileUrl, fileName, replyToId } = req.body;
+    const { from, to, text } = req.body;
+    console.log('Send message:', { from, to, text });
     
-    if (!from || !to || (!text && !fileUrl)) {
+    if (!from || !to || !text) {
         return res.status(400).json({ success: false, error: 'Недостаточно данных' });
     }
 
@@ -121,10 +127,7 @@ app.post('/send-message', async (req, res) => {
         const newMessage = {
             from_user: from,
             to_user: to,
-            text: text || '',
-            file_url: fileUrl || null,
-            file_name: fileName || null,
-            reply_to: replyToId || null,
+            text: text,
             timestamp: new Date().toISOString()
         };
 
@@ -135,15 +138,17 @@ app.post('/send-message', async (req, res) => {
 
         if (error) throw error;
         
-        console.log(`✅ Message sent from ${from} to ${to}`);
+        console.log('Message sent successfully');
         res.json({ success: true, message: data[0] });
     } catch (error) {
-        handleDbError(res, error, 'Error sending message');
+        console.error('Error sending message:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { user1, user2 } = req.params;
+    console.log('Get messages between:', user1, user2);
     
     try {
         const { data, error } = await supabase
@@ -153,47 +158,19 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
             .order('timestamp', { ascending: true });
 
         if (error) throw error;
+        console.log('Messages found:', data?.length || 0);
         res.json(data || []);
     } catch (error) {
-        handleDbError(res, error, 'Error fetching messages');
-    }
-});
-
-app.put('/edit-message/:id', async (req, res) => {
-    const { id } = req.params;
-    const { text } = req.body;
-    
-    try {
-        const { error } = await supabase
-            .from('messages')
-            .update({ text, edited: true, edited_at: new Date().toISOString() })
-            .eq('id', parseInt(id));
-        
-        if (error) throw error;
-        res.json({ success: true });
-    } catch (error) {
-        handleDbError(res, error, 'Error editing message');
-    }
-});
-
-app.delete('/delete-message/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const { error } = await supabase
-            .from('messages')
-            .delete()
-            .eq('id', parseInt(id));
-        
-        if (error) throw error;
-        res.json({ success: true });
-    } catch (error) {
-        handleDbError(res, error, 'Error deleting message');
+        console.error('Error fetching messages:', error);
+        res.json([]);
     }
 });
 
 // ========== REACTIONS ==========
 app.post('/add-reaction', async (req, res) => {
     const { messageId, userId, reaction, type } = req.body;
+    console.log('Add reaction:', { messageId, userId, reaction, type });
+    
     const table = type === 'group' ? 'group_reactions' : 'reactions';
     
     try {
@@ -219,9 +196,11 @@ app.post('/add-reaction', async (req, res) => {
             if (error) throw error;
         }
         
+        console.log('Reaction added successfully');
         res.json({ success: true });
     } catch (error) {
-        handleDbError(res, error, 'Error adding reaction');
+        console.error('Error adding reaction:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -238,15 +217,22 @@ app.get('/get-reactions/:messageId/:type', async (req, res) => {
         if (error) throw error;
         res.json(data || []);
     } catch (error) {
-        handleDbError(res, error, 'Error fetching reactions');
+        console.error('Error fetching reactions:', error);
+        res.json([]);
     }
 });
 
 // ========== GROUPS ==========
 app.post('/create-group', async (req, res) => {
     const { name, creator, members } = req.body;
+    console.log('Create group:', { name, creator, members });
+    
+    if (!name || !creator) {
+        return res.status(400).json({ success: false, error: 'Недостаточно данных' });
+    }
     
     try {
+        // Create group
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert([{ name, created_by: creator, created_at: new Date().toISOString() }])
@@ -256,7 +242,8 @@ app.post('/create-group', async (req, res) => {
         
         const groupId = group[0].id;
         
-        const allMembers = [...new Set([creator, ...members])];
+        // Add creator as admin
+        const allMembers = [...new Set([creator, ...(members || [])])];
         const memberInserts = allMembers.map(username => ({
             group_id: groupId,
             user_id: username,
@@ -270,14 +257,17 @@ app.post('/create-group', async (req, res) => {
         
         if (memberError) throw memberError;
         
+        console.log('Group created successfully:', groupId);
         res.json({ success: true, group: group[0] });
     } catch (error) {
-        handleDbError(res, error, 'Error creating group');
+        console.error('Error creating group:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.get('/get-groups/:username', async (req, res) => {
     const { username } = req.params;
+    console.log('Get groups for user:', username);
     
     try {
         const { data, error } = await supabase
@@ -306,16 +296,19 @@ app.get('/get-groups/:username', async (req, res) => {
                 created_at: item.groups.created_at
             }));
         
+        console.log('Groups found:', groups.length);
         res.json(groups);
     } catch (error) {
-        handleDbError(res, error, 'Error fetching groups');
+        console.error('Error fetching groups:', error);
+        res.json([]);
     }
 });
 
 app.post('/send-group-message', async (req, res) => {
-    const { groupId, from, text, fileUrl, fileName, replyToId } = req.body;
+    const { groupId, from, text } = req.body;
+    console.log('Send group message:', { groupId, from, text });
     
-    if (!groupId || !from || (!text && !fileUrl)) {
+    if (!groupId || !from || !text) {
         return res.status(400).json({ success: false, error: 'Недостаточно данных' });
     }
     
@@ -323,10 +316,7 @@ app.post('/send-group-message', async (req, res) => {
         const newMessage = {
             group_id: parseInt(groupId),
             from_user: from,
-            text: text || '',
-            file_url: fileUrl || null,
-            file_name: fileName || null,
-            reply_to: replyToId || null,
+            text: text,
             timestamp: new Date().toISOString()
         };
         
@@ -337,15 +327,17 @@ app.post('/send-group-message', async (req, res) => {
         
         if (error) throw error;
         
-        console.log(`✅ Group message sent to group ${groupId} by ${from}`);
+        console.log('Group message sent successfully');
         res.json({ success: true, message: data[0] });
     } catch (error) {
-        handleDbError(res, error, 'Error sending group message');
+        console.error('Error sending group message:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.get('/get-group-messages/:groupId', async (req, res) => {
     const { groupId } = req.params;
+    console.log('Get group messages:', groupId);
     
     try {
         const { data, error } = await supabase
@@ -355,118 +347,20 @@ app.get('/get-group-messages/:groupId', async (req, res) => {
             .order('timestamp', { ascending: true });
         
         if (error) throw error;
+        console.log('Group messages found:', data?.length || 0);
         res.json(data || []);
     } catch (error) {
-        handleDbError(res, error, 'Error fetching group messages');
+        console.error('Error fetching group messages:', error);
+        res.json([]);
     }
 });
 
-// ========== PINNED MESSAGES ==========
-app.post('/pin-group-message', async (req, res) => {
-    const { groupId, messageId, pinnedBy } = req.body;
-    
-    try {
-        const { data: existing } = await supabase
-            .from('group_pinned_messages')
-            .select('*')
-            .eq('group_id', groupId)
-            .eq('message_id', messageId);
-        
-        if (existing && existing.length > 0) {
-            const { error } = await supabase
-                .from('group_pinned_messages')
-                .delete()
-                .eq('group_id', groupId)
-                .eq('message_id', messageId);
-            
-            if (error) throw error;
-            res.json({ success: true, action: 'unpinned' });
-        } else {
-            const { error } = await supabase
-                .from('group_pinned_messages')
-                .insert([{ group_id: groupId, message_id: messageId, pinned_by: pinnedBy, pinned_at: new Date().toISOString() }]);
-            
-            if (error) throw error;
-            res.json({ success: true, action: 'pinned' });
-        }
-    } catch (error) {
-        handleDbError(res, error, 'Error pinning message');
-    }
-});
-
-app.get('/get-pinned-messages/:groupId', async (req, res) => {
-    const { groupId } = req.params;
-    
-    try {
-        const { data, error } = await supabase
-            .from('group_pinned_messages')
-            .select('*, group_messages(*)')
-            .eq('group_id', parseInt(groupId));
-        
-        if (error) throw error;
-        res.json(data || []);
-    } catch (error) {
-        handleDbError(res, error, 'Error fetching pinned messages');
-    }
-});
-
-// ========== DRAFTS ==========
-app.post('/save-draft', async (req, res) => {
-    const { userId, chatId, chatType, text } = req.body;
-    
-    try {
-        const { data, error } = await supabase
-            .from('drafts')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('chat_id', chatId)
-            .eq('chat_type', chatType);
-        
-        if (data && data.length > 0) {
-            const { error: updateError } = await supabase
-                .from('drafts')
-                .update({ text, updated_at: new Date().toISOString() })
-                .eq('id', data[0].id);
-            
-            if (updateError) throw updateError;
-        } else if (text) {
-            const { error: insertError } = await supabase
-                .from('drafts')
-                .insert([{ user_id: userId, chat_id: chatId, chat_type: chatType, text, updated_at: new Date().toISOString() }]);
-            
-            if (insertError) throw insertError;
-        }
-        
-        res.json({ success: true });
-    } catch (error) {
-        handleDbError(res, error, 'Error saving draft');
-    }
-});
-
-app.get('/get-draft/:userId/:chatId/:chatType', async (req, res) => {
-    const { userId, chatId, chatType } = req.params;
-    
-    try {
-        const { data, error } = await supabase
-            .from('drafts')
-            .select('text')
-            .eq('user_id', userId)
-            .eq('chat_id', chatId)
-            .eq('chat_type', chatType)
-            .maybeSingle();
-        
-        if (error) throw error;
-        res.json({ text: data?.text || '' });
-    } catch (error) {
-        handleDbError(res, error, 'Error fetching draft');
-    }
-});
-
-// Serve main HTML file
+// Serve HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(__dirname + '/index.html');
 });
 
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
