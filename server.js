@@ -96,15 +96,100 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
     res.json(data || []);
 });
 
+// Редактирование сообщения
 app.put('/edit-message/:id', async (req, res) => {
     const { id } = req.params;
-    const { text, type } = req.body; // type: 'user' или 'group'
+    const { text, type } = req.body;
     if (!text) return res.status(400).json({ error: 'Текст не может быть пустым' });
-    
     let table = type === 'user' ? 'messages' : 'group_messages';
     const { error } = await supabase.from(table).update({ text, edited: true }).eq('id', parseInt(id));
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
+});
+
+// Добавление реакции
+app.post('/add-reaction', async (req, res) => {
+    const { messageId, type, username, reaction } = req.body;
+    if (!messageId || !type || !username || !reaction) return res.status(400).json({ error: 'Недостаточно данных' });
+    let table = type === 'user' ? 'reactions' : 'group_reactions';
+    await supabase.from(table).delete().eq('message_id', messageId).eq('username', username);
+    const { error } = await supabase.from(table).insert([{ message_id: messageId, username, reaction }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+// Получение реакций
+app.get('/get-reactions/:messageId/:type', async (req, res) => {
+    const { messageId, type } = req.params;
+    let table = type === 'user' ? 'reactions' : 'group_reactions';
+    const { data } = await supabase.from(table).select('username, reaction').eq('message_id', parseInt(messageId));
+    res.json(data || []);
+});
+
+// Закрепление сообщения
+app.post('/pin-message', async (req, res) => {
+    const { groupId, messageId, pinnedBy } = req.body;
+    if (!groupId || !messageId || !pinnedBy) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { error } = await supabase.from('group_pinned_messages').insert([{ group_id: groupId, message_id: messageId, pinned_by: pinnedBy }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+// Черновики
+app.post('/save-draft', async (req, res) => {
+    const { username, chatId, chatType, draftText } = req.body;
+    if (!username || !chatId || !chatType) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { error } = await supabase.from('drafts').upsert([{ username, chat_id: chatId, chat_type: chatType, draft_text: draftText, updated_at: new Date() }], {
+        onConflict: 'username, chat_id, chat_type'
+    });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+app.get('/get-drafts/:username', async (req, res) => {
+    const { username } = req.params;
+    const { data } = await supabase.from('drafts').select('*').eq('username', username);
+    res.json(data || []);
+});
+
+// Админ-панель
+app.get('/admin/users', async (req, res) => {
+    const { data } = await supabase.from('users').select('username, avatar, verified, role, online');
+    res.json(data || []);
+});
+
+app.post('/admin/set-role', async (req, res) => {
+    const { adminUsername, targetUsername, role } = req.body;
+    if (!adminUsername || !targetUsername || !role) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { data: admin } = await supabase.from('users').select('role').eq('username', adminUsername);
+    if (!admin || admin[0]?.role !== 'admin') return res.status(403).json({ error: 'Доступ запрещён' });
+    await supabase.from('users').update({ role }).eq('username', targetUsername);
+    res.json({ success: true });
+});
+
+app.get('/admin/stats', async (req, res) => {
+    const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: messageCount } = await supabase.from('messages').select('*', { count: 'exact', head: true });
+    const { count: groupCount } = await supabase.from('groups').select('*', { count: 'exact', head: true });
+    const { count: groupMessageCount } = await supabase.from('group_messages').select('*', { count: 'exact', head: true });
+    res.json({ users: userCount || 0, messages: messageCount || 0, groups: groupCount || 0, groupMessages: groupMessageCount || 0 });
+});
+
+// Добавление участника в группу
+app.post('/add-group-member', async (req, res) => {
+    const { groupId, username, addedBy } = req.body;
+    if (!groupId || !username || !addedBy) return res.status(400).json({ error: 'Недостаточно данных' });
+    const { data: adminCheck } = await supabase.from('group_members').select('role').eq('group_id', groupId).eq('username', addedBy);
+    if (!adminCheck || adminCheck[0]?.role !== 'admin') return res.status(403).json({ error: 'Только администратор может добавлять участников' });
+    const { error } = await supabase.from('group_members').insert([{ group_id: groupId, username, role: 'member' }]);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+app.get('/get-group-members/:groupId', async (req, res) => {
+    const { groupId } = req.params;
+    const { data } = await supabase.from('group_members').select('username, role').eq('group_id', groupId);
+    res.json(data || []);
 });
 
 app.post('/add-reaction', async (req, res) => {
