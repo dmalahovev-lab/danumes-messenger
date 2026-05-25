@@ -449,7 +449,6 @@
             if (currentChatType === 'user') {
                 const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
                 messages = res || [];
-                console.log('📥 Загружено сообщений:', messages.length);
                 renderMessages();
             }
         } catch(e) { console.error(e); }
@@ -461,7 +460,6 @@
             if (currentChatType === 'user') {
                 const res = await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
                 if (res.success) {
-                    console.log('✅ Сообщение отправлено');
                     await loadMessages();
                     await loadChatsAndChannels();
                 } else {
@@ -636,22 +634,17 @@
             </div>
             <div id="emojiPicker" style="display:none;position:absolute;bottom:80px;left:24px;background:rgba(18,22,35,0.95);border-radius:20px;padding:12px;width:280px;z-index:1500;"><div class="emoji-grid" id="emojiGrid"></div></div>
         `;
-        
         renderMessages();
-        
         const msgInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const fileLabel = document.getElementById('fileLabel'), fileInput = document.getElementById('fileInput');
         const emojiBtn = document.getElementById('emojiBtn'), emojiPicker = document.getElementById('emojiPicker'), emojiGrid = document.getElementById('emojiGrid');
-        
         if (emojiGrid && !emojiGrid.children.length) {
             const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉','😍','🤔','😂','🥲','😭','😡','🥺','🤯','💀','👾','🎈','🍕','⚽','🎵','📷','🔒'];
             emojis.forEach(e => { const div = document.createElement('div'); div.className = 'emoji-option'; div.textContent = e; div.onclick = () => { msgInput.value += e; msgInput.focus(); emojiPicker.style.display = 'none'; }; emojiGrid.appendChild(div); });
         }
-        
         emojiBtn.onclick = (e) => { e.stopPropagation(); emojiPicker.style.display = emojiPicker.style.display === 'flex' ? 'none' : 'flex'; };
         document.addEventListener('click', (e) => { if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.style.display = 'none'; });
-        
         const send = async () => {
             const text = msgInput.value.trim();
             if (fileInput.files.length) {
@@ -659,10 +652,8 @@
                 const up = await uploadFile(file);
                 if (up.success) { await sendMessage(text, up.fileUrl, up.fileName); fileInput.value = ''; }
             } else if (text) await sendMessage(text);
-            msgInput.value = '';
-            msgInput.focus();
+            msgInput.value = ''; msgInput.focus();
         };
-        
         sendBtn.onclick = send;
         msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
         fileLabel.onclick = () => fileInput.click();
