@@ -21,13 +21,12 @@
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
         }
         .auth-card {
-            background: rgba(18, 22, 35, 0.8);
+            background: rgba(18,22,35,0.8);
             backdrop-filter: blur(20px);
             border-radius: 48px;
             padding: 48px 40px;
             width: 460px;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 25px 45px rgba(0,0,0,0.3);
         }
         .auth-card h2 {
             font-size: 32px;
@@ -56,12 +55,10 @@
             font-weight: 600;
             background: transparent;
             color: rgba(255,255,255,0.7);
-            transition: 0.2s;
         }
         .tab.active {
             background: linear-gradient(135deg, #6c5ce7, #a855f7);
             color: white;
-            box-shadow: 0 4px 12px rgba(108,92,231,0.3);
         }
         .auth-form { display: flex; flex-direction: column; gap: 20px; }
         .auth-form input {
@@ -86,8 +83,6 @@
             cursor: pointer;
         }
         .error-text { color: #f87171; font-size: 13px; text-align: center; margin-top: -8px; }
-        
-        /* Messenger styles */
         .messenger { display: flex; height: 100vh; width: 100%; background: #0f1117; }
         .sidebar {
             width: 320px;
@@ -230,7 +225,6 @@
             border-bottom-left-radius: 24px;
             color: white;
         }
-        .message-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
         .message-time { font-size: 10px; opacity: 0.6; text-align: right; margin-top: 6px; }
         .file-attach {
             display: inline-block;
@@ -455,6 +449,7 @@
             if (currentChatType === 'user') {
                 const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
                 messages = res || [];
+                console.log('📥 Загружено сообщений:', messages.length);
                 renderMessages();
             }
         } catch(e) { console.error(e); }
@@ -466,6 +461,7 @@
             if (currentChatType === 'user') {
                 const res = await api('POST', '/send-message', { from: currentUser.username, to: currentChat, text: text || '', fileUrl, fileName });
                 if (res.success) {
+                    console.log('✅ Сообщение отправлено');
                     await loadMessages();
                     await loadChatsAndChannels();
                 } else {
@@ -557,8 +553,11 @@
 
         document.querySelectorAll('.chat-item').forEach(el => {
             el.addEventListener('click', () => {
-                currentChatType = el.dataset.type; currentChat = el.dataset.id; messages = [];
-                renderChat(); loadMessages(); renderSidebar();
+                currentChatType = el.dataset.type; currentChat = el.dataset.id;
+                messages = [];
+                renderChat();
+                loadMessages();
+                renderSidebar();
             });
         });
         const searchInput = document.getElementById('searchInput');
@@ -573,12 +572,18 @@
     function renderMessages() {
         const container = document.getElementById('messagesList');
         if (!container) return;
-        if (!currentChat) { container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Выберите чат</div>`; return; }
-        if (!messages.length) { container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Нет сообщений</div>`; return; }
+        if (!currentChat) {
+            container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Выберите чат</div>`;
+            return;
+        }
+        if (!messages.length) {
+            container.innerHTML = `<div style="text-align:center;opacity:0.5;padding:20px;">Нет сообщений</div>`;
+            return;
+        }
         let html = '';
         messages.forEach(msg => {
             const isOwn = msg.from_user === currentUser.username;
-            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             let content = '';
             if (msg.file_url && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(msg.file_name)) {
                 content += `<img src="${msg.file_url}" class="message-image" data-url="${msg.file_url}">`;
@@ -606,7 +611,10 @@
     function renderChat() {
         const mainDiv = document.getElementById('chatMain');
         if (!mainDiv) return;
-        if (!currentChat) { mainDiv.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;">✨ Выберите чат ✨</div>`; return; }
+        if (!currentChat) {
+            mainDiv.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;">✨ Выберите чат ✨</div>`;
+            return;
+        }
         let chatInfo = { name: currentChat, avatar: '💬' };
         const found = chats.find(c => c.id === currentChat && c.type === currentChatType);
         if (found) chatInfo = found;
@@ -628,17 +636,22 @@
             </div>
             <div id="emojiPicker" style="display:none;position:absolute;bottom:80px;left:24px;background:rgba(18,22,35,0.95);border-radius:20px;padding:12px;width:280px;z-index:1500;"><div class="emoji-grid" id="emojiGrid"></div></div>
         `;
+        
         renderMessages();
+        
         const msgInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const fileLabel = document.getElementById('fileLabel'), fileInput = document.getElementById('fileInput');
         const emojiBtn = document.getElementById('emojiBtn'), emojiPicker = document.getElementById('emojiPicker'), emojiGrid = document.getElementById('emojiGrid');
+        
         if (emojiGrid && !emojiGrid.children.length) {
             const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👑','🚀','⭐','❤️','💎','🔥','👍','🎉','😍','🤔','😂','🥲','😭','😡','🥺','🤯','💀','👾','🎈','🍕','⚽','🎵','📷','🔒'];
             emojis.forEach(e => { const div = document.createElement('div'); div.className = 'emoji-option'; div.textContent = e; div.onclick = () => { msgInput.value += e; msgInput.focus(); emojiPicker.style.display = 'none'; }; emojiGrid.appendChild(div); });
         }
+        
         emojiBtn.onclick = (e) => { e.stopPropagation(); emojiPicker.style.display = emojiPicker.style.display === 'flex' ? 'none' : 'flex'; };
         document.addEventListener('click', (e) => { if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) emojiPicker.style.display = 'none'; });
+        
         const send = async () => {
             const text = msgInput.value.trim();
             if (fileInput.files.length) {
@@ -646,8 +659,10 @@
                 const up = await uploadFile(file);
                 if (up.success) { await sendMessage(text, up.fileUrl, up.fileName); fileInput.value = ''; }
             } else if (text) await sendMessage(text);
-            msgInput.value = ''; msgInput.focus();
+            msgInput.value = '';
+            msgInput.focus();
         };
+        
         sendBtn.onclick = send;
         msgInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
         fileLabel.onclick = () => fileInput.click();
