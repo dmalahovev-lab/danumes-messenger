@@ -15,8 +15,6 @@ app.use(express.static(__dirname));
 
 const VERIFIED_USERS = ['Danumala', 'RunFly'];
 
-app.get('/health', (req, res) => res.status(200).send('OK'));
-
 // ========== USER AUTH ==========
 app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
@@ -181,28 +179,23 @@ app.get('/get-reactions/:messageId/:type', async (req, res) => {
 // ========== GROUPS ==========
 app.post('/create-group', async (req, res) => {
     const { name, creator, members } = req.body;
-    console.log('Create group:', { name, creator, members });
+    console.log('📝 Create group:', { name, creator, members });
     
     if (!name || !creator) {
         return res.status(400).json({ success: false, error: 'Недостаточно данных' });
     }
     
     try {
-        // Создаём группу
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert([{ name, created_by: creator, created_at: new Date().toISOString() }])
             .select();
         
-        if (groupError) {
-            console.error('Group creation error:', groupError);
-            throw groupError;
-        }
+        if (groupError) throw groupError;
         
         const groupId = group[0].id;
-        console.log('Group created with id:', groupId);
+        console.log('✅ Group created, id:', groupId);
         
-        // Добавляем создателя
         const allMembers = [creator, ...(members || [])];
         const memberInserts = allMembers.map(username => ({
             group_id: groupId,
@@ -211,62 +204,55 @@ app.post('/create-group', async (req, res) => {
             joined_at: new Date().toISOString()
         }));
         
-        const { error: memberError } = await supabase
-            .from('group_members')
-            .insert(memberInserts);
+        const { error: memberError } = await supabase.from('group_members').insert(memberInserts);
+        if (memberError) throw memberError;
         
-        if (memberError) {
-            console.error('Member insert error:', memberError);
-            throw memberError;
-        }
-        
-        console.log('Group created successfully');
+        console.log('✅ Group fully created');
         res.json({ success: true, group: group[0] });
     } catch (error) {
-        console.error('Error creating group:', error);
+        console.error('❌ Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.get('/get-groups/:username', async (req, res) => {
     const { username } = req.params;
-    console.log('Get groups for user:', username);
+    console.log('📥 Get groups for:', username);
     
     try {
-        const { data, error } = await supabase
+        const { data: memberData, error: memberError } = await supabase
             .from('group_members')
-            .select(`
-                group_id,
-                role,
-                groups:group_id (
-                    id,
-                    name,
-                    created_by,
-                    created_at
-                )
-            `)
+            .select('group_id, role')
             .eq('user_id', username);
         
-        if (error) {
-            console.error('Error fetching groups:', error);
-            throw error;
+        if (memberError) throw memberError;
+        
+        if (!memberData || memberData.length === 0) {
+            console.log('No groups found');
+            return res.json([]);
         }
         
-        // Правильно извлекаем данные из вложенного объекта
-        const groups = (data || [])
-            .filter(item => item.groups)
-            .map(item => ({
-                id: item.groups.id,
-                name: item.groups.name,
-                role: item.role,
-                created_by: item.groups.created_by,
-                created_at: item.groups.created_at
-            }));
+        const groupIds = memberData.map(m => m.group_id);
         
-        console.log('Groups found:', groups.length);
-        res.json(groups);
+        const { data: groupsData, error: groupsError } = await supabase
+            .from('groups')
+            .select('*')
+            .in('id', groupIds);
+        
+        if (groupsError) throw groupsError;
+        
+        const result = groupsData.map(group => ({
+            id: group.id,
+            name: group.name,
+            role: memberData.find(m => m.group_id === group.id)?.role || 'member',
+            created_by: group.created_by,
+            created_at: group.created_at
+        }));
+        
+        console.log('✅ Groups found:', result.length);
+        res.json(result);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error:', error);
         res.json([]);
     }
 });
@@ -289,11 +275,7 @@ app.post('/send-group-message', async (req, res) => {
             timestamp: new Date().toISOString()
         };
         
-        const { data, error } = await supabase
-            .from('group_messages')
-            .insert([newMessage])
-            .select();
-        
+        const { data, error } = await supabase.from('group_messages').insert([newMessage]).select();
         if (error) throw error;
         res.json({ success: true, message: data[0] });
     } catch (error) {
@@ -320,6 +302,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`✅ Verified users: ${VERIFIED_USERS.join(', ')}`);
+    console.log(`🚀 Server on port ${PORT}`);
 });
