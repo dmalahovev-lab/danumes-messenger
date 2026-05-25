@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DanuMes - Современный мессенджер</title>
+    <title>DanuMes - Мессенджер</title>
     <style>
         * {
             margin: 0;
@@ -12,14 +12,14 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #0a0a0f;
             color: #e1e1e1;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* Темы оформления */
+        /* Темы */
         body[data-theme="dark"] {
             --bg-page: #0a0a0f;
             --bg-sidebar: #111116;
@@ -34,7 +34,6 @@
             --accent: #2b5278;
             --accent-hover: #3a6b99;
             --online: #4caf50;
-            --shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
         body[data-theme="light"] {
@@ -49,9 +48,7 @@
             --text-secondary: #65676b;
             --border: #e4e6eb;
             --accent: #0088cc;
-            --accent-hover: #0099e6;
             --online: #31a24c;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         body[data-theme="ocean"] {
@@ -61,14 +58,9 @@
             --bg-chat: #0a192f;
             --bg-message-own: #1e3a5f;
             --bg-message-other: #112b45;
-            --bg-input: #0f2742;
             --text-primary: #d4e6f1;
-            --text-secondary: #7fb3d5;
-            --border: #1a3a5c;
             --accent: #3498db;
-            --accent-hover: #5dade2;
             --online: #2ecc71;
-            --shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         body[data-theme="forest"] {
@@ -78,14 +70,9 @@
             --bg-chat: #0d2818;
             --bg-message-own: #1a5d35;
             --bg-message-other: #1e3a2a;
-            --bg-input: #1a4428;
             --text-primary: #d4f0d4;
-            --text-secondary: #88b388;
-            --border: #1e5530;
             --accent: #27ae60;
-            --accent-hover: #2ecc71;
             --online: #2ecc71;
-            --shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         body[data-theme="sunset"] {
@@ -95,21 +82,14 @@
             --bg-chat: #1a0f1a;
             --bg-message-own: #8b3a5e;
             --bg-message-other: #3d1a2e;
-            --bg-input: #2d1424;
             --text-primary: #f5d5d5;
-            --text-secondary: #d48a8a;
-            --border: #4a1e3a;
             --accent: #e67e22;
-            --accent-hover: #f39c12;
             --online: #f39c12;
-            --shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
-        /* Лейаут */
         .app {
             display: flex;
             height: 100vh;
-            background: var(--bg-page);
         }
 
         .sidebar {
@@ -119,7 +99,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: all 0.3s ease;
         }
 
         .sidebar-header {
@@ -138,24 +117,13 @@
         .avatar {
             width: 52px;
             height: 52px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            background: var(--accent);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow);
-        }
-
-        .avatar:hover {
-            transform: scale(1.05);
-            filter: brightness(1.1);
-        }
-
-        .user-info {
-            flex: 1;
         }
 
         .username {
@@ -167,13 +135,11 @@
         .user-status {
             font-size: 12px;
             color: var(--online);
-            margin-top: 4px;
         }
 
         .action-buttons {
             display: flex;
             gap: 8px;
-            margin-top: 12px;
         }
 
         .action-btn {
@@ -181,51 +147,33 @@
             padding: 8px;
             background: var(--bg-page);
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             color: var(--text-primary);
-            font-size: 13px;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .action-btn:hover {
-            background: var(--accent);
-            transform: translateY(-1px);
         }
 
         .search-container {
             padding: 12px 16px;
-            background: var(--bg-sidebar);
         }
 
         .search-input {
             width: 100%;
-            padding: 10px 14px;
+            padding: 10px;
             background: var(--bg-page);
             border: 1px solid var(--border);
             border-radius: 12px;
             color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--accent);
         }
 
         .chats-list {
             flex: 1;
             overflow-y: auto;
-            padding: 8px 0;
         }
 
         .chat-section {
             padding: 8px 16px 4px;
             font-size: 11px;
-            font-weight: 600;
             color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .chat-item {
@@ -234,9 +182,7 @@
             gap: 14px;
             padding: 12px 16px;
             cursor: pointer;
-            transition: all 0.2s;
-            margin: 2px 8px;
-            border-radius: 12px;
+            transition: background 0.2s;
         }
 
         .chat-item:hover {
@@ -257,7 +203,6 @@
             justify-content: center;
             font-size: 24px;
             position: relative;
-            flex-shrink: 0;
         }
 
         .online-indicator {
@@ -273,25 +218,17 @@
 
         .chat-info {
             flex: 1;
-            min-width: 0;
         }
 
         .chat-name {
             font-weight: 600;
             font-size: 15px;
             color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
         .chat-preview {
             font-size: 12px;
             color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-top: 3px;
         }
 
         .group-badge {
@@ -299,7 +236,6 @@
             background: var(--accent);
             padding: 2px 6px;
             border-radius: 8px;
-            color: white;
         }
 
         .chat-area {
@@ -313,26 +249,6 @@
             padding: 16px 20px;
             background: var(--bg-header);
             border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .chat-header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .back-button {
-            display: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--bg-page);
-            border: none;
-            color: var(--text-primary);
-            cursor: pointer;
         }
 
         .chat-header-name {
@@ -344,7 +260,6 @@
         .chat-header-status {
             font-size: 12px;
             color: var(--text-secondary);
-            margin-top: 3px;
         }
 
         .messages-container {
@@ -379,7 +294,6 @@
         .message-bubble {
             padding: 10px 14px;
             border-radius: 18px;
-            word-wrap: break-word;
         }
 
         .message-own .message-bubble {
@@ -401,7 +315,6 @@
 
         .message-text {
             font-size: 14px;
-            line-height: 1.45;
             color: var(--text-primary);
         }
 
@@ -409,15 +322,6 @@
             font-size: 10px;
             color: var(--text-secondary);
             margin-top: 5px;
-        }
-
-        .reply-quote {
-            background: rgba(0,0,0,0.2);
-            padding: 6px 10px;
-            border-radius: 12px;
-            margin-bottom: 6px;
-            font-size: 11px;
-            border-left: 3px solid var(--accent);
         }
 
         .reactions {
@@ -433,11 +337,9 @@
             padding: 3px 8px;
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.15s;
         }
 
         .reaction:hover {
-            transform: scale(1.05);
             background: var(--accent);
         }
 
@@ -451,21 +353,9 @@
             border-top: 1px solid var(--border);
         }
 
-        .reply-indicator {
-            background: var(--bg-page);
-            padding: 8px 12px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            font-size: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .input-wrapper {
             display: flex;
             gap: 10px;
-            align-items: flex-end;
         }
 
         .message-input {
@@ -475,14 +365,8 @@
             border: 1px solid var(--border);
             border-radius: 24px;
             color: var(--text-primary);
-            font-size: 14px;
             resize: none;
             font-family: inherit;
-        }
-
-        .message-input:focus {
-            outline: none;
-            border-color: var(--accent);
         }
 
         .input-btn {
@@ -493,36 +377,6 @@
             border-radius: 50%;
             color: white;
             cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s;
-        }
-
-        .input-btn:hover {
-            background: var(--accent-hover);
-            transform: scale(1.05);
-        }
-
-        .context-menu {
-            position: fixed;
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            z-index: 1000;
-            min-width: 200px;
-            overflow: hidden;
-        }
-
-        .context-menu-item {
-            padding: 10px 16px;
-            cursor: pointer;
-            transition: background 0.15s;
-            font-size: 14px;
-            color: var(--text-primary);
-        }
-
-        .context-menu-item:hover {
-            background: var(--accent);
         }
 
         .modal {
@@ -532,7 +386,6 @@
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -549,9 +402,7 @@
 
         .modal-title {
             font-size: 22px;
-            font-weight: 700;
             margin-bottom: 20px;
-            color: var(--text-primary);
         }
 
         .modal-input {
@@ -559,10 +410,9 @@
             padding: 12px;
             background: var(--bg-page);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 8px;
             color: var(--text-primary);
             margin-bottom: 16px;
-            font-size: 14px;
         }
 
         .modal-buttons {
@@ -574,9 +424,8 @@
         .modal-btn {
             padding: 10px 20px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
         }
 
         .modal-btn-primary {
@@ -584,32 +433,12 @@
             color: white;
         }
 
-        .avatar-picker {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .avatar-option {
-            font-size: 36px;
-            text-align: center;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 12px;
-        }
-
-        .avatar-option:hover {
-            background: var(--accent);
-            transform: scale(1.1);
-        }
-
         .login-container {
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background: linear-gradient(135deg, var(--bg-page), var(--bg-sidebar));
+            background: var(--bg-page);
         }
 
         .login-card {
@@ -618,7 +447,6 @@
             border-radius: 28px;
             width: 100%;
             max-width: 400px;
-            box-shadow: var(--shadow);
         }
 
         .login-title {
@@ -626,10 +454,7 @@
             font-weight: 800;
             margin-bottom: 32px;
             text-align: center;
-            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--accent);
         }
 
         .login-input {
@@ -640,7 +465,6 @@
             border-radius: 14px;
             color: var(--text-primary);
             margin-bottom: 14px;
-            font-size: 15px;
         }
 
         .login-btn {
@@ -650,7 +474,6 @@
             border: none;
             border-radius: 14px;
             color: white;
-            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
         }
@@ -660,43 +483,6 @@
             margin-top: 20px;
             cursor: pointer;
             color: var(--accent);
-            font-size: 14px;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-page);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--accent);
-            border-radius: 3px;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -320px;
-                top: 0;
-                height: 100vh;
-                z-index: 100;
-                transition: left 0.3s ease;
-            }
-
-            .sidebar.open {
-                left: 0;
-            }
-
-            .back-button {
-                display: flex;
-            }
-
-            .message {
-                max-width: 85%;
-            }
         }
     </style>
 </head>
@@ -704,7 +490,6 @@
     <div id="app"></div>
 
     <script>
-        // ===== СОСТОЯНИЕ =====
         let currentUser = null;
         let currentChat = null;
         let currentChatType = null;
@@ -712,54 +497,51 @@
         let allUsers = [];
         let allGroups = [];
         let messages = [];
-        let replyToMessage = null;
         let messageInterval = null;
-        
-        const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
-        
-        // ===== API =====
+
+        // API helper
         async function api(method, url, data) {
             try {
                 const options = { method, headers: { 'Content-Type': 'application/json' } };
                 if (data) options.body = JSON.stringify(data);
                 const response = await fetch(url, options);
-                return await response.json();
+                const result = await response.json();
+                console.log(`API ${method} ${url}:`, result);
+                return result;
             } catch (error) {
                 console.error('API Error:', error);
                 return { success: false, error: error.message };
             }
         }
-        
+
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
         function formatTime(timestamp) {
             if (!timestamp) return '';
             const date = new Date(timestamp);
-            const now = new Date();
-            if (date.toDateString() === now.toDateString()) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            return date.toLocaleDateString();
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        
-        // ===== ЗАГРУЗКА ДАННЫХ =====
+
+        // Загрузка чатов
         async function loadChats() {
             if (!currentUser) return;
             
-            const users = await api('GET', '/get-users');
-            allUsers = Array.isArray(users) ? users.filter(u => u.username !== currentUser.username) : [];
+            const usersResult = await api('GET', '/get-users');
+            allUsers = Array.isArray(usersResult) ? usersResult.filter(u => u.username !== currentUser.username) : [];
             
-            const groups = await api('GET', `/get-groups/${currentUser.username}`);
-            allGroups = Array.isArray(groups) ? groups : [];
+            const groupsResult = await api('GET', `/get-groups/${currentUser.username}`);
+            allGroups = Array.isArray(groupsResult) ? groupsResult : [];
             
+            console.log('Loaded users:', allUsers.length, 'groups:', allGroups.length);
             renderSidebar();
         }
-        
+
+        // Загрузка сообщений
         async function loadMessages() {
             if (!currentUser || !currentChat) return;
             
@@ -775,8 +557,8 @@
             messages = fetchedMessages;
             renderMessages();
         }
-        
-        // ===== ОТПРАВКА =====
+
+        // Отправка сообщения
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input?.value.trim();
@@ -786,43 +568,43 @@
             const payload = currentChatType === 'group' ? {
                 groupId: currentGroupId,
                 from: currentUser.username,
-                text: text,
-                replyToId: replyToMessage?.id || null
+                text: text
             } : {
                 from: currentUser.username,
                 to: currentChat,
-                text: text,
-                replyToId: replyToMessage?.id || null
+                text: text
             };
             
             const result = await api('POST', endpoint, payload);
             if (result.success) {
                 input.value = '';
-                replyToMessage = null;
-                const replyIndicator = document.getElementById('replyIndicator');
-                if (replyIndicator) replyIndicator.style.display = 'none';
                 await loadMessages();
                 const container = document.getElementById('messagesContainer');
                 if (container) container.scrollTop = container.scrollHeight;
             } else {
-                alert('Ошибка отправки');
+                alert('Ошибка отправки: ' + (result.error || 'Неизвестная ошибка'));
             }
         }
-        
-        // ===== РЕАКЦИИ =====
+
+        // Реакции
         async function addReaction(messageId, reaction, type) {
             const result = await api('POST', '/add-reaction', {
-                messageId, userId: currentUser.username, reaction, type
+                messageId: parseInt(messageId),
+                userId: currentUser.username,
+                reaction: reaction,
+                type: type
             });
-            if (result.success) await loadMessages();
+            if (result.success) {
+                await loadMessages();
+            }
         }
-        
+
         async function loadReactions(messageId, type) {
             const result = await api('GET', `/get-reactions/${messageId}/${type}`);
             return Array.isArray(result) ? result : [];
         }
-        
-        // ===== ГРУППЫ =====
+
+        // Создание группы
         async function createGroup() {
             const name = document.getElementById('groupName')?.value.trim();
             if (!name) {
@@ -833,7 +615,9 @@
             const selectedUsers = Array.from(document.querySelectorAll('.user-select:checked')).map(cb => cb.value);
             
             const result = await api('POST', '/create-group', {
-                name, creator: currentUser.username, members: selectedUsers
+                name: name,
+                creator: currentUser.username,
+                members: selectedUsers
             });
             
             if (result.success) {
@@ -846,75 +630,40 @@
                 alert('Ошибка создания группы: ' + (result.error || 'Неизвестная ошибка'));
             }
         }
-        
-        // ===== ВЫБОР ЧАТА =====
+
+        // Выбор чата
         function selectChat(chatId, type, groupId = null) {
             currentChat = chatId;
             currentChatType = type;
             currentGroupId = groupId;
-            replyToMessage = null;
             
             renderSidebar();
             renderChatArea();
             loadMessages();
             
             if (messageInterval) clearInterval(messageInterval);
-            messageInterval = setInterval(() => {
-                if (document.hidden) loadMessages();
-            }, 3000);
+            messageInterval = setInterval(loadMessages, 3000);
         }
-        
-        // ===== АВАТАР =====
+
+        // Обновление аватара
         async function updateAvatar(avatar) {
             const result = await api('POST', '/update-avatar', {
-                username: currentUser.username, avatar
+                username: currentUser.username,
+                avatar: avatar
             });
             if (result.success) {
                 currentUser.avatar = avatar;
                 renderSidebar();
             }
         }
-        
-        // ===== ТЕМЫ =====
+
+        // Тема
         function setTheme(theme) {
             document.body.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
         }
-        
-        // ===== КОНТЕКСТНОЕ МЕНЮ =====
-        function showContextMenu(event, messageId, messageFrom, messageText) {
-            const existing = document.querySelector('.context-menu');
-            if (existing) existing.remove();
-            
-            const isOwn = messageFrom === currentUser.username;
-            const menu = document.createElement('div');
-            menu.className = 'context-menu';
-            menu.style.left = event.clientX + 'px';
-            menu.style.top = event.clientY + 'px';
-            
-            const items = [];
-            items.push({ label: '💬 Ответить', action: () => {
-                replyToMessage = messages.find(m => m.id === messageId);
-                const indicator = document.getElementById('replyIndicator');
-                if (indicator) {
-                    indicator.style.display = 'flex';
-                    indicator.querySelector('.reply-text').textContent = `Ответ ${messageFrom}: ${messageText.substring(0, 50)}`;
-                }
-            }});
-            
-            items.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'context-menu-item';
-                div.textContent = item.label;
-                div.onclick = () => { item.action(); menu.remove(); };
-                menu.appendChild(div);
-            });
-            
-            document.body.appendChild(menu);
-            setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
-        }
-        
-        // ===== МОДАЛЬНЫЕ ОКНА =====
+
+        // Модальные окна
         let currentModal = null;
         
         function showModal(content) {
@@ -932,11 +681,11 @@
         }
         
         function showAvatarPicker() {
-            const emojis = ['😀', '😎', '🥳', '😺', '🐶', '🦊', '🐼', '🐨', '👨‍💻', '👩‍💻', '💼', '🎮', '📚', '🎨', '⚽', '🎵'];
+            const emojis = ['😀', '😎', '🥳', '😺', '🐶', '🦊', '🐼', '🐨', '👨‍💻', '👩‍💻'];
             showModal(`
                 <div class="modal-title">Выберите аватар</div>
-                <div class="avatar-picker">
-                    ${emojis.map(emoji => `<div class="avatar-option" onclick="updateAvatar('${emoji}'); closeModal();">${emoji}</div>`).join('')}
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px;">
+                    ${emojis.map(emoji => `<div style="font-size: 32px; text-align: center; cursor: pointer; padding: 8px;" onclick="updateAvatar('${emoji}'); closeModal();">${emoji}</div>`).join('')}
                 </div>
                 <div class="modal-buttons">
                     <button class="modal-btn" onclick="closeModal()">Отмена</button>
@@ -946,18 +695,18 @@
         
         function showCreateGroupModal() {
             if (allUsers.length === 0) {
-                alert('Нет других пользователей для добавления в группу');
+                alert('Нет других пользователей для создания группы');
                 return;
             }
             
             showModal(`
                 <div class="modal-title">Создать группу</div>
                 <input type="text" class="modal-input" id="groupName" placeholder="Название группы">
-                <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary);">Выберите участников:</div>
+                <div style="margin-bottom: 12px; font-size: 13px;">Участники:</div>
                 <div style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;">
                     ${allUsers.map(user => `
-                        <div style="padding: 8px 0;">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div style="padding: 6px 0;">
+                            <label style="display: flex; align-items: center; gap: 8px;">
                                 <input type="checkbox" class="user-select" value="${user.username}">
                                 <span>${escapeHtml(user.username)}</span>
                             </label>
@@ -970,8 +719,8 @@
                 </div>
             `);
         }
-        
-        // ===== ОТРИСОВКА =====
+
+        // Отрисовка
         function renderSidebar() {
             const sidebar = document.getElementById('sidebar');
             if (!sidebar) return;
@@ -986,7 +735,7 @@
                         <div class="avatar" onclick="showAvatarPicker()">${currentUser?.avatar || '👤'}</div>
                         <div class="user-info">
                             <div class="username">${escapeHtml(currentUser?.username || '')}</div>
-                            <div class="user-status">В сети</div>
+                            <div class="user-status">● В сети</div>
                         </div>
                     </div>
                     <div class="action-buttons">
@@ -1011,7 +760,7 @@
                                 <div class="chat-avatar">👥</div>
                                 <div class="chat-info">
                                     <div class="chat-name">${escapeHtml(group.name)} <span class="group-badge">${group.role}</span></div>
-                                    <div class="chat-preview">Групповой чат</div>
+                                    <div class="chat-preview">Группа</div>
                                 </div>
                             </div>
                         `).join('')}
@@ -1045,38 +794,36 @@
             if (!container) return;
             
             if (!messages.length) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 60px 20px;">✨ Нет сообщений</div>';
+                container.innerHTML = '<div style="text-align: center; padding: 60px; color: var(--text-secondary);">✨ Нет сообщений</div>';
                 return;
             }
             
             container.innerHTML = messages.map(msg => {
                 const isOwn = msg.from_user === currentUser.username;
-                const replyTo = msg.reply_to ? messages.find(m => m.id === msg.reply_to) : null;
                 return `
-                    <div class="message ${isOwn ? 'message-own' : 'message-other'}" 
-                         data-message-id="${msg.id}"
-                         oncontextmenu="showContextMenu(event, ${msg.id}, '${msg.from_user}', '${escapeHtml(msg.text || '').replace(/'/g, "\\'")}'); return false;">
+                    <div class="message ${isOwn ? 'message-own' : 'message-other'}">
                         ${!isOwn && currentChatType === 'group' ? `<div class="message-sender">${escapeHtml(msg.from_user)}</div>` : ''}
-                        ${replyTo ? `<div class="reply-quote"><strong>${escapeHtml(replyTo.from_user)}:</strong> ${escapeHtml(replyTo.text?.substring(0, 80))}</div>` : ''}
                         <div class="message-bubble">
                             <div class="message-text">${escapeHtml(msg.text || '')}</div>
                         </div>
                         <div class="message-meta">${formatTime(msg.timestamp)}</div>
-                        <div class="reactions" data-message-id="${msg.id}">⏳</div>
+                        <div class="reactions" data-message-id="${msg.id}"></div>
                     </div>
                 `;
             }).join('');
             
+            // Загружаем реакции
+            const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
             for (const msg of messages) {
-                const reactionsDiv = document.querySelector(`.message[data-message-id="${msg.id}"] .reactions`);
+                const reactionsDiv = document.querySelector(`.message .reactions[data-message-id="${msg.id}"]`);
                 if (reactionsDiv) {
                     const reactions = await loadReactions(msg.id, currentChatType);
                     const userReaction = reactions.find(r => r.user_id === currentUser.username);
-                    const reactionGroups = {};
-                    reactions.forEach(r => { reactionGroups[r.reaction] = (reactionGroups[r.reaction] || 0) + 1; });
+                    const reactionCounts = {};
+                    reactions.forEach(r => { reactionCounts[r.reaction] = (reactionCounts[r.reaction] || 0) + 1; });
                     
                     reactionsDiv.innerHTML = REACTIONS.map(emoji => {
-                        const count = reactionGroups[emoji] || 0;
+                        const count = reactionCounts[emoji] || 0;
                         const isActive = userReaction?.reaction === emoji;
                         return `<span class="reaction ${isActive ? 'active' : ''}" onclick="addReaction(${msg.id}, '${emoji}', '${currentChatType}')">${emoji} ${count ? count : ''}</span>`;
                     }).join('');
@@ -1092,24 +839,15 @@
             
             chatArea.innerHTML = `
                 <div class="chat-header">
-                    <div class="chat-header-left">
-                        <button class="back-button" onclick="toggleSidebar()">←</button>
-                        <div>
-                            <div class="chat-header-name">${escapeHtml(currentChat || 'Выберите чат')}</div>
-                            <div class="chat-header-status">${currentChatType === 'group' ? 'Группа' : currentChat ? 'Личный чат' : ''}</div>
-                        </div>
-                    </div>
+                    <div class="chat-header-name">${escapeHtml(currentChat || 'Выберите чат')}</div>
+                    <div class="chat-header-status">${currentChatType === 'group' ? 'Группа' : currentChat ? 'Личный чат' : ''}</div>
                 </div>
                 <div class="messages-container" id="messagesContainer">
-                    ${!currentChat ? '<div style="text-align: center; color: var(--text-secondary); padding: 60px 20px;">💬 Выберите чат слева</div>' : ''}
+                    ${!currentChat ? '<div style="text-align: center; padding: 60px;">💬 Выберите чат слева</div>' : ''}
                 </div>
                 <div class="input-area">
-                    <div id="replyIndicator" class="reply-indicator" style="display: none;">
-                        <span class="reply-text"></span>
-                        <span style="cursor: pointer;" onclick="replyToMessage=null; this.parentElement.style.display='none';">✕</span>
-                    </div>
                     <div class="input-wrapper">
-                        <textarea class="message-input" id="messageInput" placeholder="${currentChat ? 'Сообщение...' : 'Выберите чат'}" ${!currentChat ? 'disabled' : ''}></textarea>
+                        <textarea class="message-input" id="messageInput" placeholder="${currentChat ? 'Сообщение...' : 'Выберите чат'}" ${!currentChat ? 'disabled' : ''} rows="1"></textarea>
                         <button class="input-btn" onclick="sendMessage()" ${!currentChat ? 'disabled' : ''}>➤</button>
                     </div>
                 </div>
@@ -1127,12 +865,8 @@
                 }
             }
         }
-        
-        function toggleSidebar() {
-            document.querySelector('.sidebar')?.classList.toggle('open');
-        }
-        
-        // ===== АУТЕНТИФИКАЦИЯ =====
+
+        // Аутентификация
         let isLoginMode = true;
         
         function renderAuth() {
@@ -1200,8 +934,8 @@
                 renderChatArea();
             }
         }
-        
-        // ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
+
+        // Глобальные функции
         window.addReaction = addReaction;
         window.updateAvatar = updateAvatar;
         window.setTheme = setTheme;
@@ -1213,10 +947,8 @@
         window.closeModal = closeModal;
         window.submitAuth = submitAuth;
         window.toggleAuthMode = toggleAuthMode;
-        window.toggleSidebar = toggleSidebar;
-        window.showContextMenu = showContextMenu;
         
-        // ===== ЗАПУСК =====
+        // Запуск
         renderAuth();
     </script>
 </body>
