@@ -98,8 +98,8 @@ app.get('/get-messages/:user1/:user2', async (req, res) => {
     const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(`from_user.eq.${user1},and(to_user.eq.${user2})`)
-        .or(`from_user.eq.${user2},and(to_user.eq.${user1})`)
+        .filter('from_user', 'in', `(${user1},${user2})`)
+        .filter('to_user', 'in', `(${user1},${user2})`)
         .order('id', { ascending: true });
     
     if (error) {
