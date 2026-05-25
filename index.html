@@ -1026,27 +1026,32 @@
         let pendingFile = null;
         
         async function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch('/upload-file', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (result.success) {
-                    pendingFile = { url: result.fileUrl, name: result.fileName };
-                    const input = document.getElementById('messageInput');
-                    if (input) input.value = `[Файл: ${result.fileName}] ` + (input.value || '');
-                } else {
-                    alert('Ошибка загрузки файла');
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert('Ошибка загрузки файла');
-            }
-        }
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${currentUser.username}/${fileName}`;
+    
+    try {
+        // Загрузка в Supabase Storage
+        const { data, error } = await supabase.storage
+            .from('chat-files')
+            .upload(filePath, file);
+        
+        if (error) throw error;
+        
+        // Получение публичного URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('chat-files')
+            .getPublicUrl(filePath);
+        
+        pendingFile = { url: publicUrl, name: file.name };
+        const input = document.getElementById('messageInput');
+        if (input) input.value = `[Файл: ${file.name}] ` + (input.value || '');
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('Ошибка загрузки файла в Supabase Storage');
+    }
+}
         
         // Avatar
         async function updateAvatar(avatar) {
