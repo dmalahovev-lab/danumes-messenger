@@ -1,7 +1,4 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -18,27 +15,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// File upload configuration - using /tmp for Render
-const UPLOADS_DIR = process.env.RENDER ? '/tmp/uploads' : path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-    filename: (req, file, cb) => {
-        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, unique + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-
 // Health check endpoint for Render
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Helper function to handle database errors
+// Helper function
 const handleDbError = (res, error, customMessage = 'Database error') => {
     console.error(customMessage, error);
     return res.status(500).json({ success: false, error: customMessage });
@@ -355,13 +337,8 @@ app.post('/send-group-message', async (req, res) => {
         
         if (error) throw error;
         
-        const { data: members } = await supabase
-            .from('group_members')
-            .select('user_id')
-            .eq('group_id', groupId);
-        
         console.log(`✅ Group message sent to group ${groupId} by ${from}`);
-        res.json({ success: true, message: data[0], members: members?.map(m => m.user_id) || [] });
+        res.json({ success: true, message: data[0] });
     } catch (error) {
         handleDbError(res, error, 'Error sending group message');
     }
@@ -452,7 +429,7 @@ app.post('/save-draft', async (req, res) => {
                 .eq('id', data[0].id);
             
             if (updateError) throw updateError;
-        } else {
+        } else if (text) {
             const { error: insertError } = await supabase
                 .from('drafts')
                 .insert([{ user_id: userId, chat_id: chatId, chat_type: chatType, text, updated_at: new Date().toISOString() }]);
@@ -476,34 +453,12 @@ app.get('/get-draft/:userId/:chatId/:chatType', async (req, res) => {
             .eq('user_id', userId)
             .eq('chat_id', chatId)
             .eq('chat_type', chatType)
-            .single();
+            .maybeSingle();
         
-        if (error && error.code !== 'PGRST116') throw error;
-        
+        if (error) throw error;
         res.json({ text: data?.text || '' });
     } catch (error) {
         handleDbError(res, error, 'Error fetching draft');
-    }
-});
-
-// ========== FILE UPLOAD ==========
-app.post('/upload-file', upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'Файл не загружен' });
-    }
-    res.json({ 
-        success: true, 
-        fileUrl: `/file/${req.file.filename}`, 
-        fileName: req.file.originalname 
-    });
-});
-
-app.get('/file/:filename', (req, res) => {
-    const filePath = path.join(UPLOADS_DIR, req.params.filename);
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).send('Файл не найден');
     }
 });
 
@@ -512,8 +467,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Сервер запущен на порту ${PORT}`);
-    console.log(`📁 Uploads directory: ${UPLOADS_DIR}`);
 });
