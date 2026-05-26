@@ -200,7 +200,7 @@ app.post('/create-group', async (req, res) => {
         const memberInserts = allMembers.map(username => ({
             group_id: groupId,
             user_id: username,
-            role: username === creator ? 'admin' : 'member',
+            role: 'member',
             joined_at: new Date().toISOString()
         }));
         
@@ -222,7 +222,7 @@ app.get('/get-groups/:username', async (req, res) => {
     try {
         const { data: memberData, error: memberError } = await supabase
             .from('group_members')
-            .select('group_id, role')
+            .select('group_id')
             .eq('user_id', username);
         
         if (memberError) throw memberError;
@@ -244,7 +244,6 @@ app.get('/get-groups/:username', async (req, res) => {
         const result = groupsData.map(group => ({
             id: group.id,
             name: group.name,
-            role: memberData.find(m => m.group_id === group.id)?.role || 'member',
             created_by: group.created_by,
             created_at: group.created_at
         }));
