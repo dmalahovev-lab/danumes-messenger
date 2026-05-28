@@ -15,52 +15,105 @@ app.use(express.static(__dirname));
 
 const VERIFIED_USERS = ['Danumala', 'RunFly'];
 
-// Health check for Render
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
+// Health check
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
 // ========== USER AUTH ==========
 app.post('/register-attempt', async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.json({ success: false, error: 'Заполните поля' });
+    console.log('📝 Register:', username);
+    
+    if (!username || !password) {
+        return res.json({ success: false, error: 'Заполните поля' });
+    }
 
     try {
-        const { data: existing } = await supabase.from('users').select('username').eq('username', username);
-        if (existing?.length) return res.json({ success: false, error: 'Пользователь уже существует' });
+        const { data: existing } = await supabase
+            .from('users')
+            .select('username')
+            .eq('username', username);
+        
+        if (existing && existing.length > 0) {
+            return res.json({ success: false, error: 'Пользователь уже существует' });
+        }
 
         const isVerified = VERIFIED_USERS.includes(username);
-        const { error } = await supabase.from('users').insert([{ 
-            username, password, avatar: '👤', online: true, verified: isVerified 
-        }]);
+        const { error } = await supabase
+            .from('users')
+            .insert([{ 
+                username, 
+                password, 
+                avatar: '👤', 
+                online: false, 
+                verified: isVerified 
+            }]);
+        
         if (error) throw error;
+        
+        console.log('✅ User registered:', username);
         res.json({ success: true });
     } catch (error) {
+        console.error('Registration error:', error);
         res.json({ success: false, error: error.message });
     }
 });
 
 app.post('/login-attempt', async (req, res) => {
     const { username, password } = req.body;
+    console.log('🔐 Login attempt:', username, 'password:', password);
+    
+    if (!username || !password) {
+        return res.json({ success: false, error: 'Заполните поля' });
+    }
+
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('username, avatar, verified')
-            .eq('username', username)
-            .eq('password', password);
-        if (error) throw error;
-        if (!data?.length) return res.json({ success: false, error: 'Неверные данные' });
+            .select('username, avatar, verified, password')
+            .eq('username', username);
+        
+        if (error) {
+            console.error('DB Error:', error);
+            return res.json({ success: false, error: error.message });
+        }
+        
+        console.log('Found user:', data);
+        
+        if (!data || data.length === 0) {
+            return res.json({ success: false, error: 'Пользователь не найден' });
+        }
+        
+        const user = data[0];
+        
+        if (user.password !== password) {
+            console.log('Password mismatch:', user.password, '!=', password);
+            return res.json({ success: false, error: 'Неверный пароль' });
+        }
 
-        await supabase.from('users').update({ online: true }).eq('username', username);
-        res.json({ success: true, username: data[0].username, avatar: data[0].avatar, verified: data[0].verified });
+        // Обновляем статус онлайн
+        await supabase
+            .from('users')
+            .update({ online: true })
+            .eq('username', username);
+        
+        console.log('✅ Login successful:', username);
+        res.json({ 
+            success: true, 
+            username: user.username, 
+            avatar: user.avatar || '👤', 
+            verified: user.verified || false 
+        });
     } catch (error) {
+        console.error('Login error:', error);
         res.json({ success: false, error: error.message });
     }
 });
 
 app.post('/logout', async (req, res) => {
     const { username } = req.body;
-    if (username) await supabase.from('users').update({ online: false }).eq('username', username);
+    if (username) {
+        await supabase.from('users').update({ online: false }).eq('username', username);
+    }
     res.json({ success: true });
 });
 
@@ -383,5 +436,4 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`✅ Verified users: ${VERIFIED_USERS.join(', ')}`);
 });
