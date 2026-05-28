@@ -256,6 +256,25 @@ app.get('/get-groups/:username', async (req, res) => {
     }
 });
 
+// 🆕 ВЫХОД ИЗ ГРУППЫ
+app.post('/leave-group', async (req, res) => {
+    const { groupId, userId } = req.body;
+    console.log(`🚪 User ${userId} leaving group ${groupId}`);
+    
+    try {
+        const { error } = await supabase
+            .from('group_members')
+            .delete()
+            .eq('group_id', groupId)
+            .eq('user_id', userId);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/send-group-message', async (req, res) => {
     const { groupId, from, text, fileUrl, fileName, fileType } = req.body;
     
@@ -296,10 +315,82 @@ app.get('/get-group-messages/:groupId', async (req, res) => {
     }
 });
 
+// ========== CHANNELS (НОВЫЕ) ==========
+// 🆕 СОЗДАНИЕ КАНАЛА
+app.post('/create-channel', async (req, res) => {
+    const { name, creator } = req.body;
+    console.log(`📢 Creating channel: ${name} by ${creator}`);
+    
+    try {
+        const { data, error } = await supabase
+            .from('channels')
+            .insert([{ name, created_by: creator, created_at: new Date().toISOString() }])
+            .select();
+        
+        if (error) throw error;
+        res.json({ success: true, channel: data[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 🆕 ПОЛУЧЕНИЕ КАНАЛОВ
+app.get('/get-channels/:username', async (req, res) => {
+    const { username } = req.params;
+    try {
+        const { data } = await supabase
+            .from('channel_subscribers')
+            .select('channel_id, channels(*)')
+            .eq('user_id', username);
+        res.json(data || []);
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+// 🆕 ОТПРАВКА В КАНАЛ
+app.post('/send-channel-message', async (req, res) => {
+    const { channelId, from, text, fileUrl, fileName, fileType } = req.body;
+    
+    try {
+        const newMessage = {
+            channel_id: parseInt(channelId),
+            from_user: from,
+            text: text || '',
+            file_url: fileUrl || null,
+            file_name: fileName || null,
+            file_type: fileType || null,
+            timestamp: new Date().toISOString()
+        };
+        
+        const { data, error } = await supabase.from('channel_messages').insert([newMessage]).select();
+        if (error) throw error;
+        res.json({ success: true, message: data[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 🆕 ПОЛУЧЕНИЕ СООБЩЕНИЙ КАНАЛА
+app.get('/get-channel-messages/:channelId', async (req, res) => {
+    const { channelId } = req.params;
+    try {
+        const { data } = await supabase
+            .from('channel_messages')
+            .select('*')
+            .eq('channel_id', parseInt(channelId))
+            .order('timestamp', { ascending: true });
+        res.json(data || []);
+    } catch (error) {
+        res.json([]);
+    }
+});
+
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server on port ${PORT}`);
+    console.log(`✅ Verified users: ${VERIFIED_USERS.join(', ')}`);
 });
