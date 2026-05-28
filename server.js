@@ -256,19 +256,10 @@ app.get('/get-groups/:username', async (req, res) => {
     }
 });
 
-// 🆕 ВЫХОД ИЗ ГРУППЫ
 app.post('/leave-group', async (req, res) => {
     const { groupId, userId } = req.body;
-    console.log(`🚪 User ${userId} leaving group ${groupId}`);
-    
     try {
-        const { error } = await supabase
-            .from('group_members')
-            .delete()
-            .eq('group_id', groupId)
-            .eq('user_id', userId);
-        
-        if (error) throw error;
+        await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', userId);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -315,11 +306,14 @@ app.get('/get-group-messages/:groupId', async (req, res) => {
     }
 });
 
-// ========== CHANNELS (НОВЫЕ) ==========
-// 🆕 СОЗДАНИЕ КАНАЛА
+// ========== CHANNELS ==========
 app.post('/create-channel', async (req, res) => {
     const { name, creator } = req.body;
-    console.log(`📢 Creating channel: ${name} by ${creator}`);
+    console.log('📢 Create channel:', { name, creator });
+    
+    if (!name || !creator) {
+        return res.status(400).json({ success: false, error: 'Недостаточно данных' });
+    }
     
     try {
         const { data, error } = await supabase
@@ -328,29 +322,37 @@ app.post('/create-channel', async (req, res) => {
             .select();
         
         if (error) throw error;
+        console.log('✅ Channel created:', data[0]);
         res.json({ success: true, channel: data[0] });
     } catch (error) {
+        console.error('❌ Error creating channel:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// 🆕 ПОЛУЧЕНИЕ КАНАЛОВ
 app.get('/get-channels/:username', async (req, res) => {
-    const { username } = req.params;
+    console.log('📥 Get all channels');
     try {
-        const { data } = await supabase
-            .from('channel_subscribers')
-            .select('channel_id, channels(*)')
-            .eq('user_id', username);
+        const { data, error } = await supabase
+            .from('channels')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        console.log('✅ Channels found:', data?.length || 0);
         res.json(data || []);
     } catch (error) {
+        console.error('❌ Error fetching channels:', error);
         res.json([]);
     }
 });
 
-// 🆕 ОТПРАВКА В КАНАЛ
 app.post('/send-channel-message', async (req, res) => {
     const { channelId, from, text, fileUrl, fileName, fileType } = req.body;
+    
+    if (!channelId || !from || (!text && !fileUrl)) {
+        return res.status(400).json({ success: false, error: 'Недостаточно данных' });
+    }
     
     try {
         const newMessage = {
@@ -371,7 +373,6 @@ app.post('/send-channel-message', async (req, res) => {
     }
 });
 
-// 🆕 ПОЛУЧЕНИЕ СООБЩЕНИЙ КАНАЛА
 app.get('/get-channel-messages/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
