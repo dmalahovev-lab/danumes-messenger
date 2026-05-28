@@ -121,7 +121,6 @@
 
         .app { display: flex; height: 100vh; }
 
-        /* Сайдбар */
         .sidebar {
             width: 320px;
             background: var(--bg-sidebar);
@@ -178,7 +177,6 @@
         }
         .action-btn:hover { background: var(--accent); transform: translateY(-2px); }
 
-        /* Выпадающее меню для кнопки + */
         .plus-menu {
             position: absolute;
             bottom: 50px;
@@ -188,7 +186,7 @@
             border: 1px solid var(--border);
             border-radius: 20px;
             padding: 8px 0;
-            min-width: 160px;
+            min-width: 180px;
             z-index: 100;
             display: none;
             animation: menuPop 0.2s ease;
@@ -238,7 +236,7 @@
         .chat-avatar {
             width: 52px; height: 52px; background: var(--bg-page); border-radius: 26px;
             display: flex; align-items: center; justify-content: center; font-size: 24px;
-            position: relative; flex-shrink: 0; transition: all 0.2s;
+            position: relative; flex-shrink: 0;
         }
         .online-indicator {
             position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px;
@@ -249,7 +247,6 @@
         .chat-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .chat-preview { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
 
-        /* Область чата */
         .chat-area {
             flex: 1; display: flex; flex-direction: column; background: var(--bg-chat);
             margin: 8px 8px 8px 0; border-radius: 28px; overflow: hidden;
@@ -266,13 +263,11 @@
         .chat-header-name { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 6px; }
         .chat-header-status { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
 
-        /* Сообщения */
         .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 
         .message {
             max-width: 70%; display: flex; flex-direction: column;
             animation: messageSlide 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-            position: relative;
         }
         @keyframes messageSlide {
             from { opacity: 0; transform: translateY(20px) scale(0.95); }
@@ -311,7 +306,6 @@
         }
         .message-file img:hover { transform: scale(1.02); }
 
-        /* Голосовые сообщения */
         .voice-message {
             display: flex; align-items: center; gap: 12px; min-width: 200px;
         }
@@ -328,11 +322,10 @@
         }
         .voice-progress {
             height: 100%; background: var(--accent); border-radius: 2px;
-            width: 0%; transition: width 0.1s linear;
+            width: 0%;
         }
         .voice-duration { font-size: 11px; color: var(--text-secondary); min-width: 40px; }
 
-        /* Реакции */
         .reactions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
         .reaction-badge {
             background: var(--bg-header); border-radius: 40px; padding: 4px 12px; font-size: 14px;
@@ -342,7 +335,6 @@
         .reaction-badge:hover { background: var(--accent); transform: scale(1.08) translateY(-2px); }
         .reaction-badge.active { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
 
-        /* Ввод */
         .input-area {
             padding: 16px 24px; background: var(--bg-header); backdrop-filter: blur(10px);
             border-top: 1px solid var(--border);
@@ -351,7 +343,7 @@
         .message-input {
             flex: 1; padding: 14px 20px; background: var(--bg-input); border: 1px solid var(--border);
             border-radius: 30px; color: var(--text-primary); font-size: 15px; resize: none; font-family: inherit;
-            max-height: 100px; transition: all 0.2s;
+            max-height: 100px;
         }
         .message-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
         .input-btn {
@@ -360,7 +352,6 @@
         }
         .input-btn:hover { background: var(--accent-hover); transform: scale(1.08) rotate(5deg); }
 
-        /* Меню */
         .context-menu {
             position: fixed; background: var(--glass-bg); backdrop-filter: blur(20px);
             border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow);
@@ -382,7 +373,6 @@
         .reaction-option { font-size: 28px; cursor: pointer; padding: 5px; transition: all 0.15s; }
         .reaction-option:hover { transform: scale(1.3) rotate(10deg); }
 
-        /* Модалки */
         .modal {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
@@ -416,7 +406,6 @@
         }
         @keyframes toastSlide { from { opacity: 0; transform: translateX(-50%) translateY(30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-        /* Просмотр изображений */
         .image-viewer {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.95); z-index: 5000;
@@ -424,10 +413,7 @@
             animation: fadeIn 0.2s ease;
             cursor: pointer;
         }
-        .image-viewer img {
-            max-width: 90%; max-height: 90%; object-fit: contain;
-            border-radius: 16px;
-        }
+        .image-viewer img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 16px; }
         .image-viewer-close {
             position: absolute; top: 20px; right: 30px;
             font-size: 40px; color: white; cursor: pointer;
@@ -436,6 +422,27 @@
         }
         .image-viewer-close:hover { transform: scale(1.1); }
 
+        .sticker-panel {
+            position: fixed; bottom: 80px; right: 20px;
+            background: var(--glass-bg); backdrop-filter: blur(20px);
+            border-radius: 24px; padding: 16px; z-index: 99;
+            display: none; grid-template-columns: repeat(5, 1fr);
+            gap: 12px; max-width: 300px; border: 1px solid var(--border);
+        }
+        .sticker-panel.show { display: grid; }
+        .sticker { font-size: 36px; cursor: pointer; padding: 8px; text-align: center; transition: all 0.2s; border-radius: 16px; }
+        .sticker:hover { background: var(--accent); transform: scale(1.15); }
+
+        .voice-recording {
+            display: flex; align-items: center; gap: 12px;
+            background: var(--bg-input); padding: 8px 16px;
+            border-radius: 30px; margin-bottom: 8px;
+        }
+        .recording-timer { color: #e74c3c; font-weight: bold; }
+        .recording-wave { display: flex; align-items: center; gap: 3px; }
+        .wave-bar { width: 3px; height: 20px; background: var(--accent); animation: wave 0.5s ease infinite; }
+        @keyframes wave { 0%, 100% { height: 10px; } 50% { height: 20px; } }
+
         .login-container { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg-page); }
         .login-card {
             background: var(--glass-bg); backdrop-filter: blur(20px); padding: 48px; border-radius: 48px;
@@ -443,7 +450,7 @@
             animation: modalSlide 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
         }
         .login-title { font-size: 42px; font-weight: 800; margin-bottom: 36px; text-align: center; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .login-input { width: 100%; padding: 16px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 28px; color: var(--text-primary); margin-bottom: 16px; font-size: 16px; transition: all 0.2s; }
+        .login-input { width: 100%; padding: 16px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 28px; color: var(--text-primary); margin-bottom: 16px; font-size: 16px; }
         .login-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
         .login-btn { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 32px; color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .login-btn:hover { transform: translateY(-2px); background: var(--accent-hover); box-shadow: 0 8px 20px var(--accent-glow); }
@@ -484,8 +491,6 @@
         let recordingTimer = null;
         let recordingSeconds = 0;
         let plusMenuVisible = false;
-
-        // Аудиоплеер
         let currentAudio = null;
         let currentAudioBtn = null;
 
@@ -527,21 +532,14 @@
             });
         }
 
-        // Просмотр изображения
         function viewImage(url) {
             const viewer = document.createElement('div');
             viewer.className = 'image-viewer';
-            viewer.innerHTML = `
-                <button class="image-viewer-close" onclick="this.parentElement.remove()">✕</button>
-                <img src="${url}" alt="Просмотр изображения">
-            `;
-            viewer.onclick = (e) => {
-                if (e.target === viewer) viewer.remove();
-            };
+            viewer.innerHTML = `<button class="image-viewer-close" onclick="this.parentElement.remove()">✕</button><img src="${url}" alt="Просмотр изображения">`;
+            viewer.onclick = (e) => { if (e.target === viewer) viewer.remove(); };
             document.body.appendChild(viewer);
         }
 
-        // Голосовое воспроизведение с остановкой
         function playVoice(url, btn) {
             if (currentAudio && currentAudioBtn === btn) {
                 currentAudio.pause();
@@ -550,32 +548,19 @@
                 if (btn) btn.textContent = '▶️';
                 return;
             }
-            
             if (currentAudio) {
                 currentAudio.pause();
                 if (currentAudioBtn) currentAudioBtn.textContent = '▶️';
                 currentAudio = null;
                 currentAudioBtn = null;
             }
-            
             const audio = new Audio(url);
             currentAudio = audio;
             currentAudioBtn = btn;
             audio.play();
             if (btn) btn.textContent = '⏸️';
-            
-            audio.onended = () => {
-                if (btn) btn.textContent = '▶️';
-                currentAudio = null;
-                currentAudioBtn = null;
-            };
-            
-            audio.onerror = () => {
-                showToast('Ошибка воспроизведения');
-                if (btn) btn.textContent = '▶️';
-                currentAudio = null;
-                currentAudioBtn = null;
-            };
+            audio.onended = () => { if (btn) btn.textContent = '▶️'; currentAudio = null; currentAudioBtn = null; };
+            audio.onerror = () => { showToast('Ошибка воспроизведения'); if (btn) btn.textContent = '▶️'; currentAudio = null; currentAudioBtn = null; };
         }
 
         async function loadChats() {
@@ -602,7 +587,6 @@
                 const res = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
                 fetchedMessages = Array.isArray(res) ? res : [];
             }
-            
             let hasChanges = fetchedMessages.length !== messages.length;
             if (!hasChanges) {
                 for (let i = 0; i < fetchedMessages.length; i++) {
@@ -617,35 +601,17 @@
 
         async function sendMessage(text, fileData = null) {
             if (!text && !fileData && !pendingFile) return;
-            
             let endpoint, payload;
-            
             if (currentChatType === 'group') {
                 endpoint = '/send-group-message';
-                payload = {
-                    groupId: currentGroupId, from: currentUser.username, text: text || '',
-                    fileUrl: fileData?.url || pendingFile?.url,
-                    fileName: fileData?.name || pendingFile?.name,
-                    fileType: fileData?.type || pendingFile?.type
-                };
+                payload = { groupId: currentGroupId, from: currentUser.username, text: text || '', fileUrl: fileData?.url || pendingFile?.url, fileName: fileData?.name || pendingFile?.name, fileType: fileData?.type || pendingFile?.type };
             } else if (currentChatType === 'channel') {
                 endpoint = '/send-channel-message';
-                payload = {
-                    channelId: currentGroupId, from: currentUser.username, text: text || '',
-                    fileUrl: fileData?.url || pendingFile?.url,
-                    fileName: fileData?.name || pendingFile?.name,
-                    fileType: fileData?.type || pendingFile?.type
-                };
+                payload = { channelId: currentGroupId, from: currentUser.username, text: text || '', fileUrl: fileData?.url || pendingFile?.url, fileName: fileData?.name || pendingFile?.name, fileType: fileData?.type || pendingFile?.type };
             } else {
                 endpoint = '/send-message';
-                payload = {
-                    from: currentUser.username, to: currentChat, text: text || '',
-                    fileUrl: fileData?.url || pendingFile?.url,
-                    fileName: fileData?.name || pendingFile?.name,
-                    fileType: fileData?.type || pendingFile?.type
-                };
+                payload = { from: currentUser.username, to: currentChat, text: text || '', fileUrl: fileData?.url || pendingFile?.url, fileName: fileData?.name || pendingFile?.name, fileType: fileData?.type || pendingFile?.type };
             }
-            
             const res = await api('POST', endpoint, payload);
             if (res.success) {
                 pendingFile = null;
@@ -660,48 +626,31 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-                
+                mediaRecorder.ondataavailable = (event) => { audioChunks.push(event.data); };
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     const reader = new FileReader();
                     reader.onloadend = async () => {
-                        const audioBase64 = reader.result;
-                        await sendMessage('🎤 Голосовое сообщение', {
-                            url: audioBase64,
-                            name: 'voice.webm',
-                            type: 'audio/webm'
-                        });
+                        await sendMessage('🎤 Голосовое сообщение', { url: reader.result, name: 'voice.webm', type: 'audio/webm' });
                     };
                     reader.readAsDataURL(audioBlob);
                     stream.getTracks().forEach(track => track.stop());
                     hideRecordingUI();
                 };
-                
                 mediaRecorder.start();
                 isRecording = true;
                 recordingSeconds = 0;
                 showRecordingUI();
-                
                 recordingTimer = setInterval(() => {
                     recordingSeconds++;
                     const timerEl = document.querySelector('.recording-timer');
                     if (timerEl) timerEl.textContent = `${Math.floor(recordingSeconds / 60)}:${(recordingSeconds % 60).toString().padStart(2, '0')}`;
                 }, 1000);
-            } catch (err) {
-                showToast('Ошибка доступа к микрофону');
-            }
+            } catch (err) { showToast('Ошибка доступа к микрофону'); }
         }
 
         function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                isRecording = false;
-                clearInterval(recordingTimer);
-            }
+            if (mediaRecorder && isRecording) { mediaRecorder.stop(); isRecording = false; clearInterval(recordingTimer); }
         }
 
         function showRecordingUI() {
@@ -710,96 +659,44 @@
             if (existing) existing.remove();
             const recordingDiv = document.createElement('div');
             recordingDiv.className = 'voice-recording';
-            recordingDiv.innerHTML = `
-                <span>🎙️ Запись:</span>
-                <span class="recording-timer">0:00</span>
-                <div class="recording-wave">
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                </div>
-                <button class="input-btn" onclick="stopRecording()" style="background: #e74c3c; width: 36px; height: 36px;">⏹️</button>
-            `;
+            recordingDiv.innerHTML = `<span>🎙️ Запись:</span><span class="recording-timer">0:00</span><div class="recording-wave"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><button class="input-btn" onclick="stopRecording()" style="background: #e74c3c; width: 36px; height: 36px;">⏹️</button>`;
             inputArea.insertBefore(recordingDiv, inputArea.firstChild);
         }
 
-        function hideRecordingUI() {
-            const recordingDiv = document.querySelector('.voice-recording');
-            if (recordingDiv) recordingDiv.remove();
-        }
+        function hideRecordingUI() { const div = document.querySelector('.voice-recording'); if (div) div.remove(); }
 
-        function sendSticker(sticker) {
-            sendMessage(sticker);
-            toggleStickerPanel();
-        }
-
-        function toggleStickerPanel() {
-            const panel = document.getElementById('stickerPanel');
-            if (panel) {
-                panel.classList.toggle('show');
-            }
-        }
-
-        function togglePlusMenu() {
-            const menu = document.getElementById('plusMenu');
-            if (menu) {
-                plusMenuVisible = !plusMenuVisible;
-                menu.classList.toggle('show', plusMenuVisible);
-            }
-        }
+        function sendSticker(sticker) { sendMessage(sticker); toggleStickerPanel(); }
+        function toggleStickerPanel() { document.getElementById('stickerPanel')?.classList.toggle('show'); }
+        function togglePlusMenu() { const menu = document.getElementById('plusMenu'); if (menu) { plusMenuVisible = !plusMenuVisible; menu.classList.toggle('show', plusMenuVisible); } }
 
         async function deleteChat(chatId, type, groupId) {
             if (!confirm(`Удалить чат с ${chatId}?`)) return;
             if (type === 'group' && groupId) {
                 await api('POST', '/leave-group', { groupId, userId: currentUser.username });
-                showToast(`Вы вышли из группы ${chatId}`);
                 allGroups = allGroups.filter(g => g.name !== chatId);
             } else if (type === 'channel') {
-                showToast(`Канал ${chatId} удалён из списка`);
                 allChannels = allChannels.filter(c => c.name !== chatId);
             }
-            if (currentChat === chatId) {
-                currentChat = null;
-                currentChatType = null;
-                renderChatArea();
-            }
+            if (currentChat === chatId) { currentChat = null; currentChatType = null; renderChatArea(); }
             renderSidebar();
         }
 
         async function forwardMessage(message) {
             const targetUser = prompt('Кому переслать сообщение? (username)');
             if (targetUser) {
-                await sendToUser(targetUser, `[Переслано от ${message.from_user}]: ${message.text}`);
+                await api('POST', '/send-message', { from: currentUser.username, to: targetUser, text: `[Переслано от ${message.from_user}]: ${message.text}` });
                 showToast('Сообщение переслано');
             }
         }
 
-        async function sendToUser(username, text) {
-            const res = await api('POST', '/send-message', {
-                from: currentUser.username,
-                to: username,
-                text: text
-            });
-            return res.success;
-        }
-
         function requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-                Notification.requestPermission();
-            }
-        }
-
-        function showNotification(title, body) {
-            if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-                new Notification(title, { body });
-            }
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') { Notification.requestPermission(); }
         }
 
         async function sendMessageFromInput() {
             const input = document.getElementById('msgInput');
             const text = input?.value.trim();
-            if (text) {
-                await sendMessage(text);
-                if (input) input.value = '';
-            }
+            if (text) { await sendMessage(text); if (input) input.value = ''; }
         }
 
         function uploadFile() {
@@ -832,9 +729,7 @@
         }
 
         async function addReaction(msgId, reaction, type) {
-            const res = await api('POST', '/add-reaction', {
-                messageId: parseInt(msgId), userId: currentUser.username, reaction, type
-            });
+            const res = await api('POST', '/add-reaction', { messageId: parseInt(msgId), userId: currentUser.username, reaction, type });
             if (res.success) await loadMessages();
         }
 
@@ -848,24 +743,16 @@
             if (!name) { showToast('Введите название'); return; }
             const selected = Array.from(document.querySelectorAll('.user-select:checked')).map(cb => cb.value);
             const res = await api('POST', '/create-group', { name, creator: currentUser.username, members: selected });
-            if (res.success) {
-                closeModal();
-                await loadChats();
-                showToast(`Группа "${name}" создана`);
-                if (res.group) selectChat(res.group.name, 'group', res.group.id);
-            } else showToast('Ошибка: ' + (res.error || 'Неизвестно'));
+            if (res.success) { closeModal(); await loadChats(); showToast(`Группа "${name}" создана`); if (res.group) selectChat(res.group.name, 'group', res.group.id); }
+            else showToast('Ошибка: ' + (res.error || 'Неизвестно'));
         }
 
         async function createChannel() {
             const name = document.getElementById('channelName')?.value.trim();
             if (!name) { showToast('Введите название канала'); return; }
             const res = await api('POST', '/create-channel', { name, creator: currentUser.username });
-            if (res.success) {
-                closeModal();
-                await loadChats();
-                showToast(`Канал "${name}" создан`);
-                if (res.channel) selectChat(res.channel.name, 'channel', res.channel.id);
-            } else showToast('Ошибка: ' + (res.error || 'Неизвестно'));
+            if (res.success) { closeModal(); await loadChats(); showToast(`Канал "${name}" создан`); if (res.channel) selectChat(res.channel.name, 'channel', res.channel.id); }
+            else showToast('Ошибка: ' + (res.error || 'Неизвестно'));
         }
 
         function selectChat(chatId, type, groupId = null) {
@@ -873,39 +760,22 @@
             currentChat = chatId;
             currentChatType = type;
             currentGroupId = groupId;
-            editingMessageId = null;
-            if (type === 'user') {
-                const user = allUsers.find(u => u.username === chatId);
-                currentChatAvatar = user?.avatar || '👤';
-            } else if (type === 'channel') {
-                currentChatAvatar = '📢';
-            } else {
-                currentChatAvatar = '👥';
-            }
-            renderSidebar();
-            renderChatArea();
-            loadMessages();
+            if (type === 'user') { const user = allUsers.find(u => u.username === chatId); currentChatAvatar = user?.avatar || '👤'; }
+            else if (type === 'channel') { currentChatAvatar = '📢'; }
+            else { currentChatAvatar = '👥'; }
+            renderSidebar(); renderChatArea(); loadMessages();
         }
 
         async function updateAvatar(avatar) {
             const res = await api('POST', '/update-avatar', { username: currentUser.username, avatar });
-            if (res.success) {
-                currentUser.avatar = avatar;
-                renderSidebar();
-                if (currentChatType === 'user') { currentChatAvatar = avatar; renderChatArea(); }
-                showToast('Аватар обновлён');
-            }
+            if (res.success) { currentUser.avatar = avatar; renderSidebar(); if (currentChatType === 'user') { currentChatAvatar = avatar; renderChatArea(); } showToast('Аватар обновлён'); }
             closeModal();
         }
 
-        function setTheme(theme) {
-            document.body.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-        }
+        function setTheme(theme) { document.body.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }
 
-        function showContextMenu(e, msgId, msgFrom, msgText, fileUrl, isVoice) {
-            e.preventDefault();
-            e.stopPropagation();
+        function showContextMenu(e, msgId, msgFrom, msgText, fileUrl) {
+            e.preventDefault(); e.stopPropagation();
             const existing = document.querySelector('.context-menu');
             if (existing) existing.remove();
             const isOwn = msgFrom === currentUser.username;
@@ -913,40 +783,14 @@
             menu.className = 'context-menu';
             menu.style.left = e.clientX + 'px';
             menu.style.top = e.clientY + 'px';
-            
             if (isOwn) {
-                const edit = document.createElement('div');
-                edit.className = 'context-menu-item';
-                edit.textContent = '✏️ Редактировать';
-                edit.onclick = () => { startEditing(msgId, msgText); menu.remove(); };
-                menu.appendChild(edit);
-                const del = document.createElement('div');
-                del.className = 'context-menu-item';
-                del.textContent = '🗑️ Удалить';
-                del.onclick = () => { deleteMessage(msgId); menu.remove(); };
-                menu.appendChild(del);
+                const edit = document.createElement('div'); edit.className = 'context-menu-item'; edit.textContent = '✏️ Редактировать'; edit.onclick = () => { startEditing(msgId, msgText); menu.remove(); }; menu.appendChild(edit);
+                const del = document.createElement('div'); del.className = 'context-menu-item'; del.textContent = '🗑️ Удалить'; del.onclick = () => { deleteMessage(msgId); menu.remove(); }; menu.appendChild(del);
             }
-            const forward = document.createElement('div');
-            forward.className = 'context-menu-item';
-            forward.textContent = '↪️ Переслать';
-            forward.onclick = () => { 
-                forwardMessage(messages.find(m => m.id === msgId)); 
-                menu.remove(); 
-            };
-            menu.appendChild(forward);
-            
-            const react = document.createElement('div');
-            react.className = 'context-menu-item';
-            react.textContent = '😊 Поставить реакцию';
-            react.onclick = (ev) => { ev.stopPropagation(); menu.remove(); showReactionMenu(e, msgId); };
-            menu.appendChild(react);
-            
+            const forward = document.createElement('div'); forward.className = 'context-menu-item'; forward.textContent = '↪️ Переслать'; forward.onclick = () => { forwardMessage(messages.find(m => m.id === msgId)); menu.remove(); }; menu.appendChild(forward);
+            const react = document.createElement('div'); react.className = 'context-menu-item'; react.textContent = '😊 Поставить реакцию'; react.onclick = (ev) => { ev.stopPropagation(); menu.remove(); showReactionMenu(e, msgId); }; menu.appendChild(react);
             if (fileUrl && fileUrl !== 'undefined') {
-                const down = document.createElement('div');
-                down.className = 'context-menu-item';
-                down.textContent = '📥 Скачать файл';
-                down.onclick = () => { window.open(fileUrl, '_blank'); menu.remove(); };
-                menu.appendChild(down);
+                const down = document.createElement('div'); down.className = 'context-menu-item'; down.textContent = '📥 Скачать файл'; down.onclick = () => { window.open(fileUrl, '_blank'); menu.remove(); }; menu.appendChild(down);
             }
             document.body.appendChild(menu);
             setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
@@ -960,9 +804,7 @@
             menu.style.left = e.clientX + 'px';
             menu.style.top = (e.clientY - 50) + 'px';
             REACTIONS.forEach(emoji => {
-                const opt = document.createElement('div');
-                opt.className = 'reaction-option';
-                opt.textContent = emoji;
+                const opt = document.createElement('div'); opt.className = 'reaction-option'; opt.textContent = emoji;
                 opt.onclick = () => { addReaction(msgId, emoji, currentChatType); menu.remove(); };
                 menu.appendChild(opt);
             });
@@ -1003,8 +845,7 @@
             const inp = document.getElementById('editInput');
             const newText = inp?.value.trim();
             if (newText) await editMessage(msgId, newText);
-            editingMessageId = null;
-            await loadMessages();
+            editingMessageId = null; await loadMessages();
         }
 
         function cancelEdit(msgId) { editingMessageId = null; loadMessages(); }
@@ -1017,36 +858,20 @@
             const fUsers = allUsers.filter(u => u.username.toLowerCase().includes(search));
             const fChannels = allChannels.filter(c => c.name.toLowerCase().includes(search));
             const isVerified = VERIFIED_USERS.includes(currentUser?.username);
-            
-            sidebar.innerHTML = `<div class="sidebar-header"><div class="user-card"><div class="avatar" onclick="showAvatarPicker()">${currentUser?.avatar || '👤'}</div><div class="user-info"><div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="user-status">● В сети</div></div></div><div class="action-buttons" style="position: relative;"><select class="action-btn" id="themeSelect" onchange="setTheme(this.value)"><option value="blue">💙 Blue</option><option value="light">☀️ Light</option><option value="dark">🌙 Dark</option><option value="purple">💜 Purple</option><option value="pink">🌸 Pink</option></select><button class="action-btn" onclick="togglePlusMenu()">➕</button><div id="plusMenu" class="plus-menu"><div class="plus-menu-item" onclick="showCreateGroupModal(); togglePlusMenu()">👥 Создать группу</div><div class="plus-menu-item" onclick="showCreateChannelModal(); togglePlusMenu()">📢 Создать канал</div></div></div></div><div class="search-container"><input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск..." oninput="renderSidebar()"></div><div class="chats-list">${fChannels.length ? `<div class="chat-section">КАНАЛЫ</div>${fChannels.map(c => `<div class="chat-item ${currentChat === c.name ? 'active' : ''}" onclick="selectChat('${c.name.replace(/'/g, "\\'")}', 'channel', ${c.id})"><div class="chat-avatar">📢</div><div class="chat-info"><div class="chat-name">${escapeHtml(c.name)}</div><div class="chat-preview">Канал</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${c.name}', 'channel', ${c.id})">✕</button></div>`).join('')}` : ''}${fGroups.length ? `<div class="chat-section">ГРУППЫ</div>${fGroups.map(g => `<div class="chat-item ${currentChat === g.name ? 'active' : ''}" onclick="selectChat('${g.name.replace(/'/g, "\\'")}', 'group', ${g.id})"><div class="chat-avatar">👥</div><div class="chat-info"><div class="chat-name">${escapeHtml(g.name)}</div><div class="chat-preview">Группа</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${g.name}', 'group', ${g.id})">✕</button></div>`).join('')}` : ''}${fUsers.length ? `<div class="chat-section">ЛИЧНЫЕ</div>${fUsers.map(u => `<div class="chat-item ${currentChat === u.username ? 'active' : ''}" onclick="selectChat('${u.username}', 'user', null)"><div class="chat-avatar">${u.avatar || '👤'}${u.online ? '<div class="online-indicator"></div>' : ''}</div><div class="chat-info"><div class="chat-name">${escapeHtml(u.username)}${u.verified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="chat-preview">${u.online ? 'В сети' : 'Не в сети'}</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${u.username}', 'user', null)">✕</button></div>`).join('')}` : ''}</div><div id="stickerPanel" class="sticker-panel" style="display: none; position: fixed; bottom: 80px; right: 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 24px; padding: 16px; z-index: 99; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 300px; border: 1px solid var(--border);">${STICKERS.map(s => `<div class="sticker" onclick="sendSticker('${s}')">${s}</div>`).join('')}</div>`;
-            
+            sidebar.innerHTML = `<div class="sidebar-header"><div class="user-card"><div class="avatar" onclick="showAvatarPicker()">${currentUser?.avatar || '👤'}</div><div class="user-info"><div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="user-status">● В сети</div></div></div><div class="action-buttons" style="position: relative;"><select class="action-btn" id="themeSelect" onchange="setTheme(this.value)"><option value="blue">💙 Blue</option><option value="light">☀️ Light</option><option value="dark">🌙 Dark</option><option value="purple">💜 Purple</option><option value="pink">🌸 Pink</option></select><button class="action-btn" onclick="togglePlusMenu()">➕</button><div id="plusMenu" class="plus-menu"><div class="plus-menu-item" onclick="showCreateGroupModal(); togglePlusMenu()">👥 Создать группу</div><div class="plus-menu-item" onclick="showCreateChannelModal(); togglePlusMenu()">📢 Создать канал</div></div></div></div><div class="search-container"><input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск..." oninput="renderSidebar()"></div><div class="chats-list">${fChannels.length ? `<div class="chat-section">КАНАЛЫ</div>${fChannels.map(c => `<div class="chat-item ${currentChat === c.name ? 'active' : ''}" onclick="selectChat('${c.name.replace(/'/g, "\\'")}', 'channel', ${c.id})"><div class="chat-avatar">📢</div><div class="chat-info"><div class="chat-name">${escapeHtml(c.name)}</div><div class="chat-preview">Канал</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${c.name}', 'channel', ${c.id})">✕</button></div>`).join('')}` : ''}${fGroups.length ? `<div class="chat-section">ГРУППЫ</div>${fGroups.map(g => `<div class="chat-item ${currentChat === g.name ? 'active' : ''}" onclick="selectChat('${g.name.replace(/'/g, "\\'")}', 'group', ${g.id})"><div class="chat-avatar">👥</div><div class="chat-info"><div class="chat-name">${escapeHtml(g.name)}</div><div class="chat-preview">Группа</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${g.name}', 'group', ${g.id})">✕</button></div>`).join('')}` : ''}${fUsers.length ? `<div class="chat-section">ЛИЧНЫЕ</div>${fUsers.map(u => `<div class="chat-item ${currentChat === u.username ? 'active' : ''}" onclick="selectChat('${u.username}', 'user', null)"><div class="chat-avatar">${u.avatar || '👤'}${u.online ? '<div class="online-indicator"></div>' : ''}</div><div class="chat-info"><div class="chat-name">${escapeHtml(u.username)}${u.verified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="chat-preview">${u.online ? 'В сети' : 'Не в сети'}</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${u.username}', 'user', null)">✕</button></div>`).join('')}` : ''}</div><div id="stickerPanel" class="sticker-panel">${STICKERS.map(s => `<div class="sticker" onclick="sendSticker('${s}')">${s}</div>`).join('')}</div>`;
             const saved = localStorage.getItem('theme') || 'blue';
             const sel = document.getElementById('themeSelect');
             if (sel) sel.value = saved;
             setTheme(saved);
-            
-            // Закрываем плюс меню при клике вне
-            document.addEventListener('click', function(e) {
-                const menu = document.getElementById('plusMenu');
-                const btn = e.target.closest('.action-btn');
-                if (menu && !btn && plusMenuVisible) {
-                    menu.classList.remove('show');
-                    plusMenuVisible = false;
-                }
-            });
+            document.addEventListener('click', function(e) { const menu = document.getElementById('plusMenu'); const btn = e.target.closest('.action-btn'); if (menu && !btn && plusMenuVisible) { menu.classList.remove('show'); plusMenuVisible = false; } });
         }
 
         async function renderMessages() {
             const container = document.getElementById('messagesContainer');
             if (!container) return;
             if (!messages.length) { container.innerHTML = '<div style="text-align: center; padding: 60px; opacity: 0.6;">✨ Нет сообщений</div>'; return; }
-            
             const reactionsMap = new Map();
-            for (const msg of messages) {
-                const reacts = await loadReactions(msg.id, currentChatType);
-                reactionsMap.set(msg.id, reacts);
-            }
-            
+            for (const msg of messages) { const reacts = await loadReactions(msg.id, currentChatType); reactionsMap.set(msg.id, reacts); }
             let html = '';
             for (const msg of messages) {
                 const isOwn = msg.from_user === currentUser.username;
@@ -1054,69 +879,37 @@
                 const userReact = reacts.find(r => r.user_id === currentUser.username);
                 const reactGroups = {};
                 reacts.forEach(r => { reactGroups[r.reaction] = (reactGroups[r.reaction] || 0) + 1; });
-                
                 let fileHtml = '';
                 let isVoice = false;
                 if (msg.file_url) {
-                    if (msg.file_url.startsWith('data:image/')) {
-                        fileHtml = `<div class="message-file"><img src="${msg.file_url}" onclick="viewImage('${msg.file_url}')"></div>`;
-                    } else if (msg.file_url.startsWith('data:audio/') || msg.file_type?.startsWith('audio/')) {
-                        isVoice = true;
-                        fileHtml = `<div class="voice-message"><button class="voice-play-btn" onclick="playVoice('${msg.file_url}', this)">▶️</button><div class="voice-timeline"><div class="voice-progress"></div></div><span class="voice-duration"></span></div>`;
-                    } else if (msg.file_url.startsWith('data:')) {
-                        fileHtml = `<div class="message-file"><a href="${msg.file_url}" download="${escapeHtml(msg.file_name || 'файл')}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a></div>`;
-                    }
+                    if (msg.file_url.startsWith('data:image/')) { fileHtml = `<div class="message-file"><img src="${msg.file_url}" onclick="viewImage('${msg.file_url}')"></div>`; }
+                    else if (msg.file_url.startsWith('data:audio/') || msg.file_type?.startsWith('audio/')) { isVoice = true; fileHtml = `<div class="voice-message"><button class="voice-play-btn" onclick="playVoice('${msg.file_url}', this)">▶️</button><div class="voice-timeline"><div class="voice-progress"></div></div><span class="voice-duration"></span></div>`; }
+                    else if (msg.file_url.startsWith('data:')) { fileHtml = `<div class="message-file"><a href="${msg.file_url}" download="${escapeHtml(msg.file_name || 'файл')}">📎 ${escapeHtml(msg.file_name || 'Файл')}</a></div>`; }
                 }
-                
                 let reactsHtml = '';
-                for (const [emoji, count] of Object.entries(reactGroups)) {
-                    const active = userReact?.reaction === emoji ? 'active' : '';
-                    reactsHtml += `<span class="reaction-badge ${active}" onclick="addReaction(${msg.id}, '${emoji}', '${currentChatType}')">${emoji}${count > 1 ? `<span style="font-size: 11px; margin-left: 4px;">${count}</span>` : ''}</span>`;
-                }
-                
+                for (const [emoji, count] of Object.entries(reactGroups)) { const active = userReact?.reaction === emoji ? 'active' : ''; reactsHtml += `<span class="reaction-badge ${active}" onclick="addReaction(${msg.id}, '${emoji}', '${currentChatType}')">${emoji}${count > 1 ? `<span style="font-size: 11px; margin-left: 4px;">${count}</span>` : ''}</span>`; }
                 const highlightedText = highlightMentions(escapeHtml(msg.text || ''));
-                html += `<div class="message ${isOwn ? 'message-own' : 'message-other'}" data-mid="${msg.id}">${!isOwn && (currentChatType === 'group' || currentChatType === 'channel') ? `<div class="message-sender">${escapeHtml(msg.from_user)}</div>` : ''}<div class="message-bubble" oncontextmenu="showContextMenu(event, ${msg.id}, '${msg.from_user}', '${escapeHtml(msg.text || '').replace(/'/g, "\\'")}', '${msg.file_url || ''}', ${isVoice})"><div class="message-text">${highlightedText}</div>${fileHtml}</div><div class="message-meta">${formatTime(msg.timestamp)}${msg.edited ? '<span class="message-edited">✎ изменено</span>' : ''}</div><div class="reactions">${reactsHtml}</div></div>`;
+                html += `<div class="message ${isOwn ? 'message-own' : 'message-other'}" data-mid="${msg.id}">${!isOwn && (currentChatType === 'group' || currentChatType === 'channel') ? `<div class="message-sender">${escapeHtml(msg.from_user)}</div>` : ''}<div class="message-bubble" oncontextmenu="showContextMenu(event, ${msg.id}, '${msg.from_user}', '${escapeHtml(msg.text || '').replace(/'/g, "\\'")}', '${msg.file_url || ''}')"><div class="message-text">${highlightedText}</div>${fileHtml}</div><div class="message-meta">${formatTime(msg.timestamp)}${msg.edited ? '<span class="message-edited">✎ изменено</span>' : ''}</div><div class="reactions">${reactsHtml}</div></div>`;
             }
             container.innerHTML = html;
             const shouldScroll = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
             if (shouldScroll) container.scrollTop = container.scrollHeight;
-            
-            if (!localStorage.getItem('notificationsRequested')) {
-                requestNotificationPermission();
-                localStorage.setItem('notificationsRequested', 'true');
-            }
+            if (!localStorage.getItem('notificationsRequested')) { requestNotificationPermission(); localStorage.setItem('notificationsRequested', 'true'); }
         }
 
         function renderChatArea() {
             const chatArea = document.getElementById('chatArea');
             if (!chatArea) return;
-            let status = '';
-            let isVerified = false;
+            let status = '', isVerified = false;
             if (currentChatType === 'group') status = 'Группа';
             else if (currentChatType === 'channel') status = 'Канал';
-            else if (currentChat) {
-                const user = allUsers.find(u => u.username === currentChat);
-                status = user?.online ? '🟢 В сети' : '⚫ Не в сети';
-                isVerified = user?.verified || false;
-            }
+            else if (currentChat) { const user = allUsers.find(u => u.username === currentChat); status = user?.online ? '🟢 В сети' : '⚫ Не в сети'; isVerified = user?.verified || false; }
             chatArea.innerHTML = `<div class="chat-header"><div class="chat-header-avatar">${currentChatAvatar || '👤'}</div><div><div class="chat-header-name">${escapeHtml(currentChat || 'Выберите чат')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="chat-header-status">${status}</div></div></div><div class="messages-container" id="messagesContainer">${!currentChat ? '<div style="text-align: center; padding: 60px; opacity: 0.6;">💬 Выберите чат</div>' : ''}</div><div class="input-area"><div class="input-wrapper"><button class="input-btn" onclick="document.getElementById(\'fileInput\').click()" style="background: var(--bg-page);">📎</button><input type="file" id="fileInput" style="display: none;" onchange="uploadFile()"><button class="input-btn" onclick="startRecording()" style="background: var(--bg-page);">🎙️</button><button class="input-btn" onclick="toggleStickerPanel()" style="background: var(--bg-page);">😊</button><textarea class="message-input" id="msgInput" placeholder="${currentChat ? 'Сообщение... (напишите @username для упоминания)' : 'Выберите чат'}" ${!currentChat ? 'disabled' : ''} rows="1"></textarea><button class="input-btn" onclick="sendMessageFromInput()" ${!currentChat ? 'disabled' : ''}>➤</button></div></div>`;
-            if (currentChat) {
-                const input = document.getElementById('msgInput');
-                if (input) {
-                    input.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessageFromInput();
-                        }
-                    });
-                }
-            }
+            if (currentChat) { const input = document.getElementById('msgInput'); if (input) { input.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageFromInput(); } }); } }
         }
 
         let isLogin = true;
-        function renderAuth() {
-            document.getElementById('app').innerHTML = `<div class="login-container"><div class="login-card"><div class="login-title">DanuMes</div><input type="text" class="login-input" id="authUser" placeholder="Имя"><input type="password" class="login-input" id="authPass" placeholder="Пароль"><button class="login-btn" onclick="submitAuth()">${isLogin ? 'Войти' : 'Регистрация'}</button><div class="switch-mode" onclick="toggleMode()">${isLogin ? 'Нет аккаунта?' : 'Уже есть?'}</div></div></div>`;
-        }
+        function renderAuth() { document.getElementById('app').innerHTML = `<div class="login-container"><div class="login-card"><div class="login-title">DanuMes</div><input type="text" class="login-input" id="authUser" placeholder="Имя"><input type="password" class="login-input" id="authPass" placeholder="Пароль"><button class="login-btn" onclick="submitAuth()">${isLogin ? 'Войти' : 'Регистрация'}</button><div class="switch-mode" onclick="toggleMode()">${isLogin ? 'Нет аккаунта?' : 'Уже есть?'}</div></div></div>`; }
         function toggleMode() { isLogin = !isLogin; renderAuth(); }
         async function submitAuth() {
             const username = document.getElementById('authUser').value.trim();
@@ -1124,27 +917,20 @@
             if (!username || !password) { showToast('Заполните поля'); return; }
             const res = await api('POST', isLogin ? '/login-attempt' : '/register-attempt', { username, password });
             if (res.success) {
-                if (isLogin) { 
-                    currentUser = { username: res.username, avatar: res.avatar || '👤', verified: res.verified }; 
-                    renderMain(); 
-                } else { 
-                    showToast('Регистрация успешна! Войдите'); 
-                    isLogin = true; 
-                    renderAuth(); 
-                }
+                if (isLogin) { currentUser = { username: res.username, avatar: res.avatar || '👤', verified: res.verified }; renderMain(); }
+                else { showToast('Регистрация успешна! Войдите'); isLogin = true; renderAuth(); }
             } else showToast(res.error || 'Ошибка');
         }
         async function renderMain() {
             document.getElementById('app').innerHTML = `<div class="app"><div class="sidebar" id="sidebar"></div><div class="chat-area" id="chatArea"></div></div>`;
             await loadChats();
-            if (allGroups.length > 0) selectChat(allGroups[0].name, 'group', allGroups[0].id);
-            else if (allChannels.length > 0) selectChat(allChannels[0].name, 'channel', allChannels[0].id);
+            if (allChannels.length > 0) selectChat(allChannels[0].name, 'channel', allChannels[0].id);
+            else if (allGroups.length > 0) selectChat(allGroups[0].name, 'group', allGroups[0].id);
             else if (allUsers.length > 0) selectChat(allUsers[0].username, 'user', null);
             if (updateInterval) clearInterval(updateInterval);
             updateInterval = setInterval(() => { loadMessages(); loadChats(); }, 5000);
         }
 
-        // Глобальные функции
         window.addReaction = addReaction;
         window.updateAvatar = updateAvatar;
         window.setTheme = setTheme;
