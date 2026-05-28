@@ -391,6 +391,20 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
+// Подписка на канал
+app.post('/subscribe-channel', async (req, res) => {
+    const { channelId, userId } = req.body;
+    const { error } = await supabase.from('channel_subscribers').insert([{ channel_id: channelId, user_id: userId }]);
+    res.json({ success: !error });
+});
+
+// Отписка от канала
+app.post('/unsubscribe-channel', async (req, res) => {
+    const { channelId, userId } = req.body;
+    const { error } = await supabase.from('channel_subscribers').delete().eq('channel_id', channelId).eq('user_id', userId);
+    res.json({ success: !error });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server on port ${PORT}`);
     console.log(`✅ Verified users: ${VERIFIED_USERS.join(', ')}`);
