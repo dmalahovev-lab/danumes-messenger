@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>DanuMes — Мессенджер</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -15,6 +19,94 @@
             overflow: hidden;
         }
 
+        /* Плавные переходы */
+        .sidebar, .chat-area, .message, .chat-item, .avatar, .reaction-badge {
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        /* Анимация появления сообщений */
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(15px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .message {
+            animation: messageSlide 0.2s ease-out;
+        }
+
+        /* Анимация появления чатов */
+        @keyframes chatFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .chat-item {
+            animation: chatFadeIn 0.15s ease-out;
+        }
+
+        /* Анимация для модальных окон */
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-content {
+            animation: modalPop 0.2s ease-out;
+        }
+
+        /* Анимация для тостов */
+        @keyframes toastSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .toast {
+            animation: toastSlide 0.25s ease-out;
+        }
+
+        /* Hover эффекты */
+        .chat-item:hover {
+            transform: translateX(5px);
+            background: var(--bg-header);
+        }
+
+        .avatar:hover {
+            transform: scale(1.08) rotate(3deg);
+        }
+
+        .input-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .reaction-badge:hover {
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        /* Темы */
         body[data-theme="blue"] {
             --bg-page: #0a1628; --bg-sidebar: #0f1a2e; --bg-header: #17212b;
             --bg-chat: #0e1621; --bg-message-own: #2b5278; --bg-message-other: #182533;
@@ -60,25 +152,22 @@
         .sidebar-header { padding: 20px 16px; background: var(--bg-header); border-bottom: 1px solid var(--border); }
         .user-card { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; cursor: pointer; }
         .avatar { width: 52px; height: 52px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
-        .avatar:hover { transform: scale(1.05); }
         .user-info { flex: 1; }
         .username { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 6px; }
         .verified-badge { color: var(--verified); font-size: 16px; }
         .user-status { font-size: 12px; color: var(--online); margin-top: 4px; }
-        .action-buttons { display: flex; gap: 8px; position: relative; }
+        .action-buttons { display: flex; gap: 8px; }
         .action-btn { flex: 1; padding: 8px; background: var(--bg-page); border: none; border-radius: 10px; color: var(--text-primary); cursor: pointer; font-size: 13px; }
         .action-btn:hover { background: var(--accent); }
         .search-container { padding: 12px 16px; }
         .search-input { width: 100%; padding: 10px 14px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 28px; color: var(--text-primary); font-size: 14px; }
         .search-input:focus { outline: none; border-color: var(--accent); }
         .chats-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .chat-section { padding: 8px 16px 4px; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+        .chat-section { padding: 8px 16px 4px; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
         .chat-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; cursor: pointer; margin: 2px 8px; border-radius: 20px; position: relative; }
-        .chat-item:hover { background: var(--bg-header); }
         .chat-item.active { background: var(--accent); }
         .delete-chat-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); opacity: 0; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 12px; }
         .chat-item:hover .delete-chat-btn { opacity: 1; }
-        .delete-chat-btn:hover { background: rgba(231,76,60,0.2); color: #e74c3c; }
         .chat-avatar { width: 48px; height: 48px; background: var(--bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; flex-shrink: 0; }
         .online-indicator { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: var(--online); border-radius: 50%; border: 2px solid var(--bg-sidebar); }
         .chat-info { flex: 1; min-width: 0; }
@@ -104,19 +193,16 @@
         .message-text { font-size: 14px; line-height: 1.4; word-wrap: break-word; }
         .message-mention { background: var(--accent); border-radius: 12px; padding: 2px 6px; color: white; }
         .message-meta { font-size: 10px; color: var(--text-secondary); margin-top: 5px; display: flex; align-items: center; gap: 8px; }
-        .message-edited { font-style: italic; }
         .message-file { margin-top: 6px; }
         .message-file img { max-width: 200px; max-height: 150px; border-radius: 12px; cursor: pointer; }
 
         .voice-message { display: flex; align-items: center; gap: 12px; min-width: 200px; }
         .voice-play-btn { width: 36px; height: 36px; background: var(--accent); border: none; border-radius: 50%; color: white; cursor: pointer; font-size: 14px; }
-        .voice-play-btn:hover { transform: scale(1.05); }
         .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; cursor: pointer; }
         .voice-progress { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; }
 
         .reactions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
         .reaction-badge { background: var(--bg-header); border-radius: 20px; padding: 3px 8px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-        .reaction-badge:hover { background: var(--accent); }
         .reaction-badge.active { background: var(--accent); }
 
         .input-area { padding: 16px 20px; background: var(--bg-header); border-top: 1px solid var(--border); }
@@ -124,14 +210,12 @@
         .message-input { flex: 1; padding: 12px 16px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 24px; color: var(--text-primary); font-size: 14px; resize: none; font-family: inherit; max-height: 100px; }
         .message-input:focus { outline: none; border-color: var(--accent); }
         .input-btn { width: 42px; height: 42px; background: var(--accent); border: none; border-radius: 50%; color: white; cursor: pointer; font-size: 18px; }
-        .input-btn:hover { background: var(--accent-hover); }
 
         .context-menu { position: fixed; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 12px; z-index: 1000; min-width: 200px; overflow: hidden; }
         .context-menu-item { padding: 10px 16px; cursor: pointer; font-size: 14px; }
         .context-menu-item:hover { background: var(--accent); }
         .reaction-menu { position: fixed; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 30px; z-index: 1001; display: flex; gap: 8px; padding: 10px 16px; }
         .reaction-option { font-size: 26px; cursor: pointer; padding: 5px; }
-        .reaction-option:hover { transform: scale(1.2); }
 
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal-content { background: var(--bg-sidebar); border-radius: 24px; padding: 24px; width: 90%; max-width: 400px; }
@@ -153,7 +237,6 @@
         .profile-card { background: var(--bg-sidebar); border-radius: 40px; padding: 32px; width: 90%; max-width: 400px; text-align: center; border: 1px solid var(--border); }
         .profile-avatar { width: 120px; height: 120px; background: var(--accent); border-radius: 60px; display: flex; align-items: center; justify-content: center; font-size: 64px; margin: 0 auto 20px; cursor: pointer; }
         .profile-name { font-size: 28px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .profile-status { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
         .profile-actions { display: flex; gap: 12px; justify-content: center; }
         .profile-btn { padding: 10px 24px; border: none; border-radius: 30px; cursor: pointer; font-size: 14px; background: var(--accent); color: white; }
 
@@ -194,12 +277,21 @@
         let updateInterval = null;
         let isSending = false;
         let currentAudio = null;
+        let isLoadingMessages = false;
 
         const VERIFIED_USERS = ['Danumala', 'RunFly'];
         const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
         const STICKERS = ['😀', '😎', '🥳', '😺', '🐶', '🦊', '🐼', '🐨', '❤️', '🔥', '✨', '⭐', '🎉', '🎈', '🎵', '🎸', '⚽', '🏀', '🌈', '🍕'];
 
-        function showToast(msg) { let t = document.querySelector('.toast'); if (t) t.remove(); t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
+        function showToast(msg) { 
+            let t = document.querySelector('.toast'); 
+            if (t) t.remove(); 
+            t = document.createElement('div'); 
+            t.className = 'toast'; 
+            t.textContent = msg; 
+            document.body.appendChild(t); 
+            setTimeout(() => t.remove(), 3000); 
+        }
         
         async function api(method, url, data) { 
             try { 
@@ -216,23 +308,32 @@
 
         function playVoice(url, btn) {
             if (currentAudio) { currentAudio.pause(); currentAudio = null; if (btn) btn.textContent = '▶️'; }
-            const audio = new Audio(url); currentAudio = audio; audio.play(); btn.textContent = '⏸️';
+            const audio = new Audio(url); 
+            currentAudio = audio; 
+            audio.play(); 
+            btn.textContent = '⏸️';
             audio.onended = () => { btn.textContent = '▶️'; currentAudio = null; };
         }
 
+        // Оптимизированная загрузка чатов - параллельные запросы
         async function loadChats() {
             if (!currentUser) return;
-            const users = await api('GET', '/get-users');
+            const [users, groups, channels] = await Promise.all([
+                api('GET', '/get-users'),
+                api('GET', `/get-groups/${currentUser.username}`),
+                api('GET', `/get-channels/${currentUser.username}`)
+            ]);
             allUsers = Array.isArray(users) ? users.filter(u => u.username !== currentUser.username) : [];
-            const groups = await api('GET', `/get-groups/${currentUser.username}`);
             allGroups = Array.isArray(groups) ? groups : [];
-            const channels = await api('GET', `/get-channels/${currentUser.username}`);
             allChannels = Array.isArray(channels) ? channels : [];
             renderSidebar();
         }
 
+        // Оптимизированная загрузка сообщений - без лишних рендеров
         async function loadMessages() {
-            if (!currentUser || !currentChat) return;
+            if (!currentUser || !currentChat || isLoadingMessages) return;
+            isLoadingMessages = true;
+            
             let fetched = [];
             if (currentChatType === 'group' && currentGroupId) { 
                 const r = await api('GET', `/get-group-messages/${currentGroupId}`); 
@@ -244,12 +345,26 @@
                 const r = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`); 
                 fetched = Array.isArray(r) ? r : []; 
             }
-            messages = fetched;
-            renderMessages();
+            
+            // Быстрое сравнение - только по количеству и последнему ID
+            let needRender = false;
+            if (fetched.length !== messages.length) {
+                needRender = true;
+            } else if (fetched.length > 0 && messages.length > 0) {
+                if (fetched[fetched.length-1].id !== messages[messages.length-1].id) {
+                    needRender = true;
+                }
+            }
+            
+            if (needRender) {
+                messages = fetched;
+                renderMessages();
+            }
+            isLoadingMessages = false;
         }
 
         async function sendMessage(text, fileData = null) {
-            if (isSending) { showToast('Подождите, сообщение отправляется...'); return; }
+            if (isSending) { showToast('Подождите...'); return; }
             if (!text && !fileData) return;
             if (currentChatType === 'channel' && currentChannelCreator !== currentUser?.username) { showToast('⛔ Только автор канала может писать'); return; }
             
@@ -271,7 +386,6 @@
                 await loadMessages(); 
                 const c = document.getElementById('messagesContainer'); 
                 if (c) c.scrollTop = c.scrollHeight;
-                showToast('Сообщение отправлено');
             } else { 
                 showToast('Ошибка: ' + (result.error || 'Неизвестно')); 
             }
@@ -290,14 +404,14 @@
         async function editMessage(id, newText) { 
             const r = await api('PUT', `/edit-message/${id}`, { text: newText }); 
             if (r.success) { await loadMessages(); showToast('Изменено'); } 
-            else showToast('Ошибка редактирования'); 
+            else showToast('Ошибка'); 
         }
         
         async function deleteMessage(id) { 
             if (!confirm('Удалить сообщение?')) return; 
             const r = await api('DELETE', `/delete-message/${id}`); 
             if (r.success) { await loadMessages(); showToast('Удалено'); } 
-            else showToast('Ошибка удаления'); 
+            else showToast('Ошибка'); 
         }
         
         async function addReaction(mid, reaction, type) { 
@@ -369,7 +483,7 @@
                 await loadChats(); 
                 showToast(`Группа "${name}" создана`); 
                 if (r.group) selectChat(r.group.name, 'group', r.group.id); 
-            } else showToast('Ошибка: ' + (r.error || 'Неизвестно')); 
+            } else showToast('Ошибка'); 
         }
         
         async function createChannel() { 
@@ -381,27 +495,17 @@
                 await loadChats(); 
                 showToast(`Канал "${name}" создан`); 
                 if (r.channel) selectChat(r.channel.name, 'channel', r.channel.id, r.channel.created_by); 
-            } else showToast('Ошибка: ' + (r.error || 'Неизвестно')); 
+            } else showToast('Ошибка'); 
         }
 
-        // Поиск и подписка на канал
-        function searchChannel() {
-            const channelName = prompt('Введите название канала для подписки:');
-            if (channelName) {
-                const channel = allChannels.find(c => c.name.toLowerCase() === channelName.toLowerCase());
-                if (channel) {
-                    subscribeToChannel(channel);
-                } else {
-                    showToast('Канал не найден');
-                }
-            }
-        }
-
-        async function subscribeToChannel(channel) {
-            const res = await api('POST', '/subscribe-channel', { channelId: channel.id, userId: currentUser.username });
+        // Подписка на канал через поиск
+        async function subscribeToChannel(channelId, channelName) {
+            const res = await api('POST', '/subscribe-channel', { channelId: channelId, userId: currentUser.username });
             if (res.success) {
-                showToast(`Вы подписались на канал ${channel.name}`);
+                showToast(`Вы подписались на канал ${channelName}`);
                 await loadChats();
+                const channel = allChannels.find(c => c.id === channelId);
+                if (channel) selectChat(channel.name, 'channel', channel.id, channel.created_by);
             } else {
                 showToast('Ошибка подписки');
             }
@@ -572,13 +676,32 @@
         function renderSidebar() {
             const sidebar = document.getElementById('sidebar');
             if (!sidebar) return;
-            const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
-            const fChannels = allChannels.filter(c => c.name.toLowerCase().includes(search));
-            const fGroups = allGroups.filter(g => g.name.toLowerCase().includes(search));
-            const fUsers = allUsers.filter(u => u.username.toLowerCase().includes(search));
+            
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            
+            // Объединённый поиск: люди + каналы
+            const searchResults = [];
+            
+            // Добавляем каналы в результаты поиска
+            allChannels.forEach(c => {
+                if (c.name.toLowerCase().includes(searchTerm)) {
+                    searchResults.push({ type: 'channel', id: c.id, name: c.name, avatar: '📢', subtitle: 'Канал', created_by: c.created_by });
+                }
+            });
+            
+            // Добавляем пользователей в результаты поиска
+            allUsers.forEach(u => {
+                if (u.username.toLowerCase().includes(searchTerm)) {
+                    searchResults.push({ type: 'user', username: u.username, avatar: u.avatar || '👤', online: u.online, verified: u.verified });
+                }
+            });
+            
+            // Группы отдельно
+            const filteredGroups = allGroups.filter(g => g.name.toLowerCase().includes(searchTerm));
+            
             const isVerified = VERIFIED_USERS.includes(currentUser?.username);
             
-            sidebar.innerHTML = `<div class="sidebar-header"><div class="user-card" onclick="showUserProfile(currentUser)"><div class="avatar">${currentUser?.avatar || '👤'}</div><div class="user-info"><div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="user-status">● В сети</div></div></div><div class="action-buttons"><select class="action-btn" id="themeSelect" onchange="setTheme(this.value)"><option value="blue">💙 Blue</option><option value="light">☀️ Light</option><option value="dark">🌙 Dark</option><option value="purple">💜 Purple</option><option value="pink">🌸 Pink</option></select><button class="action-btn" onclick="showCreateGroupModal()">➕ Группа</button><button class="action-btn" onclick="showCreateChannelModal()">📢 Канал</button><button class="action-btn" onclick="searchChannel()">🔍 Найти канал</button></div></div><div class="search-container"><input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск..." oninput="renderSidebar()"></div><div class="chats-list">${fChannels.length ? `<div class="chat-section">КАНАЛЫ</div>${fChannels.map(c => `<div class="chat-item ${currentChat === c.name ? 'active' : ''}" onclick="selectChat('${c.name.replace(/'/g,"\\'")}', 'channel', ${c.id}, '${c.created_by}')"><div class="chat-avatar">📢</div><div class="chat-info"><div class="chat-name">${escapeHtml(c.name)}</div><div class="chat-preview">Канал</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${c.name}', 'channel', ${c.id})">✕</button></div>`).join('')}` : ''}${fGroups.length ? `<div class="chat-section">ГРУППЫ</div>${fGroups.map(g => `<div class="chat-item ${currentChat === g.name ? 'active' : ''}" onclick="selectChat('${g.name.replace(/'/g,"\\'")}', 'group', ${g.id})"><div class="chat-avatar">👥</div><div class="chat-info"><div class="chat-name">${escapeHtml(g.name)}</div><div class="chat-preview">Группа</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${g.name}', 'group', ${g.id})">✕</button></div>`).join('')}` : ''}${fUsers.length ? `<div class="chat-section">ЛИЧНЫЕ</div>${fUsers.map(u => `<div class="chat-item ${currentChat === u.username ? 'active' : ''}" onclick="selectChat('${u.username}', 'user', null)"><div class="chat-avatar">${u.avatar || '👤'}${u.online ? '<div class="online-indicator"></div>' : ''}</div><div class="chat-info"><div class="chat-name">${escapeHtml(u.username)}${u.verified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="chat-preview">${u.online ? 'В сети' : 'Не в сети'}</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${u.username}', 'user', null)">✕</button></div>`).join('')}` : ''}</div><div id="stickerPanel" class="sticker-panel">${STICKERS.map(s => `<div class="sticker" onclick="sendMessage('${s}'); toggleStickerPanel()">${s}</div>`).join('')}</div>`;
+            sidebar.innerHTML = `<div class="sidebar-header"><div class="user-card" onclick="showUserProfile(currentUser)"><div class="avatar">${currentUser?.avatar || '👤'}</div><div class="user-info"><div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="user-status">● В сети</div></div></div><div class="action-buttons"><select class="action-btn" id="themeSelect" onchange="setTheme(this.value)"><option value="blue">💙 Blue</option><option value="light">☀️ Light</option><option value="dark">🌙 Dark</option><option value="purple">💜 Purple</option><option value="pink">🌸 Pink</option></select><button class="action-btn" onclick="showCreateGroupModal()">➕ Группа</button><button class="action-btn" onclick="showCreateChannelModal()">📢 Канал</button></div></div><div class="search-container"><input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск людей и каналов..." oninput="renderSidebar()"></div><div class="chats-list">${filteredGroups.length ? `<div class="chat-section">ГРУППЫ</div>${filteredGroups.map(g => `<div class="chat-item ${currentChat === g.name ? 'active' : ''}" onclick="selectChat('${g.name.replace(/'/g,"\\'")}', 'group', ${g.id})"><div class="chat-avatar">👥</div><div class="chat-info"><div class="chat-name">${escapeHtml(g.name)}</div><div class="chat-preview">Группа</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${g.name}', 'group', ${g.id})">✕</button></div>`).join('')}` : ''}${searchResults.length ? `<div class="chat-section">РЕЗУЛЬТАТЫ ПОИСКА</div>${searchResults.map(r => r.type === 'channel' ? `<div class="chat-item" onclick="subscribeToChannel(${r.id}, '${r.name.replace(/'/g,"\\'")}')"><div class="chat-avatar">📢</div><div class="chat-info"><div class="chat-name">${escapeHtml(r.name)}</div><div class="chat-preview">Нажмите чтобы подписаться</div></div></div>` : `<div class="chat-item ${currentChat === r.username ? 'active' : ''}" onclick="selectChat('${r.username}', 'user', null)"><div class="chat-avatar">${r.avatar}${r.online ? '<div class="online-indicator"></div>' : ''}</div><div class="chat-info"><div class="chat-name">${escapeHtml(r.username)}${r.verified ? '<span class="verified-badge">✓</span>' : ''}</div><div class="chat-preview">${r.online ? 'В сети' : 'Не в сети'}</div></div><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${r.username}', 'user', null)">✕</button></div>`).join('')}` : ''}${!filteredGroups.length && !searchResults.length && document.getElementById('searchInput')?.value ? `<div class="chat-section" style="text-align:center;padding:40px;">😔 Ничего не найдено</div>` : ''}</div><div id="stickerPanel" class="sticker-panel">${STICKERS.map(s => `<div class="sticker" onclick="sendMessage('${s}'); toggleStickerPanel()">${s}</div>`).join('')}</div>`;
             
             const saved = localStorage.getItem('theme') || 'blue';
             const sel = document.getElementById('themeSelect'); 
@@ -594,11 +717,13 @@
                 return; 
             }
             
+            // Загружаем реакции только если они есть
             const reactionsMap = new Map();
-            for (const m of messages) { 
-                const r = await loadReactions(m.id, currentChatType); 
-                reactionsMap.set(m.id, r); 
-            }
+            const reactionPromises = messages.map(async m => {
+                const r = await loadReactions(m.id, currentChatType);
+                reactionsMap.set(m.id, r);
+            });
+            await Promise.all(reactionPromises);
             
             let html = '';
             for (const msg of messages) {
@@ -684,8 +809,6 @@
             if (type === 'group' && gid) { 
                 await api('POST', '/leave-group', { groupId: gid, userId: currentUser.username }); 
                 allGroups = allGroups.filter(g => g.name !== id); 
-            } else if (type === 'channel') { 
-                allChannels = allChannels.filter(c => c.name !== id); 
             } 
             if (currentChat === id) { 
                 currentChat = null; 
@@ -722,11 +845,10 @@
         async function renderMain() {
             document.getElementById('app').innerHTML = `<div class="app"><div class="sidebar" id="sidebar"></div><div class="chat-area" id="chatArea"></div></div>`;
             await loadChats();
-            if (allChannels.length > 0) selectChat(allChannels[0].name, 'channel', allChannels[0].id, allChannels[0].created_by);
-            else if (allGroups.length > 0) selectChat(allGroups[0].name, 'group', allGroups[0].id);
+            if (allGroups.length > 0) selectChat(allGroups[0].name, 'group', allGroups[0].id);
             else if (allUsers.length > 0) selectChat(allUsers[0].username, 'user', null);
             if (updateInterval) clearInterval(updateInterval);
-            updateInterval = setInterval(() => { loadMessages(); loadChats(); }, 3000);
+            updateInterval = setInterval(() => { loadMessages(); loadChats(); }, 4000);
         }
 
         // Глобальные функции
@@ -754,7 +876,7 @@
         window.viewAvatarExpanded = viewAvatarExpanded;
         window.startMessageFromProfile = startMessageFromProfile;
         window.uploadFile = uploadFile;
-        window.searchChannel = searchChannel;
+        window.subscribeToChannel = subscribeToChannel;
 
         renderAuth();
     </script>
