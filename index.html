@@ -17,6 +17,7 @@
       color: var(--text-primary);
       height: 100vh;
       overflow: hidden;
+      transition: background 0.2s, color 0.2s;
     }
 
     /* Telegram темы */
@@ -71,13 +72,47 @@
       --verified: #4caf50;
     }
 
+    body[data-theme="purple"] {
+      --bg-page: #1a0b2e;
+      --bg-sidebar: #201240;
+      --bg-header: #2a1a4a;
+      --bg-chat: #150828;
+      --bg-message-own: #6c3483;
+      --bg-message-other: #2a1a4a;
+      --bg-input: #2a1a4a;
+      --text-primary: #e1d5f0;
+      --text-secondary: #a890c0;
+      --border: #35255a;
+      --accent: #8e44ad;
+      --accent-hover: #a569bd;
+      --online: #2ecc71;
+      --verified: #f39c12;
+    }
+
+    body[data-theme="pink"] {
+      --bg-page: #2d132c;
+      --bg-sidebar: #3d1f3c;
+      --bg-header: #4d2a4c;
+      --bg-chat: #250f24;
+      --bg-message-own: #b83b5e;
+      --bg-message-other: #3d1f3c;
+      --bg-input: #4d2a4c;
+      --text-primary: #ffd9e6;
+      --text-secondary: #d48aaa;
+      --border: #5a3558;
+      --accent: #e84393;
+      --accent-hover: #f0629e;
+      --online: #2ecc71;
+      --verified: #f1c40f;
+    }
+
     /* ОСНОВНОЙ ЛЕЙАУТ */
     .app {
       display: flex;
       height: 100vh;
     }
 
-    /* САЙДБАР — МАКСИМАЛЬНЫЕ ЗАКРУГЛЕНИЯ */
+    /* САЙДБАР */
     .sidebar {
       width: 320px;
       background: var(--bg-sidebar);
@@ -96,7 +131,6 @@
       border-radius: 28px 28px 0 0;
     }
 
-    /* Верхняя строка с аватаром, именем и кнопкой "+" */
     .top-row {
       display: flex;
       align-items: center;
@@ -142,7 +176,6 @@
       font-size: 16px;
     }
 
-    /* Кнопка + с выпадающим меню */
     .plus-btn {
       background: var(--bg-page);
       border: none;
@@ -195,7 +228,6 @@
       background: var(--accent);
     }
 
-    /* Поиск */
     .search-container {
       padding: 12px 16px;
     }
@@ -217,7 +249,6 @@
       box-shadow: 0 0 0 2px rgba(43,82,120,0.2);
     }
 
-    /* Список чатов */
     .chats-list {
       flex: 1;
       overflow-y: auto;
@@ -301,11 +332,6 @@
       margin-top: 3px;
     }
 
-    .chat-time {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
     .delete-chat {
       position: absolute;
       right: 12px;
@@ -331,7 +357,7 @@
       color: #e74c3c;
     }
 
-    /* ОБЛАСТЬ ЧАТА — МАКСИМАЛЬНЫЕ ЗАКРУГЛЕНИЯ */
+    /* ОБЛАСТЬ ЧАТА */
     .chat-area {
       flex: 1;
       display: flex;
@@ -845,6 +871,7 @@
     let currentChat = null;
     let currentChatType = null;
     let currentGroupId = null;
+    let currentChannelCreator = null;
     let allUsers = [];
     let allGroups = [];
     let allChannels = [];
@@ -1074,6 +1101,11 @@
       closeModal();
     }
 
+    function setTheme(theme) {
+      document.body.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+    }
+
     function showProfile(user) {
       if (!user) return;
       const modal = document.createElement('div');
@@ -1140,7 +1172,7 @@
 
     function showAvatarModal() {
       const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👨‍💻','👩‍💻','💼','🎮','📚','🎨','⚽','🎵'];
-      showModal(`<div class="modal-title">Выберите аватар</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">${emojis.map(e => `<div style="font-size:40px;text-align:center;cursor:pointer;padding:8px;" onclick="updateAvatar('${e}')">${e}</div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn" onclick="closeModal()">Закрыть</button></div>`);
+      showModal(`<div class="modal-title">Выберите аватар</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">${emojis.map(e => `<div style="font-size:40px;text-align:center;cursor:pointer;padding:8px;border-radius:20px;" onclick="updateAvatar('${e}')">${e}</div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn" onclick="closeModal()">Закрыть</button></div>`);
     }
 
     function showGroupModal() {
@@ -1150,6 +1182,30 @@
 
     function showChannelModal() {
       showModal(`<div class="modal-title">Создать канал</div><input type="text" class="modal-input" id="channelName" placeholder="Название"><div class="modal-buttons"><button class="modal-btn" onclick="closeModal()">Отмена</button><button class="modal-btn modal-btn-primary" onclick="createChannel()">Создать</button></div>`);
+    }
+
+    function openSettings() {
+      const currentTheme = document.body.getAttribute('data-theme') || 'blue';
+      showModal(`
+        <div class="modal-title">Настройки</div>
+        <div style="margin-bottom:16px;">
+          <div style="margin-bottom:8px;color:var(--text-secondary);">Тема оформления</div>
+          <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:var(--bg-page);border:1px solid var(--border);border-radius:14px;color:var(--text-primary);">
+            <option value="blue" ${currentTheme === 'blue' ? 'selected' : ''}>💙 Blue</option>
+            <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light</option>
+            <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>🌙 Dark</option>
+            <option value="purple" ${currentTheme === 'purple' ? 'selected' : ''}>💜 Purple</option>
+            <option value="pink" ${currentTheme === 'pink' ? 'selected' : ''}>🌸 Pink</option>
+          </select>
+        </div>
+        <div style="padding:12px;background:var(--bg-page);border-radius:14px;margin-bottom:20px;">
+          <div style="font-size:13px;color:var(--text-secondary);">Информация</div>
+          <div style="margin-top:6px;">DanuMes v2.0 — Telegram style</div>
+        </div>
+        <div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button></div>
+      `);
+      const sel = document.getElementById('themeSelect');
+      if (sel) sel.value = currentTheme;
     }
 
     function togglePlusMenu() {
@@ -1171,7 +1227,7 @@
     function renderSidebar() {
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
-      const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+      const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
       
       let myChats = [];
       allUsers.forEach(u => myChats.push({ id: u.username, name: u.username, type: 'user', avatar: u.avatar || '👤', online: u.online, verified: u.verified, preview: u.online ? 'В сети' : 'Не в сети' }));
@@ -1179,12 +1235,22 @@
       allChannels.forEach(c => myChats.push({ id: c.id, name: c.name, type: 'channel', channelId: c.id, created_by: c.created_by, avatar: '📢', preview: 'Канал' }));
       
       let filtered = myChats;
-      if (search) filtered = myChats.filter(c => c.name.toLowerCase().includes(search));
+      if (searchTerm.length > 0) {
+        filtered = myChats.filter(c => c.name.toLowerCase().includes(searchTerm));
+      }
       
       let searchResults = [];
-      if (search) {
-        allChannels.forEach(c => { if (c.name.toLowerCase().includes(search) && !myChats.some(m => m.type === 'channel' && m.id === c.id)) searchResults.push({ type: 'channel', id: c.id, name: c.name, created_by: c.created_by }); });
-        allUsers.forEach(u => { if (u.username.toLowerCase().includes(search) && !myChats.some(m => m.type === 'user' && m.name === u.username)) searchResults.push({ type: 'user', username: u.username, avatar: u.avatar || '👤', online: u.online, verified: u.verified }); });
+      if (searchTerm.length > 0) {
+        allChannels.forEach(c => { 
+          if (c.name.toLowerCase().includes(searchTerm) && !myChats.some(m => m.type === 'channel' && m.id === c.id)) {
+            searchResults.push({ type: 'channel', id: c.id, name: c.name, created_by: c.created_by });
+          }
+        });
+        allUsers.forEach(u => { 
+          if (u.username.toLowerCase().includes(searchTerm) && !myChats.some(m => m.type === 'user' && m.name === u.username)) {
+            searchResults.push({ type: 'user', username: u.username, avatar: u.avatar || '👤', online: u.online, verified: u.verified });
+          }
+        });
       }
       
       const isVerified = VERIFIED.includes(currentUser?.username);
@@ -1196,7 +1262,7 @@
         <div class="sidebar-header">
           <div class="top-row">
             <div class="user-info" onclick="showProfile(currentUser)">
-              <div class="avatar">${currentUser?.avatar || '👤'}</div>
+              <div class="avatar" onclick="event.stopPropagation(); showAvatarModal()">${currentUser?.avatar || '👤'}</div>
               <div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div>
             </div>
             <div style="position: relative;">
@@ -1320,6 +1386,7 @@
 
     window.addReaction = addReaction;
     window.updateAvatar = updateAvatar;
+    window.setTheme = setTheme;
     window.selectChat = selectChat;
     window.showGroupModal = showGroupModal;
     window.showChannelModal = showChannelModal;
@@ -1341,6 +1408,7 @@
     window.subscribeChannel = subscribeChannel;
     window.togglePlusMenu = togglePlusMenu;
     window.closePlusMenu = closePlusMenu;
+    window.openSettings = openSettings;
 
     renderAuth();
   </script>
