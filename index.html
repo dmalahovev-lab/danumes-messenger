@@ -20,7 +20,7 @@
       transition: background 0.2s, color 0.2s;
     }
 
-    /* Telegram темы */
+    /* ===== ТЕМЫ ===== */
     body[data-theme="blue"] {
       --bg-page: #0a1628;
       --bg-sidebar: #0f1a2e;
@@ -174,6 +174,23 @@
     .verified-badge {
       color: var(--verified);
       font-size: 16px;
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .settings-btn:hover {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      transform: rotate(15deg);
     }
 
     .plus-btn {
@@ -1204,8 +1221,6 @@
         </div>
         <div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button></div>
       `);
-      const sel = document.getElementById('themeSelect');
-      if (sel) sel.value = currentTheme;
     }
 
     function togglePlusMenu() {
@@ -1261,15 +1276,18 @@
       sidebar.innerHTML = `
         <div class="sidebar-header">
           <div class="top-row">
-            <div class="user-info" onclick="showProfile(currentUser)">
-              <div class="avatar" onclick="event.stopPropagation(); showAvatarModal()">${currentUser?.avatar || '👤'}</div>
+            <div class="user-info">
+              <div class="avatar" onclick="showAvatarModal()">${currentUser?.avatar || '👤'}</div>
               <div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div>
             </div>
-            <div style="position: relative;">
-              <button class="plus-btn" onclick="togglePlusMenu()">+</button>
-              <div id="plusMenu" class="plus-menu">
-                <div class="plus-menu-item" onclick="showGroupModal(); closePlusMenu()">👥 Создать группу</div>
-                <div class="plus-menu-item" onclick="showChannelModal(); closePlusMenu()">📢 Создать канал</div>
+            <div style="display: flex; gap: 8px;">
+              <button class="settings-btn" onclick="openSettings()">⚙️</button>
+              <div style="position: relative;">
+                <button class="plus-btn" onclick="togglePlusMenu()">+</button>
+                <div id="plusMenu" class="plus-menu">
+                  <div class="plus-menu-item" onclick="showGroupModal(); closePlusMenu()">👥 Создать группу</div>
+                  <div class="plus-menu-item" onclick="showChannelModal(); closePlusMenu()">📢 Создать канал</div>
+                </div>
               </div>
             </div>
           </div>
