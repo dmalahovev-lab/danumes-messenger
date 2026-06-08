@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DanuMes — Мессенджер</title>
   
-  <!-- Отключаем кеширование -->
+  <!-- ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ (убрать кеш) -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -714,7 +714,6 @@
     function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     function formatTime(ts) { if (!ts) return ''; return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
-    // Функция для темы
     function setTheme(theme) {
       document.body.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
@@ -1119,7 +1118,6 @@
         </div>
         <div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button></div>
       `);
-      // Применяем тему к селекту
       const sel = document.getElementById('themeSelect');
       if (sel) sel.value = currentTheme;
     }
@@ -1457,7 +1455,6 @@
       if (allGroups.length) selectChat(allGroups[0].name, 'group', allGroups[0].id);
       else if (allUsers.length) selectChat(allUsers[0].username, 'user', null);
       
-      // Восстанавливаем тему при загрузке
       const savedTheme = localStorage.getItem('theme') || 'dark';
       setTheme(savedTheme);
       
