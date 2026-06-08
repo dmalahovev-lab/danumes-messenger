@@ -2,8 +2,20 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>DanuMes — Современный мессенджер</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DanuMes — Мессенджер</title>
+  
+  <!-- PWA Meta Tags для iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DanuMes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#5826FF">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  
   <style>
     * {
       margin: 0;
@@ -17,6 +29,26 @@
       color: var(--text-main);
       height: 100vh;
       overflow: hidden;
+    }
+
+    /* Для PWA на iOS — правильные отступы */
+    @media (display-mode: standalone) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      
+      .sidebar {
+        margin: 0 !important;
+        border-radius: 0 !important;
+      }
+      
+      .chat-area {
+        margin: 0 !important;
+        border-radius: 0 !important;
+      }
     }
 
     body[data-theme="dark"] {
@@ -78,6 +110,9 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      margin: 8px 0 8px 8px;
+      border-radius: 28px;
+      transition: all 0.3s;
     }
 
     .sidebar-header {
@@ -85,6 +120,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
     }
 
     .sidebar-header h2 {
@@ -135,9 +172,7 @@
       position: relative;
     }
 
-    .plus-btn:hover {
-      opacity: 0.85;
-    }
+    .plus-btn:hover { opacity: 0.85; }
 
     .dropdown-menu {
       position: absolute;
@@ -153,13 +188,7 @@
     }
 
     .dropdown-menu.show { display: block; }
-
-    .dropdown-item {
-      padding: 10px 16px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
+    .dropdown-item { padding: 10px 16px; font-size: 14px; cursor: pointer; }
     .dropdown-item:hover { background: var(--accent); }
 
     .search-container { padding: 8px 16px 16px; }
@@ -250,6 +279,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      margin: 8px 8px 8px 0;
+      border-radius: 28px;
     }
 
     .empty-state {
@@ -341,6 +372,7 @@
       cursor: pointer;
       font-size: 12px;
     }
+    .voice-play:hover { transform: scale(1.05); }
     .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
     .voice-progress { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; }
     .voice-duration { font-size: 11px; color: var(--text-muted); min-width: 40px; }
@@ -456,6 +488,7 @@
       padding: 8px 16px;
     }
     .reaction-option { font-size: 24px; cursor: pointer; padding: 4px; }
+    .reaction-option:hover { transform: scale(1.2); }
 
     .sticker-panel {
       position: fixed;
@@ -473,7 +506,7 @@
     }
     .sticker-panel.show { display: grid; }
     .sticker { font-size: 32px; cursor: pointer; padding: 6px; text-align: center; border-radius: 8px; }
-    .sticker:hover { background: var(--accent); }
+    .sticker:hover { background: var(--accent); transform: scale(1.1); }
 
     .voice-recording {
       display: flex;
@@ -576,12 +609,63 @@
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+    /* Адаптация под телефоны */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: -340px;
+        top: 0;
+        height: 100vh;
+        z-index: 100;
+        transition: left 0.3s;
+        margin: 0 !important;
+        border-radius: 0 !important;
+      }
+      .sidebar.open { left: 0; }
+      .message { max-width: 85%; }
+      .chat-area {
+        margin: 0 !important;
+        border-radius: 0 !important;
+      }
+    }
   </style>
 </head>
 <body data-theme="dark">
   <div id="app"></div>
 
   <script>
+    // Регистрация Service Worker для PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('✅ SW registered:', reg))
+        .catch(err => console.log('❌ SW error:', err));
+    }
+
+    // Запрос разрешения на уведомления
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      setTimeout(() => {
+        Notification.requestPermission();
+      }, 5000);
+    }
+
+    function showMobileNotification(title, body) {
+      if (Notification.permission === 'granted' && document.hidden) {
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, { 
+              body: body, 
+              icon: '/icon-192.png',
+              vibrate: [200, 100, 200],
+              badge: '/icon-192.png'
+            });
+          });
+        } else if ('Notification' in window) {
+          new Notification(title, { body: body, icon: '/icon-192.png' });
+        }
+      }
+    }
+
     let currentUser = null;
     let currentChat = null;
     let currentChatType = null;
@@ -591,7 +675,7 @@
     let allUsers = [];
     let allGroups = [];
     let allChannels = [];
-    let subscribedChannels = []; // Каналы на которые подписан пользователь
+    let subscribedChannels = [];
     let messages = [];
     let messagesCache = new Map();
     let lastMsgIdMap = new Map();
@@ -649,7 +733,6 @@
       allGroups = Array.isArray(groups) ? groups : [];
       allChannels = Array.isArray(channels) ? channels : [];
       
-      // Загружаем подписки пользователя
       const subs = await api('GET', `/get-user-subscriptions/${currentUser.username}`);
       subscribedChannels = Array.isArray(subs) ? subs : [];
       
@@ -687,10 +770,14 @@
         messages = fetched;
         messagesCache.set(cacheKey, fetched);
         renderMessages();
+        
+        if (fetched.length > messages.length && !force && fetched[fetched.length-1]?.from_user !== currentUser?.username) {
+          const lastMsg = fetched[fetched.length-1];
+          showMobileNotification(`📩 Новое сообщение от ${lastMsg.from_user}`, lastMsg.text?.substring(0, 100) || 'Голосовое сообщение');
+        }
       }
     }
 
-    // Редактирование сообщения
     async function editMessage(messageId, newText) {
       const r = await api('PUT', `/edit-message/${messageId}`, { text: newText });
       if (r.success) {
@@ -703,7 +790,6 @@
       }
     }
 
-    // Удаление сообщения
     async function deleteMessage(messageId) {
       const r = await api('DELETE', `/delete-message/${messageId}`);
       if (r.success) {
@@ -834,7 +920,6 @@
       return Array.isArray(r) ? r : [];
     }
 
-    // Голосовые
     let mediaRec = null;
     let audioChunks = [];
     let isRec = false;
@@ -961,7 +1046,6 @@
       if (r.success) {
         toast(`Вы подписались на канал ${channelName}`);
         isSubscribed = true;
-        // Добавляем канал в подписанные
         subscribedChannels.push({ id: channelId, name: channelName, created_by: channelCreator });
         chatsLoaded = false;
         await loadChats(true);
@@ -1153,11 +1237,9 @@
       
       const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
       
-      // Чаты: личные + группы + подписанные каналы
       let myChats = [];
       allUsers.forEach(u => myChats.push({ id: u.username, name: u.username, type: 'user', avatar: u.avatar || '👤', online: u.online, verified: u.verified, status: u.online ? 'В сети' : 'Не в сети' }));
       allGroups.forEach(g => myChats.push({ id: g.id, name: g.name, type: 'group', groupId: g.id, avatar: '👥', status: 'Группа' }));
-      // Подписанные каналы
       subscribedChannels.forEach(c => {
         myChats.push({ id: c.id, name: c.name, type: 'channel', channelId: c.id, created_by: c.created_by, avatar: '📢', status: 'Канал' });
       });
@@ -1167,7 +1249,6 @@
         filtered = myChats.filter(c => c.name.toLowerCase().includes(searchTerm));
       }
       
-      // Результаты поиска по НЕподписанным каналам
       let channelSearchResults = [];
       if (searchTerm.length > 0) {
         const subscribedIds = subscribedChannels.map(c => c.id);
@@ -1178,7 +1259,6 @@
         });
       }
       
-      // Результаты поиска по новым пользователям
       let userSearchResults = [];
       if (searchTerm.length > 0) {
         allUsers.forEach(u => {
@@ -1428,7 +1508,6 @@
       setInterval(() => { loadMessages(); loadChats(); }, 5000);
     }
 
-    // Добавляем API для подписок
     window.addReaction = addReaction;
     window.updateAvatar = updateAvatar;
     window.setTheme = setTheme;
