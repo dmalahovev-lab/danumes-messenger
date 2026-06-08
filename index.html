@@ -69,10 +69,7 @@
       --border: #5A3558;
     }
 
-    .app {
-      display: flex;
-      height: 100vh;
-    }
+    .app { display: flex; height: 100vh; }
 
     /* Сайдбар */
     .sidebar {
@@ -93,7 +90,6 @@
     .sidebar-header h2 {
       font-size: 24px;
       font-weight: 600;
-      color: var(--text-main);
     }
 
     .header-buttons {
@@ -111,7 +107,7 @@
       color: var(--text-muted);
       font-size: 18px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -132,7 +128,7 @@
       color: white;
       font-size: 20px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -141,7 +137,6 @@
 
     .plus-btn:hover {
       opacity: 0.85;
-      transform: scale(1.02);
     }
 
     .dropdown-menu {
@@ -155,29 +150,19 @@
       min-width: 180px;
       z-index: 100;
       display: none;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     }
 
-    .dropdown-menu.show {
-      display: block;
-    }
+    .dropdown-menu.show { display: block; }
 
     .dropdown-item {
       padding: 10px 16px;
       font-size: 14px;
-      color: var(--text-main);
       cursor: pointer;
-      transition: all 0.15s ease;
     }
 
-    .dropdown-item:hover {
-      background: var(--accent);
-    }
+    .dropdown-item:hover { background: var(--accent); }
 
-    .search-container {
-      padding: 8px 16px 16px 16px;
-    }
-
+    .search-container { padding: 8px 16px 16px; }
     .search-input {
       width: 100%;
       padding: 10px 14px;
@@ -187,15 +172,8 @@
       color: var(--text-main);
       font-size: 14px;
     }
-
-    .search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .search-input:focus {
-      outline: none;
-      outline: 1px solid var(--accent);
-    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus { outline: 1px solid var(--accent); }
 
     .chats-list {
       flex: 1;
@@ -209,7 +187,6 @@
       font-weight: 500;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .chat-item {
@@ -218,18 +195,13 @@
       gap: 12px;
       padding: 12px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       border-radius: 8px;
       position: relative;
     }
 
-    .chat-item:hover {
-      background: var(--bg-element);
-    }
-
-    .chat-item.active {
-      background: var(--bg-element);
-    }
+    .chat-item:hover { background: var(--bg-element); }
+    .chat-item.active { background: var(--bg-element); }
 
     .chat-avatar {
       width: 48px;
@@ -255,28 +227,9 @@
       border: 2px solid var(--bg-sidebar);
     }
 
-    .chat-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .chat-name {
-      font-weight: 600;
-      font-size: 15px;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .chat-status {
-      font-size: 12px;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
+    .chat-info { flex: 1; min-width: 0; }
+    .chat-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .chat-status { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .delete-chat {
       background: none;
       border: none;
@@ -286,17 +239,9 @@
       padding: 4px 8px;
       border-radius: 8px;
       opacity: 0;
-      transition: all 0.2s;
     }
-
-    .chat-item:hover .delete-chat {
-      opacity: 1;
-    }
-
-    .delete-chat:hover {
-      background: rgba(239,68,68,0.2);
-      color: #ef4444;
-    }
+    .chat-item:hover .delete-chat { opacity: 1; }
+    .delete-chat:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
 
     /* Область чата */
     .chat-area {
@@ -337,23 +282,9 @@
       cursor: pointer;
     }
 
-    .chat-header-info {
-      flex: 1;
-    }
-
-    .chat-header-name {
-      font-weight: 600;
-      font-size: 17px;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .chat-header-status {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
+    .chat-header-info { flex: 1; }
+    .chat-header-name { font-weight: 600; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .chat-header-status { font-size: 12px; color: var(--text-muted); }
 
     .subscribe-btn {
       background: var(--accent);
@@ -363,12 +294,8 @@
       color: white;
       font-size: 13px;
       cursor: pointer;
-      transition: all 0.2s;
     }
-
-    .subscribe-btn:hover {
-      opacity: 0.85;
-    }
+    .subscribe-btn:hover { opacity: 0.85; }
 
     /* Сообщения */
     .messages-container {
@@ -384,21 +311,9 @@
       max-width: 70%;
       display: flex;
       flex-direction: column;
-      animation: fadeIn 0.15s ease;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .message-own {
-      align-self: flex-end;
-    }
-
-    .message-other {
-      align-self: flex-start;
-    }
+    .message-own { align-self: flex-end; }
+    .message-other { align-self: flex-start; }
 
     .message-bubble {
       padding: 10px 14px;
@@ -406,49 +321,16 @@
       background: var(--bg-element);
       cursor: pointer;
     }
+    .message-own .message-bubble { background: var(--accent); }
 
-    .message-own .message-bubble {
-      background: var(--accent);
-    }
+    .message-sender { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--accent); }
+    .message-text { font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+    .message-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
-    .message-sender {
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: var(--accent);
-    }
+    .message-file { margin-top: 6px; }
+    .message-file img { max-width: 200px; max-height: 150px; border-radius: 12px; cursor: pointer; }
 
-    .message-text {
-      font-size: 14px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .message-meta {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .message-file {
-      margin-top: 6px;
-    }
-
-    .message-file img {
-      max-width: 200px;
-      max-height: 150px;
-      border-radius: 12px;
-      cursor: pointer;
-    }
-
-    /* Голосовые */
-    .voice-message {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 200px;
-    }
-
+    .voice-message { display: flex; align-items: center; gap: 10px; min-width: 200px; }
     .voice-play {
       width: 32px;
       height: 32px;
@@ -458,41 +340,12 @@
       color: white;
       cursor: pointer;
       font-size: 12px;
-      transition: all 0.2s;
     }
+    .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+    .voice-progress { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; }
+    .voice-duration { font-size: 11px; color: var(--text-muted); min-width: 40px; }
 
-    .voice-play:hover {
-      transform: scale(1.05);
-    }
-
-    .voice-timeline {
-      flex: 1;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-    }
-
-    .voice-progress {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      width: 0%;
-    }
-
-    .voice-duration {
-      font-size: 11px;
-      color: var(--text-muted);
-      min-width: 40px;
-    }
-
-    /* Реакции */
-    .reactions {
-      display: flex;
-      gap: 6px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-
+    .reactions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
     .reaction {
       background: var(--bg-element);
       border-radius: 20px;
@@ -500,28 +353,15 @@
       font-size: 12px;
       cursor: pointer;
     }
+    .reaction:hover { background: var(--accent); }
+    .reaction.active { background: var(--accent); }
 
-    .reaction:hover {
-      background: var(--accent);
-    }
-
-    .reaction.active {
-      background: var(--accent);
-    }
-
-    /* Ввод */
     .input-area {
       padding: 16px 24px;
       background: var(--bg-sidebar);
       border-top: 1px solid var(--border);
     }
-
-    .input-wrapper {
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-    }
-
+    .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
     .message-input {
       flex: 1;
       padding: 12px 16px;
@@ -534,12 +374,7 @@
       font-family: inherit;
       max-height: 100px;
     }
-
-    .message-input:focus {
-      outline: none;
-      outline: 1px solid var(--accent);
-    }
-
+    .message-input:focus { outline: 1px solid var(--accent); }
     .input-btn {
       width: 42px;
       height: 42px;
@@ -549,19 +384,9 @@
       color: var(--text-muted);
       cursor: pointer;
       font-size: 18px;
-      transition: all 0.2s;
     }
-
-    .input-btn:hover {
-      background: var(--accent);
-      color: white;
-      transform: scale(1.02);
-    }
-
-    .input-btn.send-btn {
-      background: var(--accent);
-      color: white;
-    }
+    .input-btn:hover { background: var(--accent); color: white; }
+    .input-btn.send-btn { background: var(--accent); color: white; }
 
     /* Модальные окна */
     .modal-overlay {
@@ -577,7 +402,6 @@
       justify-content: center;
       z-index: 2000;
     }
-
     .modal-window {
       background: var(--bg-sidebar);
       border-radius: 12px;
@@ -586,13 +410,7 @@
       max-width: 380px;
       border: 1px solid var(--border);
     }
-
-    .modal-title {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 20px;
-    }
-
+    .modal-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
     .modal-input {
       width: 100%;
       padding: 12px;
@@ -602,17 +420,8 @@
       color: var(--text-main);
       margin-bottom: 16px;
     }
-
-    .modal-input:focus {
-      outline: 1px solid var(--accent);
-    }
-
-    .modal-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-    }
-
+    .modal-input:focus { outline: 1px solid var(--accent); }
+    .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
     .modal-btn {
       padding: 10px 20px;
       border: none;
@@ -620,16 +429,8 @@
       cursor: pointer;
       font-size: 14px;
     }
-
-    .modal-btn-primary {
-      background: var(--accent);
-      color: white;
-    }
-
-    .modal-btn-cancel {
-      background: var(--bg-element);
-      color: var(--text-muted);
-    }
+    .modal-btn-primary { background: var(--accent); color: white; }
+    .modal-btn-cancel { background: var(--bg-element); color: var(--text-muted); }
 
     /* Контекстное меню */
     .context-menu {
@@ -641,19 +442,9 @@
       min-width: 180px;
       overflow: hidden;
     }
+    .context-menu-item { padding: 10px 16px; cursor: pointer; font-size: 14px; }
+    .context-menu-item:hover { background: var(--accent); }
 
-    .context-menu-item {
-      padding: 10px 16px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.15s;
-    }
-
-    .context-menu-item:hover {
-      background: var(--accent);
-    }
-
-    /* Меню реакций */
     .reaction-menu {
       position: fixed;
       background: var(--bg-element);
@@ -664,14 +455,8 @@
       gap: 8px;
       padding: 8px 16px;
     }
+    .reaction-option { font-size: 24px; cursor: pointer; padding: 4px; }
 
-    .reaction-option {
-      font-size: 24px;
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    /* Стикеры */
     .sticker-panel {
       position: fixed;
       bottom: 80px;
@@ -686,24 +471,10 @@
       max-width: 280px;
       border: 1px solid var(--border);
     }
+    .sticker-panel.show { display: grid; }
+    .sticker { font-size: 32px; cursor: pointer; padding: 6px; text-align: center; border-radius: 8px; }
+    .sticker:hover { background: var(--accent); }
 
-    .sticker-panel.show {
-      display: grid;
-    }
-
-    .sticker {
-      font-size: 32px;
-      cursor: pointer;
-      padding: 6px;
-      text-align: center;
-      border-radius: 8px;
-    }
-
-    .sticker:hover {
-      background: var(--accent);
-    }
-
-    /* Запись голоса */
     .voice-recording {
       display: flex;
       align-items: center;
@@ -713,12 +484,8 @@
       border-radius: 8px;
       margin-bottom: 8px;
     }
+    .recording-timer { color: #ef4444; }
 
-    .recording-timer {
-      color: #ef4444;
-    }
-
-    /* Профиль */
     .profile-modal {
       position: fixed;
       top: 0;
@@ -732,7 +499,6 @@
       justify-content: center;
       z-index: 5000;
     }
-
     .profile-card {
       background: var(--bg-sidebar);
       border-radius: 16px;
@@ -742,7 +508,6 @@
       text-align: center;
       border: 1px solid var(--border);
     }
-
     .profile-avatar {
       width: 100px;
       height: 100px;
@@ -755,20 +520,9 @@
       margin: 0 auto 20px;
       cursor: pointer;
     }
+    .profile-name { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .profile-status { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 
-    .profile-name {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .profile-status {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-
-    /* Уведомления */
     .toast {
       position: fixed;
       bottom: 30px;
@@ -782,7 +536,6 @@
       border: 1px solid var(--border);
     }
 
-    /* Логин */
     .login-container {
       display: flex;
       align-items: center;
@@ -790,7 +543,6 @@
       height: 100vh;
       background: var(--bg-main);
     }
-
     .login-card {
       background: var(--bg-sidebar);
       padding: 40px;
@@ -799,15 +551,7 @@
       max-width: 380px;
       border: 1px solid var(--border);
     }
-
-    .login-title {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 32px;
-      text-align: center;
-      color: var(--accent);
-    }
-
+    .login-title { font-size: 32px; font-weight: 700; margin-bottom: 32px; text-align: center; color: var(--accent); }
     .login-input {
       width: 100%;
       padding: 14px;
@@ -817,11 +561,6 @@
       color: var(--text-main);
       margin-bottom: 14px;
     }
-
-    .login-input:focus {
-      outline: 1px solid var(--accent);
-    }
-
     .login-btn {
       width: 100%;
       padding: 14px;
@@ -832,27 +571,11 @@
       font-weight: 600;
       cursor: pointer;
     }
+    .switch-mode { text-align: center; margin-top: 20px; cursor: pointer; color: var(--accent); font-size: 14px; }
 
-    .switch-mode {
-      text-align: center;
-      margin-top: 20px;
-      cursor: pointer;
-      color: var(--accent);
-      font-size: 14px;
-    }
-
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--accent);
-      border-radius: 10px;
-    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
   </style>
 </head>
 <body data-theme="dark">
@@ -868,6 +591,7 @@
     let allUsers = [];
     let allGroups = [];
     let allChannels = [];
+    let subscribedChannels = []; // Каналы на которые подписан пользователь
     let messages = [];
     let messagesCache = new Map();
     let lastMsgIdMap = new Map();
@@ -924,6 +648,11 @@
       allUsers = Array.isArray(users) ? users.filter(u => u.username !== currentUser.username) : [];
       allGroups = Array.isArray(groups) ? groups : [];
       allChannels = Array.isArray(channels) ? channels : [];
+      
+      // Загружаем подписки пользователя
+      const subs = await api('GET', `/get-user-subscriptions/${currentUser.username}`);
+      subscribedChannels = Array.isArray(subs) ? subs : [];
+      
       chatsLoaded = true;
       renderSidebar();
     }
@@ -961,7 +690,32 @@
       }
     }
 
-    // Модальное окно для редактирования
+    // Редактирование сообщения
+    async function editMessage(messageId, newText) {
+      const r = await api('PUT', `/edit-message/${messageId}`, { text: newText });
+      if (r.success) {
+        await loadMessages(true);
+        toast('Сообщение изменено');
+        return true;
+      } else {
+        toast('Ошибка редактирования');
+        return false;
+      }
+    }
+
+    // Удаление сообщения
+    async function deleteMessage(messageId) {
+      const r = await api('DELETE', `/delete-message/${messageId}`);
+      if (r.success) {
+        await loadMessages(true);
+        toast('Сообщение удалено');
+        return true;
+      } else {
+        toast('Ошибка удаления');
+        return false;
+      }
+    }
+
     function showEditModal(messageId, currentText) {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
@@ -984,13 +738,7 @@
       modal.querySelector('#saveEditBtn').onclick = async () => {
         const newText = input.value.trim();
         if (newText && newText !== currentText) {
-          const r = await api('PUT', `/edit-message/${messageId}`, { text: newText });
-          if (r.success) {
-            await loadMessages(true);
-            toast('Сообщение изменено');
-          } else {
-            toast('Ошибка редактирования');
-          }
+          await editMessage(messageId, newText);
         }
         modal.remove();
       };
@@ -1002,7 +750,6 @@
       });
     }
 
-    // Модальное окно для удаления
     function showDeleteModal(messageId) {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
@@ -1018,13 +765,7 @@
       document.body.appendChild(modal);
       
       modal.querySelector('#confirmDeleteBtn').onclick = async () => {
-        const r = await api('DELETE', `/delete-message/${messageId}`);
-        if (r.success) {
-          await loadMessages(true);
-          toast('Сообщение удалено');
-        } else {
-          toast('Ошибка удаления');
-        }
+        await deleteMessage(messageId);
         modal.remove();
       };
     }
@@ -1211,7 +952,6 @@
         chatsLoaded = false;
         await loadChats(true); 
         toast(`Канал "${name}" создан`);
-        // Не открываем канал сразу, он появится в поиске
         renderSidebar();
       } else toast('Ошибка');
     }
@@ -1221,6 +961,9 @@
       if (r.success) {
         toast(`Вы подписались на канал ${channelName}`);
         isSubscribed = true;
+        // Добавляем канал в подписанные
+        subscribedChannels.push({ id: channelId, name: channelName, created_by: channelCreator });
+        chatsLoaded = false;
         await loadChats(true);
         selectChat(channelName, 'channel', channelId, channelCreator);
         renderChatArea();
@@ -1233,10 +976,12 @@
       if (r.success) {
         toast(`Вы отписались от канала ${channelName}`);
         isSubscribed = false;
+        subscribedChannels = subscribedChannels.filter(c => c.id !== channelId);
         if (currentChat === channelName) {
           currentChat = null;
           renderChatArea();
         }
+        chatsLoaded = false;
         await loadChats(true);
         renderSidebar();
       } else toast('Ошибка');
@@ -1250,7 +995,7 @@
       currentChannelCreator = creator;
       
       if (type === 'channel') {
-        isSubscribed = allChannels.some(c => c.id === gid);
+        isSubscribed = subscribedChannels.some(c => c.id === gid);
       }
       
       const cacheKey = getCacheKey();
@@ -1408,23 +1153,26 @@
       
       const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
       
-      // Чаты, которые отображаются всегда (личные чаты и группы)
-      const myChats = [];
+      // Чаты: личные + группы + подписанные каналы
+      let myChats = [];
       allUsers.forEach(u => myChats.push({ id: u.username, name: u.username, type: 'user', avatar: u.avatar || '👤', online: u.online, verified: u.verified, status: u.online ? 'В сети' : 'Не в сети' }));
       allGroups.forEach(g => myChats.push({ id: g.id, name: g.name, type: 'group', groupId: g.id, avatar: '👥', status: 'Группа' }));
-      
-      // Каналы НЕ отображаются в списке — только через поиск
+      // Подписанные каналы
+      subscribedChannels.forEach(c => {
+        myChats.push({ id: c.id, name: c.name, type: 'channel', channelId: c.id, created_by: c.created_by, avatar: '📢', status: 'Канал' });
+      });
       
       let filtered = myChats;
       if (searchTerm.length > 0) {
         filtered = myChats.filter(c => c.name.toLowerCase().includes(searchTerm));
       }
       
-      // Результаты поиска по каналам (появляются только при поиске)
+      // Результаты поиска по НЕподписанным каналам
       let channelSearchResults = [];
       if (searchTerm.length > 0) {
+        const subscribedIds = subscribedChannels.map(c => c.id);
         allChannels.forEach(c => {
-          if (c.name.toLowerCase().includes(searchTerm)) {
+          if (c.name.toLowerCase().includes(searchTerm) && !subscribedIds.includes(c.id)) {
             channelSearchResults.push({ type: 'channel', id: c.id, name: c.name, created_by: c.created_by });
           }
         });
@@ -1434,7 +1182,7 @@
       let userSearchResults = [];
       if (searchTerm.length > 0) {
         allUsers.forEach(u => {
-          if (u.username.toLowerCase().includes(searchTerm) && !myChats.some(m => m.name === u.username)) {
+          if (u.username.toLowerCase().includes(searchTerm) && !myChats.some(m => m.type === 'user' && m.name === u.username)) {
             userSearchResults.push({ type: 'user', username: u.username, avatar: u.avatar || '👤', online: u.online, verified: u.verified });
           }
         });
@@ -1443,6 +1191,7 @@
       const isVerified = VERIFIED.includes(currentUser?.username);
       const userChats = filtered.filter(c => c.type === 'user');
       const groupChats = filtered.filter(c => c.type === 'group');
+      const channelChats = filtered.filter(c => c.type === 'channel');
       
       sidebar.innerHTML = `
         <div class="sidebar-header">
@@ -1471,6 +1220,16 @@
               </div>
             </div>
           `).join('')}` : ''}
+          ${channelChats.length ? `<div class="chat-section">КАНАЛЫ</div>${channelChats.map(c => `
+            <div class="chat-item ${currentChat === c.name && currentChatType === 'channel' ? 'active' : ''}" onclick="selectChat('${c.name}', 'channel', ${c.channelId}, '${c.created_by || ''}')">
+              <div class="chat-avatar">📢</div>
+              <div class="chat-info">
+                <div class="chat-name">${escapeHtml(c.name)}</div>
+                <div class="chat-status">Канал</div>
+              </div>
+              <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
+            </div>
+          `).join('')}` : ''}
           ${userChats.length ? `<div class="chat-section">ЛИЧНЫЕ СООБЩЕНИЯ</div>${userChats.map(c => `
             <div class="chat-item ${currentChat === c.name && currentChatType === 'user' ? 'active' : ''}" onclick="selectChat('${c.name}', 'user', null)">
               <div class="chat-avatar">${c.avatar}${c.online ? '<div class="online-dot"></div>' : ''}</div>
@@ -1481,12 +1240,12 @@
               <button class="delete-chat" onclick="event.stopPropagation(); deleteChat('${c.name}', 'user', null)">✕</button>
             </div>
           `).join('')}` : ''}
-          ${channelSearchResults.length ? `<div class="chat-section">КАНАЛЫ (нажмите для подписки)</div>${channelSearchResults.map(c => `
-            <div class="chat-item" onclick="selectChatForSubscribe('${c.name}', 'channel', ${c.id}, '${c.created_by}')">
+          ${channelSearchResults.length ? `<div class="chat-section">ДОСТУПНЫЕ КАНАЛЫ</div>${channelSearchResults.map(c => `
+            <div class="chat-item" onclick="subscribeToChannel(${c.id}, '${c.name.replace(/'/g,"\\'")}', '${c.created_by}')">
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(c.name)}</div>
-                <div class="chat-status">🔍 Нажмите чтобы открыть</div>
+                <div class="chat-status">🔍 Нажмите чтобы подписаться</div>
               </div>
             </div>
           `).join('')}</div>` : ''}
@@ -1499,7 +1258,6 @@
               </div>
             </div>
           `).join('')}</div>` : ''}
-          ${!groupChats.length && !userChats.length && !channelSearchResults.length && !userSearchResults.length && searchTerm ? `<div class="chat-section" style="text-align:center;padding:40px;">😔 Ничего не найдено</div>` : ''}
         </div>
         <div id="stickerPanel" class="sticker-panel">${STICKERS.map(s => `<div class="sticker" onclick="sendMessage('${s}'); toggleSticker()">${s}</div>`).join('')}</div>
       `;
@@ -1512,18 +1270,6 @@
           dropdownOpen = false;
         }
       });
-    }
-
-    // Функция для открытия канала из поиска (без подписки)
-    function selectChatForSubscribe(chatName, type, channelId, creator) {
-      currentChat = chatName;
-      currentChatType = type;
-      currentGroupId = channelId;
-      currentChannelCreator = creator;
-      isSubscribed = allChannels.some(c => c.id === channelId);
-      messages = [];
-      renderChatArea();
-      loadMessages();
     }
 
     async function renderMessages() {
@@ -1597,7 +1343,6 @@
         verified = u?.verified || false; 
       }
       
-      // Для каналов: показываем кнопку подписки/отписки вместо поля ввода
       const showSubscribeButton = currentChatType === 'channel' && !isAuthor;
       
       ca.innerHTML = `
@@ -1680,14 +1425,14 @@
       await loadChats(true);
       if (allGroups.length) selectChat(allGroups[0].name, 'group', allGroups[0].id);
       else if (allUsers.length) selectChat(allUsers[0].username, 'user', null);
-      setInterval(() => { loadMessages(); loadChats(); }, 10000);
+      setInterval(() => { loadMessages(); loadChats(); }, 5000);
     }
 
+    // Добавляем API для подписок
     window.addReaction = addReaction;
     window.updateAvatar = updateAvatar;
     window.setTheme = setTheme;
     window.selectChat = selectChat;
-    window.selectChatForSubscribe = selectChatForSubscribe;
     window.subscribeToChannel = subscribeToChannel;
     window.unsubscribeFromChannel = unsubscribeFromChannel;
     window.showGroupModal = showGroupModal;
@@ -1712,6 +1457,7 @@
     window.toggleSticker = toggleSticker;
     window.showEditModal = showEditModal;
     window.showDeleteModal = showDeleteModal;
+    window.deleteChat = deleteChat;
 
     renderAuth();
   </script>
