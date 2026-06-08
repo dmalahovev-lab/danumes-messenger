@@ -86,7 +86,7 @@
       height: 100vh;
     }
 
-    /* САЙДБАР — всегда виден на ПК, выезжает на телефоне */
+    /* САЙДБАР */
     .sidebar {
       width: 320px;
       background: var(--bg-sidebar);
@@ -111,7 +111,6 @@
         transform: translateX(0);
       }
       
-      /* Затемнение фона при открытом сайдбаре */
       .sidebar-overlay {
         position: fixed;
         top: 0;
@@ -132,6 +131,7 @@
     @media (min-width: 769px) {
       .sidebar {
         transform: translateX(0) !important;
+        position: relative;
       }
     }
 
@@ -377,14 +377,14 @@
     .messages-container {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
 
     .message {
-      max-width: 75%;
+      max-width: 70%;
       display: flex;
       flex-direction: column;
     }
@@ -404,7 +404,7 @@
     .message-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
     .message-file { margin-top: 6px; }
-    .message-file img { max-width: 180px; max-height: 140px; border-radius: 12px; cursor: pointer; }
+    .message-file img { max-width: 200px; max-height: 150px; border-radius: 12px; cursor: pointer; }
 
     .voice-message { display: flex; align-items: center; gap: 10px; min-width: 180px; }
     .voice-play {
@@ -433,33 +433,33 @@
     .reaction.active { background: var(--accent); }
 
     .input-area {
-      padding: 12px 16px;
+      padding: 16px 20px;
       background: var(--bg-sidebar);
       border-top: 1px solid var(--border);
     }
-    .input-wrapper { display: flex; gap: 8px; align-items: flex-end; }
+    .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
     .message-input {
       flex: 1;
-      padding: 10px 14px;
+      padding: 12px 16px;
       background: var(--bg-element);
       border: none;
-      border-radius: 20px;
+      border-radius: 24px;
       color: var(--text-main);
       font-size: 14px;
       resize: none;
       font-family: inherit;
-      max-height: 80px;
+      max-height: 100px;
     }
     .message-input:focus { outline: 1px solid var(--accent); }
     .input-btn {
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       background: var(--bg-element);
       border: none;
       border-radius: 50%;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 16px;
+      font-size: 18px;
     }
     .input-btn:hover { background: var(--accent); color: white; }
     .input-btn.send-btn { background: var(--accent); color: white; }
@@ -481,12 +481,12 @@
     .modal-window {
       background: var(--bg-sidebar);
       border-radius: 16px;
-      padding: 20px;
-      width: 85%;
-      max-width: 340px;
+      padding: 24px;
+      width: 90%;
+      max-width: 380px;
       border: 1px solid var(--border);
     }
-    .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    .modal-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
     .modal-input {
       width: 100%;
       padding: 12px;
@@ -498,7 +498,7 @@
     }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
     .modal-btn {
-      padding: 8px 16px;
+      padding: 10px 20px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -514,10 +514,10 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       z-index: 1000;
-      min-width: 160px;
+      min-width: 180px;
       overflow: hidden;
     }
-    .context-menu-item { padding: 10px 14px; cursor: pointer; font-size: 14px; }
+    .context-menu-item { padding: 10px 16px; cursor: pointer; font-size: 14px; }
     .context-menu-item:hover { background: var(--accent); }
 
     .reaction-menu {
@@ -528,33 +528,33 @@
       z-index: 1001;
       display: flex;
       gap: 8px;
-      padding: 8px 12px;
+      padding: 8px 16px;
     }
-    .reaction-option { font-size: 22px; cursor: pointer; padding: 4px; }
+    .reaction-option { font-size: 24px; cursor: pointer; padding: 4px; }
 
     .sticker-panel {
       position: fixed;
-      bottom: 70px;
-      right: 10px;
+      bottom: 80px;
+      right: 20px;
       background: var(--bg-element);
       border-radius: 16px;
-      padding: 12px;
+      padding: 16px;
       z-index: 99;
       display: none;
       grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      max-width: 260px;
+      gap: 12px;
+      max-width: 280px;
       border: 1px solid var(--border);
     }
     .sticker-panel.show { display: grid; }
-    .sticker { font-size: 28px; cursor: pointer; padding: 6px; text-align: center; border-radius: 8px; }
+    .sticker { font-size: 32px; cursor: pointer; padding: 6px; text-align: center; border-radius: 8px; }
 
     .voice-recording {
       display: flex;
       align-items: center;
       gap: 12px;
       background: var(--bg-element);
-      padding: 8px 12px;
+      padding: 8px 16px;
       border-radius: 8px;
       margin-bottom: 8px;
     }
@@ -576,34 +576,34 @@
     .profile-card {
       background: var(--bg-sidebar);
       border-radius: 24px;
-      padding: 24px;
-      width: 85%;
-      max-width: 340px;
+      padding: 32px;
+      width: 90%;
+      max-width: 380px;
       text-align: center;
       border: 1px solid var(--border);
     }
     .profile-avatar {
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       background: var(--accent);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 40px;
-      margin: 0 auto 16px;
+      font-size: 48px;
+      margin: 0 auto 20px;
       cursor: pointer;
     }
-    .profile-name { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-    .profile-status { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .profile-name { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .profile-status { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 
     .toast {
       position: fixed;
-      bottom: 20px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
       background: var(--bg-element);
-      padding: 8px 16px;
+      padding: 10px 20px;
       border-radius: 30px;
       font-size: 13px;
       z-index: 3000;
@@ -621,16 +621,16 @@
     }
     .login-card {
       background: var(--bg-sidebar);
-      padding: 32px 24px;
+      padding: 40px;
       border-radius: 28px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     }
     .login-title {
       font-size: 32px;
       font-weight: 700;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
       text-align: center;
       background: linear-gradient(135deg, var(--accent), var(--accent-hover));
       -webkit-background-clip: text;
@@ -643,7 +643,7 @@
       border: none;
       border-radius: 12px;
       color: var(--text-main);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       font-size: 16px;
     }
     .login-btn {
@@ -660,13 +660,13 @@
     }
     .switch-mode {
       text-align: center;
-      margin-top: 16px;
+      margin-top: 20px;
       cursor: pointer;
       color: var(--accent);
       font-size: 14px;
     }
     .saved-accounts {
-      margin-top: 20px;
+      margin-top: 24px;
       padding-top: 16px;
       border-top: 1px solid var(--border);
     }
@@ -679,7 +679,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px;
+      padding: 8px 12px;
       background: var(--bg-element);
       border-radius: 10px;
       cursor: pointer;
@@ -689,9 +689,30 @@
     .saved-avatar { width: 32px; height: 32px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
     .saved-name { flex: 1; font-size: 14px; }
 
-    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+    /* Медиа-запросы для ПК */
+    @media (min-width: 769px) {
+      .sidebar {
+        margin: 8px 0 8px 8px;
+        border-radius: 28px;
+      }
+      
+      .chat-area {
+        margin: 8px 8px 8px 0;
+        border-radius: 28px;
+      }
+      
+      .chat-header {
+        border-radius: 28px 28px 0 0;
+      }
+      
+      .input-area {
+        border-radius: 0 0 28px 28px;
+      }
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -1149,7 +1170,6 @@
       }
     }
 
-    // Функции для управления сайдбаром на телефонах
     function openSidebar() {
       document.querySelector('.sidebar')?.classList.add('open');
       document.querySelector('.sidebar-overlay')?.classList.add('open');
@@ -1188,7 +1208,7 @@
     function viewAvatarExpanded(avatar, name) {
       const d = document.createElement('div');
       d.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:6000;cursor:pointer';
-      d.innerHTML = `<div style="font-size:120px;background:var(--accent);border-radius:50%;padding:30px;">${avatar}</div><div style="position:absolute;bottom:80px;color:white;">${escapeHtml(name)}</div>`;
+      d.innerHTML = `<div style="font-size:160px;background:var(--accent);border-radius:50%;padding:40px;">${avatar}</div><div style="position:absolute;bottom:100px;color:white;">${escapeHtml(name)}</div>`;
       d.onclick = () => d.remove();
       document.body.appendChild(d);
     }
@@ -1196,7 +1216,7 @@
     function viewImage(url) {
       const v = document.createElement('div');
       v.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:5000;cursor:pointer';
-      v.innerHTML = `<img src="${url}" style="max-width:90%;max-height:90%;border-radius:12px;"><button style="position:absolute;top:20px;right:30px;font-size:30px;background:none;border:none;color:white;cursor:pointer;" onclick="this.parentElement.remove()">✕</button>`;
+      v.innerHTML = `<img src="${url}" style="max-width:90%;max-height:90%;border-radius:16px;"><button style="position:absolute;top:20px;right:30px;font-size:40px;background:none;border:none;color:white;cursor:pointer;" onclick="this.parentElement.remove()">✕</button>`;
       v.onclick = (e) => { if (e.target === v) v.remove(); };
       document.body.appendChild(v);
     }
@@ -1259,12 +1279,12 @@
 
     function showAvatarModal() {
       const emojis = ['😀','😎','🥳','😺','🐶','🦊','🐼','🐨','👨‍💻','👩‍💻','💼','🎮','📚','🎨','⚽','🎵'];
-      showModal(`<div class="modal-title">Выберите аватар</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">${emojis.map(e => `<div style="font-size:36px;text-align:center;cursor:pointer;padding:6px;border-radius:8px;" onclick="updateAvatar('${e}'); closeModal()">${e}</div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeModal()">Закрыть</button></div>`);
+      showModal(`<div class="modal-title">Выберите аватар</div><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;">${emojis.map(e => `<div style="font-size:44px;text-align:center;cursor:pointer;padding:12px;border-radius:12px;" onclick="updateAvatar('${e}'); closeModal()">${e}</div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeModal()">Закрыть</button></div>`);
     }
 
     function showGroupModal() {
       if (allUsers.length === 0) { toast('Нет других пользователей'); return; }
-      showModal(`<div class="modal-title">Создать группу</div><input type="text" class="modal-input" id="groupName" placeholder="Название"><div style="max-height:180px;overflow-y:auto;margin-bottom:16px;">${allUsers.map(u => `<div style="padding:6px 0;"><label><input type="checkbox" class="user-select" value="${u.username}"> ${escapeHtml(u.username)}</label></div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeModal()">Отмена</button><button class="modal-btn modal-btn-primary" onclick="createGroup(); closeModal()">Создать</button></div>`);
+      showModal(`<div class="modal-title">Создать группу</div><input type="text" class="modal-input" id="groupName" placeholder="Название"><div style="max-height:200px;overflow-y:auto;margin-bottom:20px;">${allUsers.map(u => `<div style="padding:8px 0;"><label><input type="checkbox" class="user-select" value="${u.username}"> ${escapeHtml(u.username)}</label></div>`).join('')}</div><div class="modal-buttons"><button class="modal-btn modal-btn-cancel" onclick="closeModal()">Отмена</button><button class="modal-btn modal-btn-primary" onclick="createGroup(); closeModal()">Создать</button></div>`);
     }
 
     function showChannelModal() {
@@ -1277,7 +1297,7 @@
         <div class="modal-title">Настройки</div>
         <div style="margin-bottom:16px;">
           <div style="margin-bottom:8px;color:var(--text-muted);">Тема</div>
-          <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:10px;background:var(--bg-element);border:none;border-radius:8px;color:var(--text-main);">
+          <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:var(--bg-element);border:none;border-radius:8px;color:var(--text-main);">
             <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>🌙 Dark</option>
             <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light</option>
             <option value="blue" ${currentTheme === 'blue' ? 'selected' : ''}>💙 Blue</option>
