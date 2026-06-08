@@ -1694,16 +1694,17 @@
       }
       
       ca.innerHTML = `
-        <div class="deco-bg">
-          <div class="deco-circle deco-circle-1"></div>
-          <div class="deco-circle deco-circle-2"></div>
-          <div class="deco-circle deco-circle-3"></div>
-          <div class="deco-circle deco-circle-4"></div>
-          <div class="deco-dots"></div>
-          <div class="deco-line"></div>
-          <div class="deco-line-2"></div>
-        </div>
-        <div class="chat-header">
+  <div class="chat-header">
+    <div class="chat-header-avatar" onclick="showProfile(...)">
+      ...
+    </div>
+    ...
+  </div>
+  <div class="messages-container" id="messagesContainer"></div>
+  <div class="input-area">
+    ...
+  </div>
+
           <div class="chat-header-avatar" onclick="showProfile(allUsers.find(u=>u.username===currentChat)||{username:currentChat,avatar:currentChatAvatar,online:true})">
             ${currentChatType === 'user' ? (allUsers.find(u=>u.username===currentChat)?.avatar || '👤') : (currentChatType === 'channel' ? '📢' : '👥')}
           </div>
