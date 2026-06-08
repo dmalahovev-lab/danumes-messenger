@@ -282,21 +282,6 @@
       text-overflow: ellipsis;
     }
 
-    .write-btn {
-      background: var(--accent);
-      border: none;
-      border-radius: 8px;
-      padding: 6px 12px;
-      color: white;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .write-btn:hover {
-      opacity: 0.85;
-    }
-
     .delete-chat {
       background: none;
       border: none;
@@ -545,7 +530,7 @@
       background: var(--accent);
     }
 
-    /* Input area — кнопки серые */
+    /* Input area */
     .input-area {
       padding: 16px 24px;
       background: var(--bg-sidebar);
@@ -897,6 +882,7 @@
     let allGroups = [];
     let allChannels = [];
     let messages = [];
+    let messagesCache = new Map(); // Кеш сообщений по чатам
     let lastMsgId = null;
     let isSending = false;
     let currentAudio = null;
@@ -932,21 +918,50 @@
     function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     function formatTime(ts) { if (!ts) return ''; return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
-    async function loadChats() {
+    // Оптимизированная загрузка чатов — один раз при входе, потом только diff
+    let chatsLoaded = false;
+    
+    async function loadChats(force = false) {
       if (!currentUser) return;
+      if (!force && chatsLoaded) return;
+      
       const [users, groups, channels] = await Promise.all([
         api('GET', '/get-users'),
         api('GET', `/get-groups/${currentUser.username}`),
         api('GET', `/get-channels/${currentUser.username}`)
       ]);
-      allUsers = Array.isArray(users) ? users.filter(u => u.username !== currentUser.username) : [];
-      allGroups = Array.isArray(groups) ? groups : [];
-      allChannels = Array.isArray(channels) ? channels : [];
-      renderSidebar();
+      
+      const newUsers = Array.isArray(users) ? users.filter(u => u.username !== currentUser.username) : [];
+      const newGroups = Array.isArray(groups) ? groups : [];
+      const newChannels = Array.isArray(channels) ? channels : [];
+      
+      // Проверяем изменения
+      const usersChanged = JSON.stringify(allUsers) !== JSON.stringify(newUsers);
+      const groupsChanged = JSON.stringify(allGroups) !== JSON.stringify(newGroups);
+      const channelsChanged = JSON.stringify(allChannels) !== JSON.stringify(newChannels);
+      
+      if (usersChanged || groupsChanged || channelsChanged || !chatsLoaded) {
+        allUsers = newUsers;
+        allGroups = newGroups;
+        allChannels = newChannels;
+        chatsLoaded = true;
+        renderSidebar();
+      }
     }
 
-    async function loadMessages() {
+    // Оптимизированная загрузка сообщений с кешем
+    async function loadMessages(force = false) {
       if (!currentUser || !currentChat) return;
+      
+      const cacheKey = `${currentChatType}_${currentChatType === 'group' || currentChatType === 'channel' ? currentGroupId : currentChat}`;
+      
+      if (!force && messagesCache.has(cacheKey)) {
+        const cached = messagesCache.get(cacheKey);
+        messages = cached;
+        renderMessages();
+        return;
+      }
+      
       let fetched = [];
       if (currentChatType === 'group') {
         const r = await api('GET', `/get-group-messages/${currentGroupId}`);
@@ -958,11 +973,12 @@
         const r = await api('GET', `/get-messages/${currentUser.username}/${currentChat}`);
         fetched = Array.isArray(r) ? r : [];
       }
+      
       const newId = fetched.length ? fetched[fetched.length-1].id : null;
-      // Проверяем только по новому ID, не перерисовываем всё
-      if (newId !== lastMsgId) {
+      if (newId !== lastMsgId || force) {
         lastMsgId = newId;
         messages = fetched;
+        messagesCache.set(cacheKey, fetched);
         renderMessages();
       }
     }
@@ -975,16 +991,21 @@
         return;
       }
       isSending = true;
+      
       const tempId = Date.now();
       const temp = { id: tempId, from_user: currentUser.username, text: text || (file ? `📎 ${file.name}` : ''), file_url: file?.url, timestamp: new Date().toISOString(), isTemp: true };
       
-      // Оптимистичное обновление — добавляем сообщение сразу
+      // Оптимистичное обновление
       const newMessages = [...messages, temp];
       messages = newMessages;
+      
+      // Обновляем кеш
+      const cacheKey = `${currentChatType}_${currentChatType === 'group' || currentChatType === 'channel' ? currentGroupId : currentChat}`;
+      messagesCache.set(cacheKey, messages);
+      
       lastMsgId = tempId;
       renderMessages();
       
-      // Прокрутка вниз
       const container = document.getElementById('messagesContainer');
       if (container) container.scrollTop = container.scrollHeight;
 
@@ -999,13 +1020,14 @@
         ep = '/send-message';
         pl = { from: currentUser.username, to: currentChat, text: text || '', fileUrl: file?.url, fileName: file?.name };
       }
+      
       const res = await api('POST', ep, pl);
       if (res.success) { 
-        await loadMessages(); 
+        await loadMessages(true); 
       } else { 
         toast('Ошибка'); 
-        // Удаляем временное сообщение
         messages = messages.filter(m => m.id !== tempId);
+        messagesCache.set(cacheKey, messages);
         lastMsgId = messages.length ? messages[messages.length-1].id : null;
         renderMessages();
       }
@@ -1023,20 +1045,20 @@
 
     async function editMsg(id, newText) {
       const r = await api('PUT', `/edit-message/${id}`, { text: newText });
-      if (r.success) { await loadMessages(); toast('Изменено'); }
+      if (r.success) { await loadMessages(true); toast('Изменено'); }
       else toast('Ошибка');
     }
 
     async function deleteMsg(id) {
       if (!confirm('Удалить?')) return;
       const r = await api('DELETE', `/delete-message/${id}`);
-      if (r.success) { await loadMessages(); toast('Удалено'); }
+      if (r.success) { await loadMessages(true); toast('Удалено'); }
       else toast('Ошибка');
     }
 
     async function addReaction(mid, reaction, type) {
       const r = await api('POST', '/add-reaction', { messageId: parseInt(mid), userId: currentUser.username, reaction, type });
-      if (r.success) await loadMessages();
+      if (r.success) await loadMessages(true);
     }
 
     async function getReactions(mid, type) {
@@ -1087,7 +1109,6 @@
       if (mediaRec && isRec) { mediaRec.stop(); isRec = false; clearInterval(recTimer); }
     }
 
-    // Воспроизведение голосового
     let currentVoiceAudio = null;
     let currentVoiceBtn = null;
 
@@ -1146,7 +1167,10 @@
       const selected = Array.from(document.querySelectorAll('.user-select:checked')).map(cb => cb.value);
       const r = await api('POST', '/create-group', { name, creator: currentUser.username, members: selected });
       if (r.success) {
-        closeModal(); await loadChats(); toast(`Группа "${name}" создана`);
+        closeModal(); 
+        chatsLoaded = false;
+        await loadChats(true); 
+        toast(`Группа "${name}" создана`);
         if (r.group) selectChat(r.group.name, 'group', r.group.id);
       } else toast('Ошибка');
     }
@@ -1156,7 +1180,10 @@
       if (!name) { toast('Введите название'); return; }
       const r = await api('POST', '/create-channel', { name, creator: currentUser.username });
       if (r.success) {
-        closeModal(); await loadChats(); toast(`Канал "${name}" создан`);
+        closeModal(); 
+        chatsLoaded = false;
+        await loadChats(true); 
+        toast(`Канал "${name}" создан`);
         if (r.channel) selectChat(r.channel.name, 'channel', r.channel.id, r.channel.created_by);
       } else toast('Ошибка');
     }
@@ -1165,7 +1192,8 @@
       const r = await api('POST', '/subscribe-channel', { channelId: id, userId: currentUser.username });
       if (r.success) {
         toast(`Подписка на ${name}`);
-        await loadChats();
+        chatsLoaded = false;
+        await loadChats(true);
         selectChat(name, 'channel', id, creator);
         const search = document.getElementById('searchInput');
         if (search) search.value = '';
@@ -1178,7 +1206,8 @@
       const r = await api('POST', '/unsubscribe-channel', { channelId: channelId, userId: currentUser.username });
       if (r.success) {
         toast(`Вы вышли из канала ${channelName}`);
-        await loadChats();
+        chatsLoaded = false;
+        await loadChats(true);
         if (currentChat === channelName) {
           currentChat = null;
           renderChatArea();
@@ -1203,7 +1232,8 @@
       const r = await api('POST', '/update-avatar', { username: currentUser.username, avatar });
       if (r.success) {
         currentUser.avatar = avatar;
-        renderSidebar();
+        chatsLoaded = false;
+        await loadChats(true);
         if (currentChatType === 'user') renderChatArea();
         toast('Аватар обновлён');
       }
@@ -1275,7 +1305,6 @@
       setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
     }
 
-    // Контекстное меню для чата в сайдбаре
     function showChatContextMenu(e, chatId, type, gid, creator) {
       e.preventDefault();
       e.stopPropagation();
@@ -1429,7 +1458,6 @@
                 <div class="chat-name">${escapeHtml(c.name)}${c.verified ? ' ✓' : ''}</div>
                 <div class="chat-status">${c.status}</div>
               </div>
-              <button class="write-btn" onclick="event.stopPropagation(); selectChat('${c.name}', 'user', null)">Написать</button>
               <button class="delete-chat" onclick="event.stopPropagation(); deleteChat('${c.name}', 'user', null)">✕</button>
             </div>
           `).join('')}` : ''}
@@ -1448,7 +1476,6 @@
                 <div class="chat-name">${escapeHtml(r.username)}${r.verified ? ' ✓' : ''}</div>
                 <div class="chat-status">${r.online ? 'В сети' : 'Не в сети'}</div>
               </div>
-              <button class="write-btn" onclick="event.stopPropagation(); selectChat('${r.username}', 'user', null)">Написать</button>
             </div>
           `).join('')}</div>` : ''}
         </div>
@@ -1498,8 +1525,7 @@
             fh = `<div class="message-file"><img src="${m.file_url}" onclick="viewImage('${m.file_url}')"></div>`;
           } else if (m.file_url.startsWith('data:audio/') || m.file_type?.startsWith('audio/')) {
             isVoice = true;
-            const audioId = `audio_${m.id}`;
-            fh = `<div class="voice-message" id="${audioId}">
+            fh = `<div class="voice-message">
               <button class="voice-play" onclick="playVoice('${m.file_url}', this, document.getElementById('progress_${m.id}'), document.getElementById('duration_${m.id}'))">▶️</button>
               <div class="voice-timeline">
                 <div class="voice-progress" id="progress_${m.id}"></div>
@@ -1591,7 +1617,7 @@
 
     async function deleteChat(id, type, gid) {
       if (!confirm(`Удалить чат?`)) return;
-      if (type === 'group' && gid) { await api('POST', '/leave-group', { groupId: gid, userId: currentUser.username }); await loadChats(); }
+      if (type === 'group' && gid) { await api('POST', '/leave-group', { groupId: gid, userId: currentUser.username }); chatsLoaded = false; await loadChats(true); }
       if (currentChat === id) { currentChat = null; renderChatArea(); }
       renderSidebar();
     }
@@ -1611,10 +1637,11 @@
     }
     async function renderMain() {
       document.getElementById('app').innerHTML = `<div class="app"><div class="sidebar" id="sidebar"></div><div class="chat-area" id="chatArea"></div></div>`;
-      await loadChats();
+      await loadChats(true);
       if (allGroups.length) selectChat(allGroups[0].name, 'group', allGroups[0].id);
       else if (allUsers.length) selectChat(allUsers[0].username, 'user', null);
-      setInterval(() => { loadMessages(); loadChats(); }, 5000);
+      // Фоновое обновление раз в 10 секунд
+      setInterval(() => { loadMessages(); loadChats(); }, 10000);
     }
 
     window.addReaction = addReaction;
