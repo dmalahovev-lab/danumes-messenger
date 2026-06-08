@@ -29,6 +29,11 @@
       --text-main: #FFFFFF;
       --text-muted: #66666E;
       --border: #2A2A2E;
+      --deco-color-1: rgba(88, 38, 255, 0.15);
+      --deco-color-2: rgba(255, 82, 82, 0.12);
+      --deco-color-3: rgba(255, 193, 7, 0.1);
+      --deco-color-4: rgba(0, 230, 118, 0.1);
+      --deco-color-5: rgba(255, 105, 180, 0.1);
     }
 
     body[data-theme="light"] {
@@ -39,6 +44,11 @@
       --text-main: #111111;
       --text-muted: #666666;
       --border: #DDDDDD;
+      --deco-color-1: rgba(88, 38, 255, 0.08);
+      --deco-color-2: rgba(255, 82, 82, 0.06);
+      --deco-color-3: rgba(255, 193, 7, 0.05);
+      --deco-color-4: rgba(0, 230, 118, 0.05);
+      --deco-color-5: rgba(255, 105, 180, 0.05);
     }
 
     body[data-theme="blue"] {
@@ -49,6 +59,11 @@
       --text-main: #E1E1E1;
       --text-muted: #8A8A9A;
       --border: #1F2C3A;
+      --deco-color-1: rgba(43, 82, 120, 0.2);
+      --deco-color-2: rgba(59, 130, 246, 0.12);
+      --deco-color-3: rgba(139, 92, 246, 0.1);
+      --deco-color-4: rgba(236, 72, 153, 0.1);
+      --deco-color-5: rgba(34, 197, 94, 0.08);
     }
 
     body[data-theme="purple"] {
@@ -59,6 +74,11 @@
       --text-main: #E1D5F0;
       --text-muted: #A890C0;
       --border: #35255A;
+      --deco-color-1: rgba(142, 68, 173, 0.2);
+      --deco-color-2: rgba(155, 89, 182, 0.12);
+      --deco-color-3: rgba(142, 68, 173, 0.08);
+      --deco-color-4: rgba(255, 105, 180, 0.08);
+      --deco-color-5: rgba(0, 230, 118, 0.06);
     }
 
     body[data-theme="pink"] {
@@ -69,6 +89,111 @@
       --text-main: #FFD9E6;
       --text-muted: #D48AAA;
       --border: #5A3558;
+      --deco-color-1: rgba(232, 67, 147, 0.2);
+      --deco-color-2: rgba(255, 105, 180, 0.12);
+      --deco-color-3: rgba(236, 72, 153, 0.08);
+      --deco-color-4: rgba(142, 68, 173, 0.08);
+      --deco-color-5: rgba(0, 230, 118, 0.06);
+    }
+
+    /* ===== ДЕКОРАТИВНЫЕ ЭЛЕМЕНТЫ ФОНА ===== */
+    .chat-area {
+      flex: 1;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Цветные декоративные элементы */
+    .deco-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .deco-circle {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.5;
+    }
+
+    .deco-circle-1 {
+      width: 300px;
+      height: 300px;
+      background: var(--deco-color-1);
+      top: -100px;
+      right: -100px;
+    }
+
+    .deco-circle-2 {
+      width: 200px;
+      height: 200px;
+      background: var(--deco-color-2);
+      bottom: 20%;
+      left: -80px;
+    }
+
+    .deco-circle-3 {
+      width: 250px;
+      height: 250px;
+      background: var(--deco-color-3);
+      top: 30%;
+      left: 20%;
+    }
+
+    .deco-circle-4 {
+      width: 180px;
+      height: 180px;
+      background: var(--deco-color-4);
+      bottom: 10%;
+      right: 10%;
+    }
+
+    .deco-dots {
+      position: absolute;
+      bottom: 15%;
+      left: 15%;
+      width: 120px;
+      height: 120px;
+      background-image: radial-gradient(var(--deco-color-5) 2px, transparent 2px);
+      background-size: 12px 12px;
+      opacity: 0.4;
+    }
+
+    .deco-line {
+      position: absolute;
+      top: 20%;
+      right: 5%;
+      width: 150px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--deco-color-1), var(--deco-color-2), transparent);
+      transform: rotate(25deg);
+      opacity: 0.5;
+    }
+
+    .deco-line-2 {
+      position: absolute;
+      bottom: 30%;
+      left: 0;
+      width: 200px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--deco-color-4), transparent);
+      opacity: 0.3;
+    }
+
+    .chat-area > .messages-container,
+    .chat-area > .chat-header,
+    .chat-area > .input-area {
+      position: relative;
+      z-index: 1;
     }
 
     /* ===== MAIN LAYOUT ===== */
@@ -84,6 +209,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      position: relative;
+      z-index: 2;
     }
 
     .sidebar-header {
@@ -334,24 +461,7 @@
       color: white;
     }
 
-    /* ===== CHAT AREA ===== */
-    .chat-area {
-      flex: 1;
-      background: var(--bg-main);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .empty-state {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      font-size: 16px;
-    }
-
+    /* ===== CHAT HEADER ===== */
     .chat-header {
       padding: 16px 24px;
       background: var(--bg-sidebar);
@@ -359,6 +469,8 @@
       align-items: center;
       gap: 14px;
       border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 2;
     }
 
     .chat-header-avatar {
@@ -391,6 +503,7 @@
       color: var(--text-muted);
     }
 
+    /* СООБЩЕНИЯ */
     .messages-container {
       flex: 1;
       overflow-y: auto;
@@ -398,6 +511,8 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      position: relative;
+      z-index: 1;
     }
 
     .message {
@@ -535,6 +650,8 @@
       padding: 16px 24px;
       background: var(--bg-sidebar);
       border-top: 1px solid var(--border);
+      position: relative;
+      z-index: 2;
     }
 
     .input-wrapper {
@@ -882,8 +999,8 @@
     let allGroups = [];
     let allChannels = [];
     let messages = [];
-    let messagesCache = new Map(); // Кеш сообщений по чатам
-    let lastMsgId = null;
+    let messagesCache = new Map();
+    let lastMsgIdMap = new Map(); // Храним последний ID для каждого чата
     let isSending = false;
     let currentAudio = null;
     let dropdownOpen = false;
@@ -918,7 +1035,12 @@
     function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     function formatTime(ts) { if (!ts) return ''; return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
-    // Оптимизированная загрузка чатов — один раз при входе, потом только diff
+    // Получить ключ кеша для текущего чата
+    function getCurrentCacheKey() {
+      if (!currentChat) return null;
+      return `${currentChatType}_${currentChatType === 'group' || currentChatType === 'channel' ? currentGroupId : currentChat}`;
+    }
+
     let chatsLoaded = false;
     
     async function loadChats(force = false) {
@@ -935,7 +1057,6 @@
       const newGroups = Array.isArray(groups) ? groups : [];
       const newChannels = Array.isArray(channels) ? channels : [];
       
-      // Проверяем изменения
       const usersChanged = JSON.stringify(allUsers) !== JSON.stringify(newUsers);
       const groupsChanged = JSON.stringify(allGroups) !== JSON.stringify(newGroups);
       const channelsChanged = JSON.stringify(allChannels) !== JSON.stringify(newChannels);
@@ -949,12 +1070,10 @@
       }
     }
 
-    // Оптимизированная загрузка сообщений с кешем
     async function loadMessages(force = false) {
       if (!currentUser || !currentChat) return;
       
-      const cacheKey = `${currentChatType}_${currentChatType === 'group' || currentChatType === 'channel' ? currentGroupId : currentChat}`;
-      
+      const cacheKey = getCurrentCacheKey();
       if (!force && messagesCache.has(cacheKey)) {
         const cached = messagesCache.get(cacheKey);
         messages = cached;
@@ -975,8 +1094,10 @@
       }
       
       const newId = fetched.length ? fetched[fetched.length-1].id : null;
-      if (newId !== lastMsgId || force) {
-        lastMsgId = newId;
+      const lastId = lastMsgIdMap.get(cacheKey);
+      
+      if (newId !== lastId || force) {
+        lastMsgIdMap.set(cacheKey, newId);
         messages = fetched;
         messagesCache.set(cacheKey, fetched);
         renderMessages();
@@ -992,18 +1113,14 @@
       }
       isSending = true;
       
+      const cacheKey = getCurrentCacheKey();
       const tempId = Date.now();
       const temp = { id: tempId, from_user: currentUser.username, text: text || (file ? `📎 ${file.name}` : ''), file_url: file?.url, timestamp: new Date().toISOString(), isTemp: true };
       
-      // Оптимистичное обновление
       const newMessages = [...messages, temp];
       messages = newMessages;
-      
-      // Обновляем кеш
-      const cacheKey = `${currentChatType}_${currentChatType === 'group' || currentChatType === 'channel' ? currentGroupId : currentChat}`;
       messagesCache.set(cacheKey, messages);
-      
-      lastMsgId = tempId;
+      lastMsgIdMap.set(cacheKey, tempId);
       renderMessages();
       
       const container = document.getElementById('messagesContainer');
@@ -1028,7 +1145,8 @@
         toast('Ошибка'); 
         messages = messages.filter(m => m.id !== tempId);
         messagesCache.set(cacheKey, messages);
-        lastMsgId = messages.length ? messages[messages.length-1].id : null;
+        const newLastId = messages.length ? messages[messages.length-1].id : null;
+        lastMsgIdMap.set(cacheKey, newLastId);
         renderMessages();
       }
       isSending = false;
@@ -1222,7 +1340,15 @@
       currentChatType = type;
       currentGroupId = gid;
       currentChannelCreator = creator;
-      lastMsgId = null;
+      
+      // Очищаем текущие сообщения перед загрузкой новых
+      const cacheKey = getCurrentCacheKey();
+      if (cacheKey && messagesCache.has(cacheKey)) {
+        messages = messagesCache.get(cacheKey);
+      } else {
+        messages = [];
+      }
+      
       renderSidebar();
       renderChatArea();
       loadMessages();
@@ -1568,6 +1694,15 @@
       }
       
       ca.innerHTML = `
+        <div class="deco-bg">
+          <div class="deco-circle deco-circle-1"></div>
+          <div class="deco-circle deco-circle-2"></div>
+          <div class="deco-circle deco-circle-3"></div>
+          <div class="deco-circle deco-circle-4"></div>
+          <div class="deco-dots"></div>
+          <div class="deco-line"></div>
+          <div class="deco-line-2"></div>
+        </div>
         <div class="chat-header">
           <div class="chat-header-avatar" onclick="showProfile(allUsers.find(u=>u.username===currentChat)||{username:currentChat,avatar:currentChatAvatar,online:true})">
             ${currentChatType === 'user' ? (allUsers.find(u=>u.username===currentChat)?.avatar || '👤') : (currentChatType === 'channel' ? '📢' : '👥')}
@@ -1640,7 +1775,6 @@
       await loadChats(true);
       if (allGroups.length) selectChat(allGroups[0].name, 'group', allGroups[0].id);
       else if (allUsers.length) selectChat(allUsers[0].username, 'user', null);
-      // Фоновое обновление раз в 10 секунд
       setInterval(() => { loadMessages(); loadChats(); }, 10000);
     }
 
