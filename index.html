@@ -22,11 +22,6 @@
       color: var(--text-main);
       height: 100vh;
       overflow: hidden;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
     }
 
     /* ТЕМЫ */
@@ -102,7 +97,6 @@
       display: flex;
       height: 100%;
       width: 100%;
-      position: relative;
     }
 
     /* САЙДБАР */
@@ -340,7 +334,7 @@
     }
     .chat-item:hover .delete-chat { opacity: 1; }
 
-    /* ЧАТ */
+    /* ЧАТ — без пустых мест */
     .chat-area {
       flex: 1;
       background: var(--bg-main);
@@ -348,6 +342,7 @@
       flex-direction: column;
       overflow: hidden;
       height: 100%;
+      min-height: 0;
     }
 
     .empty-state {
@@ -410,7 +405,7 @@
       white-space: nowrap;
     }
 
-    /* СООБЩЕНИЯ */
+    /* СООБЩЕНИЯ — растягиваются */
     .messages-container {
       flex: 1;
       overflow-y: auto;
@@ -418,6 +413,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      min-height: 0;
     }
 
     .message {
@@ -469,9 +465,9 @@
     .reaction:hover { background: var(--accent); }
     .reaction.active { background: var(--accent); }
 
-    /* ПАНЕЛЬ ВВОДА */
+    /* ПАНЕЛЬ ВВОДА — компактная, без лишних отступов */
     .input-area {
-      padding: 12px 16px;
+      padding: 8px 12px;
       background: var(--bg-sidebar);
       border-top: 1px solid var(--border);
       flex-shrink: 0;
@@ -485,7 +481,7 @@
     
     .message-input {
       flex: 1;
-      padding: 10px 14px;
+      padding: 8px 12px;
       background: var(--bg-element);
       border: none;
       border-radius: 20px;
@@ -497,8 +493,8 @@
     }
     
     .input-btn {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       background: var(--bg-element);
       border: none;
       border-radius: 50%;
@@ -523,24 +519,26 @@
 
     @media (max-width: 768px) {
       .input-area {
-        padding: 8px 12px;
+        padding: 6px 10px;
       }
       .input-wrapper {
         gap: 6px;
       }
       .input-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 15px;
+        width: 34px;
+        height: 34px;
+        font-size: 14px;
       }
       .message-input {
-        padding: 8px 12px;
+        padding: 6px 10px;
         font-size: 13px;
-        border-radius: 18px;
+      }
+      .messages-container {
+        padding: 12px;
       }
     }
 
-    /* МОДАЛКИ */
+    /* МОДАЛКИ и остальные стили */
     .modal {
       position: fixed;
       top: 0;
@@ -1373,15 +1371,13 @@
             <div class="chat-item ${currentChat === c.name && currentChatType === 'channel' ? 'active' : ''}" onclick="selectChat('${c.name}', 'channel', ${c.channelId}, '${c.created_by || ''}')">
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
-                <div class>
-                                <div class="chat-info">
-                  <div class="chat-name">${escapeHtml(c.name)}</div>
-                  <div class="chat-preview">${escapeHtml(c.preview)}</div>
-                </div>
-                <div class="chat-time">${c.time}</div>
-                <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
+                <div class="chat-name">${escapeHtml(c.name)}</div>
+                <div class="chat-preview">${escapeHtml(c.preview)}</div>
               </div>
-            `).join('')}</div>` : ''}
+              <div class="chat-time">${c.time}</div>
+              <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
+            </div>
+          `).join('')}</div>` : ''}
           ${userChats.length ? `<div class="chat-section">ЛИЧНЫЕ</div>${userChats.map(c => `
             <div class="chat-item ${currentChat === c.name && currentChatType === 'user' ? 'active' : ''}" onclick="selectChat('${c.name}', 'user', null)">
               <div class="chat-avatar">${c.avatar}${c.online ? '<div class="online-dot"></div>' : ''}</div>
@@ -1389,7 +1385,8 @@
                 <div class="chat-name">${escapeHtml(c.name)}${c.verified ? ' ✓' : ''}</div>
                 <div class="chat-preview">${escapeHtml(c.preview)}</div>
               </div>
-              <div class="chat-time">${c.time}</div>
+              <div class>
+                            <div class="chat-time">${c.time}</div>
               <button class="delete-chat" onclick="event.stopPropagation(); deleteChat('${c.name}', 'user', null)">✕</button>
             </div>
           `).join('')}</div>` : ''}
