@@ -39,7 +39,7 @@
             overflow: hidden;
         }
 
-        /* ОСНОВНОЙ ЛЕЙАУТ - фиксированный */
+        /* ОСНОВНОЙ ЛЕЙАУТ */
         .app {
             display: flex;
             height: 100%;
@@ -280,7 +280,7 @@
             white-space: nowrap;
         }
 
-        /* СООБЩЕНИЯ - прокручивается ТОЛЬКО ЭТОТ БЛОК */
+        /* СООБЩЕНИЯ */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -401,7 +401,7 @@
             cursor: pointer;
         }
 
-        /* ПАНЕЛЬ ВВОДА - фиксированная внизу */
+        /* ПАНЕЛЬ ВВОДА */
         .input-area {
             padding: 10px 16px;
             background: #121214;
@@ -453,7 +453,7 @@
             color: white;
         }
 
-        /* МОБИЛЬНАЯ АДАПТАЦИЯ */
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ - фикс статус бара */
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
@@ -515,20 +515,19 @@
             }
         }
 
-        /* Для iPhone и статус-бара */
-        @supports (padding-top: env(safe-area-inset-top)) {
-            body {
-                padding-top: env(safe-area-inset-top);
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-            
-            .sidebar-header:first-child,
-            .chat-header:first-child {
-                padding-top: max(12px, env(safe-area-inset-top));
-            }
+        /* Защита от статус-бара на всех устройствах */
+        body {
+            padding-top: constant(safe-area-inset-top);
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: constant(safe-area-inset-bottom);
+            padding-bottom: env(safe-area-inset-bottom);
         }
-
-        /* Остальные стили (модалки, контекстное меню и т.д.) */
+        
+        .sidebar-header, .chat-header {
+            padding-top: max(12px, env(safe-area-inset-top, 12px));
+        }
+        
+        /* Остальные стили */
         .modal {
             position: fixed;
             top: 0;
@@ -888,8 +887,8 @@
     <div id="app"></div>
 
     <script>
-        // ВСЯ ЛОГИКА ОСТАЁТСЯ ПОЛНОСТЬЮ БЕЗ ИЗМЕНЕНИЙ
-        // (ваш оригинальный JavaScript код)
+        // ВАШ ПОЛНЫЙ JS КОД (ТОТ ЖЕ САМЫЙ, ЧТО БЫЛ)
+        // Я не меняю логику, только исправляю проблемы с голосовыми
         
         const SAVED_ACCOUNTS_KEY = 'danumes_saved_accounts';
         const CURRENT_USER_KEY = 'danumes_current_user';
@@ -1111,32 +1110,43 @@
                 mediaRec.ondataavailable = e => audioChunks.push(e.data);
                 mediaRec.onstop = async () => {
                     const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // Исправлено: правильно читаем blob в base64
                     const reader = new FileReader();
-                    reader.onloadend = async () => {
-                        await sendMessage('🎤 Голосовое сообщение', { url: reader.result, name: 'voice.webm', type: 'audio/webm' });
-                    };
                     reader.readAsDataURL(blob);
+                    reader.onloadend = async () => {
+                        await sendMessage('', { url: reader.result, name: 'voice.webm', type: 'audio/webm' });
+                    };
                     stream.getTracks().forEach(t => t.stop());
-                    document.querySelector('.voice-recording')?.remove();
+                    const recDiv = document.querySelector('.voice-recording');
+                    if (recDiv) recDiv.remove();
                 };
                 mediaRec.start();
                 isRec = true;
                 recSec = 0;
                 const inputArea = document.querySelector('.input-area');
-                const rd = document.createElement('div');
-                rd.className = 'voice-recording';
-                rd.innerHTML = `<span>🎙️ Запись:</span><span class="recording-timer">0:00</span><button class="input-btn" onclick="stopVoice()" style="background:#ef4444;">⏹️</button>`;
-                inputArea.insertBefore(rd, inputArea.firstChild);
-                recTimer = setInterval(() => {
-                    recSec++;
-                    const t = document.querySelector('.recording-timer');
-                    if (t) t.textContent = `${Math.floor(recSec/60)}:${(recSec%60).toString().padStart(2,'0')}`;
-                }, 1000);
-            } catch(e) { toast('Нет микрофона'); }
+                if (inputArea) {
+                    const rd = document.createElement('div');
+                    rd.className = 'voice-recording';
+                    rd.innerHTML = `<span>🎙️ Запись:</span><span class="recording-timer">0:00</span><button class="input-btn" onclick="stopVoice()" style="background:#ef4444;">⏹️</button>`;
+                    inputArea.insertBefore(rd, inputArea.firstChild);
+                    recTimer = setInterval(() => {
+                        recSec++;
+                        const t = document.querySelector('.recording-timer');
+                        if (t) t.textContent = `${Math.floor(recSec/60)}:${(recSec%60).toString().padStart(2,'0')}`;
+                    }, 1000);
+                }
+            } catch(e) { 
+                toast('Нет доступа к микрофону'); 
+                console.error(e);
+            }
         }
 
         function stopVoice() {
-            if (mediaRec && isRec) { mediaRec.stop(); isRec = false; clearInterval(recTimer); }
+            if (mediaRec && isRec) { 
+                mediaRec.stop(); 
+                isRec = false; 
+                clearInterval(recTimer);
+            }
         }
 
         function playVoice(url, btn, progressDiv, durationSpan) {
@@ -1146,36 +1156,46 @@
                 if (btn) btn.textContent = '▶️';
                 return;
             }
-            const audio = new Audio(url);
-            currentVoiceAudio = audio;
-            audio.play();
-            btn.textContent = '⏸️';
-            
-            audio.onloadedmetadata = () => {
-                const duration = audio.duration;
-                const minutes = Math.floor(duration / 60);
-                const seconds = Math.floor(duration % 60);
-                if (durationSpan) durationSpan.textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
-            };
-            
-            audio.ontimeupdate = () => {
-                if (progressDiv && audio.duration) {
-                    const percent = (audio.currentTime / audio.duration) * 100;
-                    progressDiv.style.width = percent + '%';
-                }
-            };
-            
-            audio.onended = () => {
-                btn.textContent = '▶️';
-                if (progressDiv) progressDiv.style.width = '0%';
-                currentVoiceAudio = null;
-            };
-            
-            audio.onerror = () => {
-                toast('Ошибка');
-                btn.textContent = '▶️';
-                currentVoiceAudio = null;
-            };
+            try {
+                const audio = new Audio(url);
+                currentVoiceAudio = audio;
+                audio.play().catch(e => {
+                    toast('Ошибка воспроизведения');
+                    console.error(e);
+                });
+                btn.textContent = '⏸️';
+                
+                audio.onloadedmetadata = () => {
+                    const duration = audio.duration;
+                    if (isFinite(duration) && durationSpan) {
+                        const minutes = Math.floor(duration / 60);
+                        const seconds = Math.floor(duration % 60);
+                        durationSpan.textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
+                    }
+                };
+                
+                audio.ontimeupdate = () => {
+                    if (progressDiv && audio.duration && isFinite(audio.duration)) {
+                        const percent = (audio.currentTime / audio.duration) * 100;
+                        progressDiv.style.width = percent + '%';
+                    }
+                };
+                
+                audio.onended = () => {
+                    if (btn) btn.textContent = '▶️';
+                    if (progressDiv) progressDiv.style.width = '0%';
+                    currentVoiceAudio = null;
+                };
+                
+                audio.onerror = () => {
+                    toast('Ошибка аудио');
+                    if (btn) btn.textContent = '▶️';
+                    currentVoiceAudio = null;
+                };
+            } catch(e) {
+                toast('Ошибка воспроизведения');
+                console.error(e);
+            }
         }
 
         async function createGroup() {
@@ -1587,7 +1607,7 @@
                 if (m.file_url) {
                     if (m.file_url.startsWith('data:image/')) {
                         fh = `<div class="message-file"><img src="${m.file_url}" onclick="viewImage('${m.file_url}')"></div>`;
-                    } else if (m.file_url.startsWith('data:audio/')) {
+                    } else if (m.file_url.startsWith('data:audio/') || m.file_url.includes('audio')) {
                         fh = `<div class="voice-message">
                             <button class="voice-play" onclick="playVoice('${m.file_url}', this, document.getElementById('progress_${m.id}'), document.getElementById('duration_${m.id}'))">▶️</button>
                             <div class="voice-timeline">
