@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DanuMes — Мессенджер</title>
   
-  <!-- Отключаем кеш -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -23,11 +22,10 @@
       color: var(--text-main);
       height: 100vh;
       overflow: hidden;
-      /* Для iOS — безопасные зоны */
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
-    /* ===== ТЕМЫ С УЧЁТОМ STATUS BAR ===== */
+    /* ТЕМЫ */
     body[data-theme="dark"] {
       --bg-main: #0B0B0C;
       --bg-sidebar: #121214;
@@ -83,7 +81,7 @@
       --status-bar-bg: #2D132C;
     }
 
-    /* Покраска status bar на iOS */
+    /* Status bar */
     body::before {
       content: '';
       position: fixed;
@@ -96,7 +94,6 @@
       pointer-events: none;
     }
 
-    /* ОСНОВНОЙ ЛЕЙАУТ */
     .app {
       display: flex;
       height: 100%;
@@ -114,7 +111,6 @@
       flex-shrink: 0;
     }
 
-    /* ТЕЛЕФОН */
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
@@ -151,7 +147,6 @@
       }
     }
 
-    /* ПК */
     @media (min-width: 769px) {
       .sidebar {
         margin: 8px 0 8px 8px;
@@ -298,7 +293,9 @@
 
     .chat-info { flex: 1; min-width: 0; }
     .chat-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .chat-status { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-time { font-size: 10px; color: var(--text-muted); margin-left: 8px; flex-shrink: 0; }
+    .chat-row { display: flex; align-items: baseline; justify-content: space-between; }
     .delete-chat {
       background: none;
       border: none;
@@ -368,6 +365,18 @@
     .chat-header-name { font-weight: 600; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .chat-header-status { font-size: 12px; color: var(--text-muted); }
 
+    .subscribe-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* СООБЩЕНИЯ */
     .messages-container {
       flex: 1;
       overflow-y: auto;
@@ -459,7 +468,6 @@
     .input-btn:hover { background: var(--accent); color: white; }
     .input-btn.send-btn { background: var(--accent); color: white; }
 
-    /* МОДАЛКИ */
     .modal {
       position: fixed;
       top: 0;
@@ -590,7 +598,6 @@
       white-space: nowrap;
     }
 
-    /* ЛОГИН */
     .login-container {
       display: flex;
       align-items: center;
@@ -673,7 +680,7 @@
   <div id="app"></div>
 
   <script>
-    // ===== СОХРАНЕНИЕ АККАУНТОВ =====
+    // Сохранение аккаунтов
     const SAVED_ACCOUNTS_KEY = 'danumes_saved_accounts';
     const CURRENT_USER_KEY = 'danumes_current_user';
     
@@ -750,6 +757,7 @@
 
     function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
     function formatTime(ts) { if (!ts) return ''; return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    function formatDate(ts) { if (!ts) return ''; const d = new Date(ts); const now = new Date(); if (d.toDateString() === now.toDateString()) return formatTime(ts); return d.toLocaleDateString(); }
 
     async function loadChats(force = false) {
       if (!currentUser) return;
@@ -770,6 +778,26 @@
       renderSidebar();
     }
 
+    // Получение последнего сообщения для чата
+    async function getLastMessageForChat(chatId, chatType, groupId) {
+      let fetched = [];
+      if (chatType === 'group') {
+        const r = await api('GET', `/get-group-messages/${groupId}`);
+        fetched = Array.isArray(r) ? r : [];
+      } else if (chatType === 'channel') {
+        const r = await api('GET', `/get-channel-messages/${groupId}`);
+        fetched = Array.isArray(r) ? r : [];
+      } else {
+        const r = await api('GET', `/get-messages/${currentUser.username}/${chatId}`);
+        fetched = Array.isArray(r) ? r : [];
+      }
+      if (fetched.length > 0) {
+        const last = fetched[fetched.length - 1];
+        return { text: last.text?.substring(0, 50) || 'Файл', time: formatDate(last.timestamp) };
+      }
+      return null;
+    }
+
     async function loadMessages(force = false) {
       if (!currentUser || !currentChat) return;
       
@@ -787,6 +815,7 @@
       
       messages = fetched;
       renderMessages();
+      renderSidebar(); // Обновляем превью чатов
     }
 
     async function sendMessage(text, file = null) {
@@ -1176,18 +1205,43 @@
       }
     }
 
-    function renderSidebar() {
+    async function renderSidebar() {
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
       
       const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
       
+      // Собираем чаты и последние сообщения
       let myChats = [];
-      allUsers.forEach(u => myChats.push({ id: u.username, name: u.username, type: 'user', avatar: u.avatar || '👤', online: u.online, verified: u.verified, status: u.online ? 'В сети' : 'Не в сети' }));
-      allGroups.forEach(g => myChats.push({ id: g.id, name: g.name, type: 'group', groupId: g.id, avatar: '👥', status: 'Группа' }));
-      subscribedChannels.forEach(c => {
-        myChats.push({ id: c.id, name: c.name, type: 'channel', channelId: c.id, created_by: c.created_by, avatar: '📢', status: 'Канал' });
-      });
+      
+      for (const u of allUsers) {
+        const lastMsg = await getLastMessageForChat(u.username, 'user', null);
+        myChats.push({ 
+          id: u.username, name: u.username, type: 'user', 
+          avatar: u.avatar || '👤', online: u.online, verified: u.verified, 
+          preview: lastMsg ? lastMsg.text : (u.online ? 'В сети' : 'Не в сети'),
+          time: lastMsg?.time || ''
+        });
+      }
+      
+      for (const g of allGroups) {
+        const lastMsg = await getLastMessageForChat(g.name, 'group', g.id);
+        myChats.push({ 
+          id: g.id, name: g.name, type: 'group', groupId: g.id, avatar: '👥', 
+          preview: lastMsg?.text || 'Группа', time: lastMsg?.time || ''
+        });
+      }
+      
+      for (const c of subscribedChannels) {
+        const lastMsg = await getLastMessageForChat(c.name, 'channel', c.id);
+        myChats.push({ 
+          id: c.id, name: c.name, type: 'channel', channelId: c.id, created_by: c.created_by, avatar: '📢', 
+          preview: lastMsg?.text || 'Канал', time: lastMsg?.time || ''
+        });
+      }
+      
+      // Сортируем по времени последнего сообщения
+      myChats.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
       
       let filtered = myChats;
       if (searchTerm) {
@@ -1241,8 +1295,9 @@
               <div class="chat-avatar">👥</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(c.name)}</div>
-                <div class="chat-status">Группа</div>
+                <div class="chat-preview">${escapeHtml(c.preview)}</div>
               </div>
+              <div class="chat-time">${c.time}</div>
             </div>
           `).join('')}` : ''}
           ${channelChats.length ? `<div class="chat-section">КАНАЛЫ</div>${channelChats.map(c => `
@@ -1250,8 +1305,9 @@
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(c.name)}</div>
-                <div class="chat-status">Канал</div>
+                <div class="chat-preview">${escapeHtml(c.preview)}</div>
               </div>
+              <div class="chat-time">${c.time}</div>
               <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
             </div>
           `).join('')}` : ''}
@@ -1260,8 +1316,9 @@
               <div class="chat-avatar">${c.avatar}${c.online ? '<div class="online-dot"></div>' : ''}</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(c.name)}${c.verified ? ' ✓' : ''}</div>
-                <div class="chat-status">${c.status}</div>
+                <div class="chat-preview">${escapeHtml(c.preview)}</div>
               </div>
+              <div class="chat-time">${c.time}</div>
               <button class="delete-chat" onclick="event.stopPropagation(); deleteChat('${c.name}', 'user', null)">✕</button>
             </div>
           `).join('')}` : ''}
@@ -1270,7 +1327,7 @@
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(c.name)}</div>
-                <div class="chat-status">🔍 Нажмите подписаться</div>
+                <div class="chat-preview">🔍 Нажмите подписаться</div>
               </div>
             </div>
           `).join('')}</div>` : ''}
@@ -1279,7 +1336,7 @@
               <div class="chat-avatar">${u.avatar}${u.online ? '<div class="online-dot"></div>' : ''}</div>
               <div class="chat-info">
                 <div class="chat-name">${escapeHtml(u.username)}${u.verified ? ' ✓' : ''}</div>
-                <div class="chat-status">${u.online ? 'В сети' : 'Не в сети'}</div>
+                <div class="chat-preview">${u.online ? 'В сети' : 'Не в сети'}</div>
               </div>
             </div>
           `).join('')}</div>` : ''}
@@ -1496,7 +1553,7 @@
       setInterval(() => { loadMessages(); loadChats(); }, 5000);
     }
 
-    // ===== АВТОВХОД =====
+    // Автовход
     const savedUser = getCurrentUser();
     if (savedUser) {
       currentUser = savedUser;
