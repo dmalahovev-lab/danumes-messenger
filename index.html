@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DanuMes — Мессенджер</title>
   
+  <!-- Отключаем кеш -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -18,15 +19,81 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: #0B0B0C;
-      color: #FFFFFF;
+      background: var(--bg-main);
+      color: var(--text-main);
       height: 100vh;
       overflow: hidden;
+      /* Для iOS — безопасные зоны */
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ===== ТЕМЫ С УЧЁТОМ STATUS BAR ===== */
+    body[data-theme="dark"] {
+      --bg-main: #0B0B0C;
+      --bg-sidebar: #121214;
+      --bg-element: #1A1A1E;
+      --accent: #5826FF;
+      --text-main: #FFFFFF;
+      --text-muted: #66666E;
+      --border: #2A2A2E;
+      --status-bar-bg: #0B0B0C;
+    }
+
+    body[data-theme="light"] {
+      --bg-main: #F5F5F5;
+      --bg-sidebar: #FFFFFF;
+      --bg-element: #E8E8E8;
+      --accent: #5826FF;
+      --text-main: #111111;
+      --text-muted: #666666;
+      --border: #DDDDDD;
+      --status-bar-bg: #F5F5F5;
+    }
+
+    body[data-theme="blue"] {
+      --bg-main: #0A1628;
+      --bg-sidebar: #0F1A2E;
+      --bg-element: #17212B;
+      --accent: #2B5278;
+      --text-main: #E1E1E1;
+      --text-muted: #8A8A9A;
+      --border: #1F2C3A;
+      --status-bar-bg: #0A1628;
+    }
+
+    body[data-theme="purple"] {
+      --bg-main: #1A0B2E;
+      --bg-sidebar: #201240;
+      --bg-element: #2A1A4A;
+      --accent: #8E44AD;
+      --text-main: #E1D5F0;
+      --text-muted: #A890C0;
+      --border: #35255A;
+      --status-bar-bg: #1A0B2E;
+    }
+
+    body[data-theme="pink"] {
+      --bg-main: #2D132C;
+      --bg-sidebar: #3D1F3C;
+      --bg-element: #4D2A4C;
+      --accent: #E84393;
+      --text-main: #FFD9E6;
+      --text-muted: #D48AAA;
+      --border: #5A3558;
+      --status-bar-bg: #2D132C;
+    }
+
+    /* Покраска status bar на iOS */
+    body::before {
+      content: '';
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      bottom: 0;
+      height: env(safe-area-inset-top);
+      background: var(--status-bar-bg);
+      z-index: 1000;
+      pointer-events: none;
     }
 
     /* ОСНОВНОЙ ЛЕЙАУТ */
@@ -39,11 +106,11 @@
     /* САЙДБАР */
     .sidebar {
       width: 320px;
-      background: #121214;
+      background: var(--bg-sidebar);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-right: 1px solid #2A2A2E;
+      border-right: 1px solid var(--border);
       flex-shrink: 0;
     }
 
@@ -51,10 +118,10 @@
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
-        top: 0;
+        top: env(safe-area-inset-top);
         left: 0;
         width: 100%;
-        height: 100%;
+        height: calc(100% - env(safe-area-inset-top));
         z-index: 100;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
@@ -65,10 +132,10 @@
       }
       .sidebar-overlay {
         position: fixed;
-        top: 0;
+        top: env(safe-area-inset-top);
         left: 0;
         width: 100%;
-        height: 100%;
+        height: calc(100% - env(safe-area-inset-top));
         background: rgba(0,0,0,0.5);
         z-index: 99;
         display: none;
@@ -81,18 +148,6 @@
       }
       .chat-area {
         width: 100%;
-      }
-      .chat-header {
-        padding: 12px 16px !important;
-      }
-      .messages-container {
-        padding: 12px !important;
-      }
-      .input-area {
-        padding: 12px 16px !important;
-      }
-      .chat-header-name {
-        font-size: 16px !important;
       }
     }
 
@@ -116,7 +171,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #2A2A2E;
+      border-bottom: 1px solid var(--border);
     }
 
     .sidebar-header h2 {
@@ -132,16 +187,16 @@
     .settings-btn, .logout-btn {
       width: 36px;
       height: 36px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 8px;
-      color: #66666E;
+      color: var(--text-muted);
       font-size: 18px;
       cursor: pointer;
     }
 
     .settings-btn:hover, .logout-btn:hover {
-      background: #5826FF;
+      background: var(--accent);
       color: white;
     }
 
@@ -152,7 +207,7 @@
     .plus-btn {
       width: 36px;
       height: 36px;
-      background: #5826FF;
+      background: var(--accent);
       border: none;
       border-radius: 8px;
       color: white;
@@ -165,8 +220,8 @@
       position: absolute;
       top: 50px;
       right: 16px;
-      background: #1A1A1E;
-      border: 1px solid #2A2A2E;
+      background: var(--bg-element);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 0;
       min-width: 180px;
@@ -176,19 +231,19 @@
 
     .dropdown-menu.show { display: block; }
     .dropdown-item { padding: 10px 16px; cursor: pointer; }
-    .dropdown-item:hover { background: #5826FF; }
+    .dropdown-item:hover { background: var(--accent); }
 
     .search-container { padding: 12px 16px; }
     .search-input {
       width: 100%;
       padding: 10px 14px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 8px;
-      color: white;
+      color: var(--text-main);
       font-size: 14px;
     }
-    .search-input::placeholder { color: #66666E; }
+    .search-input::placeholder { color: var(--text-muted); }
 
     .chats-list {
       flex: 1;
@@ -200,7 +255,7 @@
       padding: 12px 8px 4px;
       font-size: 12px;
       font-weight: 600;
-      color: #66666E;
+      color: var(--text-muted);
       text-transform: uppercase;
     }
 
@@ -214,13 +269,13 @@
       position: relative;
     }
 
-    .chat-item:hover { background: #1A1A1E; }
-    .chat-item.active { background: #1A1A1E; }
+    .chat-item:hover { background: var(--bg-element); }
+    .chat-item.active { background: var(--bg-element); }
 
     .chat-avatar {
       width: 48px;
       height: 48px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -238,16 +293,16 @@
       height: 10px;
       background: #22c55e;
       border-radius: 50%;
-      border: 2px solid #121214;
+      border: 2px solid var(--bg-sidebar);
     }
 
     .chat-info { flex: 1; min-width: 0; }
     .chat-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .chat-status { font-size: 12px; color: #66666E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-status { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .delete-chat {
       background: none;
       border: none;
-      color: #66666E;
+      color: var(--text-muted);
       font-size: 16px;
       cursor: pointer;
       padding: 4px 8px;
@@ -259,7 +314,7 @@
     /* ЧАТ */
     .chat-area {
       flex: 1;
-      background: #0B0B0C;
+      background: var(--bg-main);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -270,22 +325,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #66666E;
+      color: var(--text-muted);
     }
 
     .chat-header {
       padding: 16px 20px;
-      background: #121214;
+      background: var(--bg-sidebar);
       display: flex;
       align-items: center;
       gap: 12px;
-      border-bottom: 1px solid #2A2A2E;
+      border-bottom: 1px solid var(--border);
     }
 
     .back-button {
       background: none;
       border: none;
-      color: white;
+      color: var(--text-main);
       font-size: 24px;
       cursor: pointer;
       width: 36px;
@@ -299,7 +354,7 @@
     .chat-header-avatar {
       width: 44px;
       height: 44px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -311,7 +366,7 @@
 
     .chat-header-info { flex: 1; min-width: 0; }
     .chat-header-name { font-weight: 600; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .chat-header-status { font-size: 12px; color: #66666E; }
+    .chat-header-status { font-size: 12px; color: var(--text-muted); }
 
     .messages-container {
       flex: 1;
@@ -333,14 +388,14 @@
     .message-bubble {
       padding: 10px 14px;
       border-radius: 18px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       cursor: pointer;
     }
-    .message-own .message-bubble { background: #5826FF; }
+    .message-own .message-bubble { background: var(--accent); }
 
-    .message-sender { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #5826FF; }
+    .message-sender { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--accent); }
     .message-text { font-size: 14px; line-height: 1.4; word-wrap: break-word; }
-    .message-meta { font-size: 10px; color: #66666E; margin-top: 4px; }
+    .message-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
     .message-file { margin-top: 6px; }
     .message-file img { max-width: 200px; max-height: 150px; border-radius: 12px; cursor: pointer; }
@@ -349,41 +404,41 @@
     .voice-play {
       width: 32px;
       height: 32px;
-      background: #5826FF;
+      background: var(--accent);
       border: none;
       border-radius: 50%;
       color: white;
       cursor: pointer;
       flex-shrink: 0;
     }
-    .voice-timeline { flex: 1; height: 4px; background: #2A2A2E; border-radius: 2px; min-width: 80px; }
-    .voice-progress { height: 100%; background: #5826FF; border-radius: 2px; width: 0%; }
-    .voice-duration { font-size: 11px; color: #66666E; min-width: 40px; }
+    .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 80px; }
+    .voice-progress { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; }
+    .voice-duration { font-size: 11px; color: var(--text-muted); min-width: 40px; }
 
     .reactions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
     .reaction {
-      background: #1A1A1E;
+      background: var(--bg-element);
       border-radius: 20px;
       padding: 2px 8px;
       font-size: 12px;
       cursor: pointer;
     }
-    .reaction:hover { background: #5826FF; }
-    .reaction.active { background: #5826FF; }
+    .reaction:hover { background: var(--accent); }
+    .reaction.active { background: var(--accent); }
 
     .input-area {
       padding: 16px 20px;
-      background: #121214;
-      border-top: 1px solid #2A2A2E;
+      background: var(--bg-sidebar);
+      border-top: 1px solid var(--border);
     }
     .input-wrapper { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .message-input {
       flex: 1;
       padding: 12px 16px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 24px;
-      color: white;
+      color: var(--text-main);
       font-size: 14px;
       resize: none;
       font-family: inherit;
@@ -393,16 +448,16 @@
     .input-btn {
       width: 42px;
       height: 42px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 50%;
-      color: #66666E;
+      color: var(--text-muted);
       cursor: pointer;
       font-size: 18px;
       flex-shrink: 0;
     }
-    .input-btn:hover { background: #5826FF; color: white; }
-    .input-btn.send-btn { background: #5826FF; color: white; }
+    .input-btn:hover { background: var(--accent); color: white; }
+    .input-btn.send-btn { background: var(--accent); color: white; }
 
     /* МОДАЛКИ */
     .modal {
@@ -418,21 +473,21 @@
       z-index: 2000;
     }
     .modal-content {
-      background: #121214;
+      background: var(--bg-sidebar);
       border-radius: 16px;
       padding: 24px;
       width: 90%;
       max-width: 380px;
-      border: 1px solid #2A2A2E;
+      border: 1px solid var(--border);
     }
     .modal-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
     .modal-input {
       width: 100%;
       padding: 12px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 8px;
-      color: white;
+      color: var(--text-main);
       margin-bottom: 16px;
     }
     .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
@@ -442,33 +497,33 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    .modal-btn-primary { background: #5826FF; color: white; }
-    .modal-btn-cancel { background: #1A1A1E; color: #66666E; }
+    .modal-btn-primary { background: var(--accent); color: white; }
+    .modal-btn-cancel { background: var(--bg-element); color: var(--text-muted); }
 
     .context-menu {
       position: fixed;
-      background: #1A1A1E;
-      border: 1px solid #2A2A2E;
+      background: var(--bg-element);
+      border: 1px solid var(--border);
       border-radius: 12px;
       min-width: 180px;
       overflow: hidden;
       z-index: 1000;
     }
     .context-menu-item { padding: 10px 16px; cursor: pointer; }
-    .context-menu-item:hover { background: #5826FF; }
+    .context-menu-item:hover { background: var(--accent); }
 
     .sticker-panel {
       position: fixed;
       bottom: 80px;
       right: 20px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border-radius: 16px;
       padding: 16px;
       display: none;
       grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       max-width: 280px;
-      border: 1px solid #2A2A2E;
+      border: 1px solid var(--border);
       z-index: 99;
     }
     .sticker-panel.show { display: grid; }
@@ -478,7 +533,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       padding: 8px 16px;
       border-radius: 8px;
       margin-bottom: 8px;
@@ -499,18 +554,18 @@
       z-index: 5000;
     }
     .profile-card {
-      background: #121214;
+      background: var(--bg-sidebar);
       border-radius: 24px;
       padding: 32px;
       width: 90%;
       max-width: 380px;
       text-align: center;
-      border: 1px solid #2A2A2E;
+      border: 1px solid var(--border);
     }
     .profile-avatar {
       width: 100px;
       height: 100px;
-      background: #5826FF;
+      background: var(--accent);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -520,14 +575,14 @@
       cursor: pointer;
     }
     .profile-name { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
-    .profile-status { font-size: 14px; color: #66666E; margin-bottom: 20px; }
+    .profile-status { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 
     .toast {
       position: fixed;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      background: #1A1A1E;
+      background: var(--bg-element);
       padding: 10px 20px;
       border-radius: 30px;
       font-size: 13px;
@@ -542,11 +597,11 @@
       justify-content: center;
       height: 100vh;
       width: 100%;
-      background: linear-gradient(135deg, #5826FF, #3a18cc);
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
       padding: 20px;
     }
     .login-card {
-      background: #121214;
+      background: var(--bg-sidebar);
       padding: 40px;
       border-radius: 28px;
       width: 100%;
@@ -557,22 +612,22 @@
       font-weight: 700;
       margin-bottom: 32px;
       text-align: center;
-      color: #5826FF;
+      color: var(--accent);
     }
     .login-input {
       width: 100%;
       padding: 14px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border: none;
       border-radius: 12px;
-      color: white;
+      color: var(--text-main);
       margin-bottom: 14px;
       font-size: 16px;
     }
     .login-btn {
       width: 100%;
       padding: 14px;
-      background: #5826FF;
+      background: var(--accent);
       border: none;
       border-radius: 12px;
       color: white;
@@ -584,16 +639,16 @@
       text-align: center;
       margin-top: 20px;
       cursor: pointer;
-      color: #5826FF;
+      color: var(--accent);
     }
     .saved-accounts {
       margin-top: 20px;
       padding-top: 16px;
-      border-top: 1px solid #2A2A2E;
+      border-top: 1px solid var(--border);
     }
     .saved-title {
       font-size: 12px;
-      color: #66666E;
+      color: var(--text-muted);
       margin-bottom: 8px;
     }
     .saved-account {
@@ -601,24 +656,24 @@
       align-items: center;
       gap: 10px;
       padding: 8px 12px;
-      background: #1A1A1E;
+      background: var(--bg-element);
       border-radius: 10px;
       cursor: pointer;
       margin-bottom: 6px;
     }
-    .saved-account:hover { background: #5826FF; }
-    .saved-avatar { width: 32px; height: 32px; background: #5826FF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .saved-account:hover { background: var(--accent); }
+    .saved-avatar { width: 32px; height: 32px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #5826FF; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
   </style>
 </head>
-<body>
+<body data-theme="dark">
   <div id="app"></div>
 
   <script>
-    // ===== СОХРАНЕНИЕ АККАУНТОВ И АВТОВХОД =====
+    // ===== СОХРАНЕНИЕ АККАУНТОВ =====
     const SAVED_ACCOUNTS_KEY = 'danumes_saved_accounts';
     const CURRENT_USER_KEY = 'danumes_current_user';
     
@@ -992,7 +1047,7 @@
     function viewAvatarExpanded(avatar, name) {
       const d = document.createElement('div');
       d.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:6000;cursor:pointer';
-      d.innerHTML = `<div style="font-size:160px;background:#5826FF;border-radius:50%;padding:40px;">${avatar}</div><div style="position:absolute;bottom:100px;color:white;">${escapeHtml(name)}</div>`;
+      d.innerHTML = `<div style="font-size:160px;background:var(--accent);border-radius:50%;padding:40px;">${avatar}</div><div style="position:absolute;bottom:100px;color:white;">${escapeHtml(name)}</div>`;
       d.onclick = () => d.remove();
       document.body.appendChild(d);
     }
@@ -1080,16 +1135,17 @@
     }
 
     function openSettings() {
+      const currentTheme = document.body.getAttribute('data-theme') || 'dark';
       showModal(`
         <div class="modal-title">Настройки</div>
         <div style="margin-bottom:16px;">
-          <div style="margin-bottom:8px;color:#66666E;">Тема</div>
-          <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:#1A1A1E;border:none;border-radius:8px;color:white;">
-            <option value="dark" selected>🌙 Dark</option>
-            <option value="light">☀️ Light</option>
-            <option value="blue">💙 Blue</option>
-            <option value="purple">💜 Purple</option>
-            <option value="pink">🌸 Pink</option>
+          <div style="margin-bottom:8px;color:var(--text-muted);">Тема</div>
+          <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:var(--bg-element);border:none;border-radius:8px;color:var(--text-main);">
+            <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>🌙 Dark</option>
+            <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light</option>
+            <option value="blue" ${currentTheme === 'blue' ? 'selected' : ''}>💙 Blue</option>
+            <option value="purple" ${currentTheme === 'purple' ? 'selected' : ''}>💜 Purple</option>
+            <option value="pink" ${currentTheme === 'pink' ? 'selected' : ''}>🌸 Pink</option>
           </select>
         </div>
         <div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button></div>
@@ -1440,7 +1496,7 @@
       setInterval(() => { loadMessages(); loadChats(); }, 5000);
     }
 
-    // ===== АВТОВХОД ПРИ ЗАГРУЗКЕ =====
+    // ===== АВТОВХОД =====
     const savedUser = getCurrentUser();
     if (savedUser) {
       currentUser = savedUser;
