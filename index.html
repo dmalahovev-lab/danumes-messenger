@@ -340,7 +340,7 @@
     }
     .chat-item:hover .delete-chat { opacity: 1; }
 
-    /* ЧАТ — flex-контейнер */
+    /* ЧАТ */
     .chat-area {
       flex: 1;
       background: var(--bg-main);
@@ -410,7 +410,7 @@
       white-space: nowrap;
     }
 
-    /* СООБЩЕНИЯ — растягиваются */
+    /* СООБЩЕНИЯ */
     .messages-container {
       flex: 1;
       overflow-y: auto;
@@ -469,7 +469,7 @@
     .reaction:hover { background: var(--accent); }
     .reaction.active { background: var(--accent); }
 
-    /* ПАНЕЛЬ ВВОДА — всегда внизу */
+    /* ПАНЕЛЬ ВВОДА */
     .input-area {
       padding: 12px 16px;
       background: var(--bg-sidebar);
@@ -1373,13 +1373,15 @@
             <div class="chat-item ${currentChat === c.name && currentChatType === 'channel' ? 'active' : ''}" onclick="selectChat('${c.name}', 'channel', ${c.channelId}, '${c.created_by || ''}')">
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
-                <div class="chat-name">${escapeHtml(c.name)}</div>
-                <div class="chat-preview">${escapeHtml(c.preview)}</div>
+                <div class>
+                                <div class="chat-info">
+                  <div class="chat-name">${escapeHtml(c.name)}</div>
+                  <div class="chat-preview">${escapeHtml(c.preview)}</div>
+                </div>
+                <div class="chat-time">${c.time}</div>
+                <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
               </div>
-              <div class="chat-time">${c.time}</div>
-              <button class="delete-chat" onclick="event.stopPropagation(); unsubscribeFromChannel(${c.channelId}, '${c.name}')">✕</button>
-            </div>
-          `).join('')}` : ''}
+            `).join('')}</div>` : ''}
           ${userChats.length ? `<div class="chat-section">ЛИЧНЫЕ</div>${userChats.map(c => `
             <div class="chat-item ${currentChat === c.name && currentChatType === 'user' ? 'active' : ''}" onclick="selectChat('${c.name}', 'user', null)">
               <div class="chat-avatar">${c.avatar}${c.online ? '<div class="online-dot"></div>' : ''}</div>
@@ -1390,13 +1392,12 @@
               <div class="chat-time">${c.time}</div>
               <button class="delete-chat" onclick="event.stopPropagation(); deleteChat('${c.name}', 'user', null)">✕</button>
             </div>
-          `).join('')}` : ''}
+          `).join('')}</div>` : ''}
           ${channelSearchResults.length ? `<div class="chat-section">ДОСТУПНЫЕ КАНАЛЫ</div>${channelSearchResults.map(c => `
             <div class="chat-item" onclick="subscribeToChannel(${c.id}, '${c.name.replace(/'/g,"\\'")}', '${c.created_by}')">
               <div class="chat-avatar">📢</div>
               <div class="chat-info">
-                <div class>
-                                <div class="chat-name">${escapeHtml(c.name)}</div>
+                <div class="chat-name">${escapeHtml(c.name)}</div>
                 <div class="chat-preview">🔍 Нажмите подписаться</div>
               </div>
             </div>
