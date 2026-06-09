@@ -39,6 +39,56 @@
             overflow: hidden;
         }
 
+        /* ТЕМЫ ОФОРМЛЕНИЯ - РАБОТАЮТ */
+        body[data-theme="dark"] { background: #0B0B0C; color: #FFFFFF; }
+        body[data-theme="dark"] .sidebar, body[data-theme="dark"] .chat-header, body[data-theme="dark"] .input-area,
+        body[data-theme="dark"] .modal-content, body[data-theme="dark"] .login-card, body[data-theme="dark"] .profile-card,
+        body[data-theme="dark"] .dropdown-menu, body[data-theme="dark"] .context-menu, body[data-theme="dark"] .sticker-panel,
+        body[data-theme="dark"] .chat-item.active { background: #121214; }
+        body[data-theme="dark"] .chat-area { background: #0B0B0C; }
+        body[data-theme="dark"] .message-bubble, body[data-theme="dark"] .modal-input, body[data-theme="dark"] .login-input,
+        body[data-theme="dark"] .search-input, body[data-theme="dark"] .settings-btn, body[data-theme="dark"] .logout-btn { background: #1A1A1E; color: #FFFFFF; }
+        body[data-theme="dark"] .message-own .message-bubble { background: #5826FF; color: white; }
+        body[data-theme="dark"] .chat-preview, body[data-theme="dark"] .message-meta, body[data-theme="dark"] .voice-duration,
+        body[data-theme="dark"] .chat-section, body[data-theme="dark"] .chat-header-status { color: #66666E; }
+        
+        body[data-theme="light"] { background: #F5F5F5; color: #000000; }
+        body[data-theme="light"] .sidebar, body[data-theme="light"] .chat-header, body[data-theme="light"] .input-area,
+        body[data-theme="light"] .modal-content, body[data-theme="light"] .login-card, body[data-theme="light"] .profile-card,
+        body[data-theme="light"] .dropdown-menu, body[data-theme="light"] .context-menu, body[data-theme="light"] .sticker-panel,
+        body[data-theme="light"] .chat-item.active { background: #FFFFFF; border-color: #E0E0E0; }
+        body[data-theme="light"] .chat-area { background: #F5F5F5; }
+        body[data-theme="light"] .message-bubble, body[data-theme="light"] .modal-input, body[data-theme="light"] .login-input,
+        body[data-theme="light"] .search-input, body[data-theme="light"] .settings-btn, body[data-theme="light"] .logout-btn,
+        body[data-theme="light"] .chat-avatar { background: #E8E8E8; color: #000000; }
+        body[data-theme="light"] .message-other .message-bubble { background: #E8E8E8; color: #000000; }
+        body[data-theme="light"] .message-own .message-bubble { background: #5826FF; color: white; }
+        body[data-theme="light"] .chat-preview, body[data-theme="light"] .message-meta, body[data-theme="light"] .voice-duration,
+        body[data-theme="light"] .chat-section, body[data-theme="light"] .chat-header-status { color: #888888; }
+        body[data-theme="light"] .message-input { background: #E8E8E8; color: #000000; }
+        body[data-theme="light"] .input-btn { background: #E8E8E8; color: #666666; }
+        
+        body[data-theme="blue"] { --accent: #0084FF; }
+        body[data-theme="blue"] .plus-btn, body[data-theme="blue"] .subscribe-btn, body[data-theme="blue"] .send-btn,
+        body[data-theme="blue"] .message-own .message-bubble, body[data-theme="blue"] .modal-btn-primary,
+        body[data-theme="blue"] .login-btn, body[data-theme="blue"] .voice-play { background: #0084FF; color: white; }
+        body[data-theme="blue"] .login-title { color: #0084FF; }
+        body[data-theme="blue"] .message-sender { color: #0084FF; }
+        
+        body[data-theme="purple"] { --accent: #9C27B0; }
+        body[data-theme="purple"] .plus-btn, body[data-theme="purple"] .subscribe-btn, body[data-theme="purple"] .send-btn,
+        body[data-theme="purple"] .message-own .message-bubble, body[data-theme="purple"] .modal-btn-primary,
+        body[data-theme="purple"] .login-btn, body[data-theme="purple"] .voice-play { background: #9C27B0; color: white; }
+        body[data-theme="purple"] .login-title { color: #9C27B0; }
+        body[data-theme="purple"] .message-sender { color: #9C27B0; }
+        
+        body[data-theme="pink"] { --accent: #E91E63; }
+        body[data-theme="pink"] .plus-btn, body[data-theme="pink"] .subscribe-btn, body[data-theme="pink"] .send-btn,
+        body[data-theme="pink"] .message-own .message-bubble, body[data-theme="pink"] .modal-btn-primary,
+        body[data-theme="pink"] .login-btn, body[data-theme="pink"] .voice-play { background: #E91E63; color: white; }
+        body[data-theme="pink"] .login-title { color: #E91E63; }
+        body[data-theme="pink"] .message-sender { color: #E91E63; }
+
         /* ОСНОВНОЙ ЛЕЙАУТ */
         .app {
             display: flex;
@@ -52,7 +102,6 @@
         .sidebar {
             width: 320px;
             max-width: 85vw;
-            background: #121214;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -142,7 +191,7 @@
         }
 
         .chat-item:active {
-            background: #1A1A1E;
+            background: rgba(88, 38, 255, 0.2);
         }
 
         .chat-avatar {
@@ -186,7 +235,6 @@
 
         .chat-preview {
             font-size: 12px;
-            color: #66666E;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -205,7 +253,6 @@
         /* ОБЛАСТЬ ЧАТА */
         .chat-area {
             flex: 1;
-            background: #0B0B0C;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -214,7 +261,6 @@
 
         .chat-header {
             padding: 12px 16px;
-            background: #121214;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -266,7 +312,6 @@
 
         .chat-header-status {
             font-size: 11px;
-            color: #66666E;
         }
 
         .subscribe-btn {
@@ -308,13 +353,16 @@
         .message-bubble {
             padding: 10px 14px;
             border-radius: 18px;
-            background: #1A1A1E;
             cursor: pointer;
             word-break: break-word;
         }
 
         .message-own .message-bubble {
             background: #5826FF;
+        }
+
+        .message-other .message-bubble {
+            background: #1A1A1E;
         }
 
         .message-sender {
@@ -331,7 +379,6 @@
 
         .message-meta {
             font-size: 10px;
-            color: #66666E;
             margin-top: 4px;
             margin-left: 8px;
         }
@@ -382,7 +429,6 @@
 
         .voice-duration {
             font-size: 10px;
-            color: #66666E;
             min-width: 40px;
         }
 
@@ -394,19 +440,23 @@
         }
 
         .reaction {
-            background: #1A1A1E;
+            background: rgba(88, 38, 255, 0.2);
             border-radius: 20px;
             padding: 2px 8px;
             font-size: 12px;
             cursor: pointer;
         }
 
+        .reaction.active {
+            background: #5826FF;
+        }
+
         /* ПАНЕЛЬ ВВОДА */
         .input-area {
             padding: 10px 16px;
-            background: #121214;
             border-top: 1px solid #2A2A2E;
             flex-shrink: 0;
+            background: inherit;
         }
 
         .input-wrapper {
@@ -418,10 +468,8 @@
         .message-input {
             flex: 1;
             padding: 10px 14px;
-            background: #1A1A1E;
             border: none;
             border-radius: 22px;
-            color: white;
             font-size: 14px;
             resize: none;
             font-family: inherit;
@@ -436,10 +484,8 @@
         .input-btn {
             width: 38px;
             height: 38px;
-            background: #1A1A1E;
             border: none;
             border-radius: 50%;
-            color: #66666E;
             cursor: pointer;
             font-size: 16px;
             flex-shrink: 0;
@@ -448,12 +494,7 @@
             justify-content: center;
         }
 
-        .input-btn.send-btn {
-            background: #5826FF;
-            color: white;
-        }
-
-        /* МОБИЛЬНАЯ АДАПТАЦИЯ - фикс статус бара */
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ */
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
@@ -515,7 +556,7 @@
             }
         }
 
-        /* Защита от статус-бара на всех устройствах */
+        /* Защита от статус-бара */
         body {
             padding-top: constant(safe-area-inset-top);
             padding-top: env(safe-area-inset-top);
@@ -527,7 +568,7 @@
             padding-top: max(12px, env(safe-area-inset-top, 12px));
         }
         
-        /* Остальные стили */
+        /* Остальные стили (модалки, контекстное меню, стикеры и т.д.) */
         .modal {
             position: fixed;
             top: 0;
@@ -746,7 +787,6 @@
             font-weight: 700;
             margin-bottom: 32px;
             text-align: center;
-            color: #5826FF;
         }
 
         .login-input {
@@ -846,7 +886,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #66666E;
             font-size: 14px;
             text-align: center;
             padding: 20px;
