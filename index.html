@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DanuMes — Мессенджер</title>
   
-  <!-- ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ (убрать кеш) -->
+  <!-- Отключаем кеширование -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -23,10 +23,9 @@
       color: var(--text-main);
       height: 100vh;
       overflow: hidden;
-      transition: background 0.2s, color 0.2s;
     }
 
-    /* ===== ТЕМЫ ===== */
+    /* ТЕМЫ */
     body[data-theme="dark"] {
       --bg-main: #0B0B0C;
       --bg-sidebar: #121214;
@@ -81,6 +80,7 @@
     .app {
       display: flex;
       height: 100vh;
+      width: 100%;
     }
 
     /* САЙДБАР */
@@ -91,26 +91,31 @@
       flex-direction: column;
       overflow: hidden;
       border-right: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
+    /* На телефонах сайдбар — полноэкранное меню */
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
-        left: -320px;
         top: 0;
+        left: 0;
+        width: 100%;
         height: 100vh;
         z-index: 100;
-        transition: left 0.3s;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        border-right: none;
       }
       .sidebar.open {
-        left: 0;
+        transform: translateX(0);
       }
       .sidebar-overlay {
         position: fixed;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
+        width: 100%;
+        height: 100vh;
         background: rgba(0,0,0,0.5);
         z-index: 99;
         display: none;
@@ -119,10 +124,14 @@
         display: block;
       }
       .back-button {
-        display: block !important;
+        display: flex !important;
+      }
+      .chat-area {
+        width: 100%;
       }
     }
 
+    /* На ПК сайдбар всегда виден */
     @media (min-width: 769px) {
       .sidebar {
         margin: 8px 0 8px 8px;
@@ -164,6 +173,7 @@
       color: var(--text-muted);
       font-size: 18px;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
     .settings-btn:hover, .logout-btn:hover {
@@ -253,6 +263,7 @@
       justify-content: center;
       font-size: 20px;
       position: relative;
+      flex-shrink: 0;
     }
 
     .online-dot {
@@ -266,9 +277,9 @@
       border: 2px solid var(--bg-sidebar);
     }
 
-    .chat-info { flex: 1; }
+    .chat-info { flex: 1; min-width: 0; }
     .chat-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-    .chat-status { font-size: 12px; color: var(--text-muted); }
+    .chat-status { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .delete-chat {
       background: none;
       border: none;
@@ -316,6 +327,8 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
+      align-items: center;
+      justify-content: center;
       display: none;
     }
 
@@ -329,10 +342,11 @@
       justify-content: center;
       font-size: 20px;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
-    .chat-header-info { flex: 1; }
-    .chat-header-name { font-weight: 600; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .chat-header-info { flex: 1; min-width: 0; }
+    .chat-header-name { font-weight: 600; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .chat-header-status { font-size: 12px; color: var(--text-muted); }
 
     .subscribe-btn {
@@ -342,6 +356,8 @@
       padding: 6px 12px;
       color: white;
       cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
     }
 
     /* СООБЩЕНИЯ */
@@ -355,7 +371,7 @@
     }
 
     .message {
-      max-width: 70%;
+      max-width: 75%;
       display: flex;
       flex-direction: column;
     }
@@ -371,13 +387,13 @@
     .message-own .message-bubble { background: var(--accent); }
 
     .message-sender { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--accent); }
-    .message-text { font-size: 14px; line-height: 1.4; }
+    .message-text { font-size: 14px; line-height: 1.4; word-wrap: break-word; }
     .message-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
     .message-file { margin-top: 6px; }
     .message-file img { max-width: 200px; max-height: 150px; border-radius: 12px; cursor: pointer; }
 
-    .voice-message { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+    .voice-message { display: flex; align-items: center; gap: 10px; min-width: 180px; flex-wrap: wrap; }
     .voice-play {
       width: 32px;
       height: 32px;
@@ -386,8 +402,9 @@
       border-radius: 50%;
       color: white;
       cursor: pointer;
+      flex-shrink: 0;
     }
-    .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+    .voice-timeline { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 100px; }
     .voice-progress { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; }
     .voice-duration { font-size: 11px; color: var(--text-muted); min-width: 40px; }
 
@@ -407,7 +424,7 @@
       background: var(--bg-sidebar);
       border-top: 1px solid var(--border);
     }
-    .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
+    .input-wrapper { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .message-input {
       flex: 1;
       padding: 12px 16px;
@@ -419,6 +436,7 @@
       resize: none;
       font-family: inherit;
       max-height: 100px;
+      min-width: 120px;
     }
     .input-btn {
       width: 42px;
@@ -429,6 +447,7 @@
       color: var(--text-muted);
       cursor: pointer;
       font-size: 18px;
+      flex-shrink: 0;
     }
     .input-btn:hover { background: var(--accent); color: white; }
     .input-btn.send-btn { background: var(--accent); color: white; }
@@ -502,7 +521,6 @@
     }
     .sticker-panel.show { display: grid; }
     .sticker { font-size: 32px; cursor: pointer; padding: 6px; text-align: center; border-radius: 8px; }
-    .sticker:hover { background: var(--accent); }
 
     .voice-recording {
       display: flex;
@@ -512,6 +530,7 @@
       padding: 8px 16px;
       border-radius: 8px;
       margin-bottom: 8px;
+      flex-wrap: wrap;
     }
     .recording-timer { color: #ef4444; }
 
@@ -561,6 +580,7 @@
       border-radius: 30px;
       font-size: 13px;
       z-index: 3000;
+      white-space: nowrap;
     }
 
     /* ЛОГИН */
@@ -594,6 +614,7 @@
       border-radius: 12px;
       color: var(--text-main);
       margin-bottom: 14px;
+      font-size: 16px;
     }
     .login-btn {
       width: 100%;
@@ -650,7 +671,7 @@
     function saveAccount(username, password, avatar) {
       const accounts = JSON.parse(localStorage.getItem(SAVED_ACCOUNTS_KEY) || '[]');
       if (!accounts.find(a => a.username === username)) {
-        accounts.push({ username, password, avatar: avatar || '👤' });
+        accounts.push({ username, password, avatar: avatar || '👤', lastLogin: new Date().toISOString() });
         localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(accounts));
       }
     }
@@ -678,8 +699,6 @@
     let allChannels = [];
     let subscribedChannels = [];
     let messages = [];
-    let messagesCache = new Map();
-    let lastMsgIdMap = new Map();
     let isSending = false;
     let dropdownOpen = false;
     let currentVoiceAudio = null;
@@ -1076,7 +1095,6 @@
         const opt = document.createElement('div');
         opt.className = 'reaction-option';
         opt.textContent = emoji;
-        opt.style.cssText = 'font-size:24px;cursor:pointer;padding:5px;';
         opt.onclick = () => { addReaction(mid, emoji, currentChatType); menu.remove(); };
         menu.appendChild(opt);
       });
@@ -1118,8 +1136,6 @@
         </div>
         <div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="closeModal()">Закрыть</button></div>
       `);
-      const sel = document.getElementById('themeSelect');
-      if (sel) sel.value = currentTheme;
     }
 
     async function logout() {
