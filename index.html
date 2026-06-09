@@ -37,52 +37,48 @@
             right: 0;
             bottom: 0;
             overflow: hidden;
-            /* Убираем лишние отступы */
-            padding: 0 !important;
+            margin: 0;
+            padding: 0;
         }
 
         /* ТЕМЫ ОФОРМЛЕНИЯ */
         body[data-theme="dark"] { background: #0B0B0C; color: #FFFFFF; }
         body[data-theme="dark"] .sidebar, body[data-theme="dark"] .chat-header, body[data-theme="dark"] .input-area,
         body[data-theme="dark"] .modal-content, body[data-theme="dark"] .login-card, body[data-theme="dark"] .profile-card,
-        body[data-theme="dark"] .dropdown-menu, body[data-theme="dark"] .context-menu, body[data-theme="dark"] .sticker-panel,
-        body[data-theme="dark"] .chat-item.active { background: #121214; }
-        body[data-theme="dark"] .chat-area { background: #0B0B0C; }
+        body[data-theme="dark"] .dropdown-menu, body[data-theme="dark"] .context-menu, body[data-theme="dark"] .sticker-panel { background: #121214; border-color: #2A2A2E; }
+        body[data-theme="dark"] .chat-area, body[data-theme="dark"] .messages-container { background: #0B0B0C; }
         body[data-theme="dark"] .message-bubble, body[data-theme="dark"] .modal-input, body[data-theme="dark"] .login-input,
         body[data-theme="dark"] .search-input, body[data-theme="dark"] .settings-btn, body[data-theme="dark"] .logout-btn { background: #1A1A1E; color: #FFFFFF; }
-        body[data-theme="dark"] .message-own .message-bubble { background: #5826FF; color: white; }
+        body[data-theme="dark"] .message-own .message-bubble { background: #5826FF; }
         body[data-theme="dark"] .chat-preview, body[data-theme="dark"] .message-meta, body[data-theme="dark"] .voice-duration,
         body[data-theme="dark"] .chat-section, body[data-theme="dark"] .chat-header-status { color: #66666E; }
         
         body[data-theme="light"] { background: #F5F5F5; color: #000000; }
         body[data-theme="light"] .sidebar, body[data-theme="light"] .chat-header, body[data-theme="light"] .input-area,
         body[data-theme="light"] .modal-content, body[data-theme="light"] .login-card, body[data-theme="light"] .profile-card,
-        body[data-theme="light"] .dropdown-menu, body[data-theme="light"] .context-menu, body[data-theme="light"] .sticker-panel,
-        body[data-theme="light"] .chat-item.active { background: #FFFFFF; border-color: #E0E0E0; }
-        body[data-theme="light"] .chat-area { background: #F5F5F5; }
+        body[data-theme="light"] .dropdown-menu, body[data-theme="light"] .context-menu, body[data-theme="light"] .sticker-panel { background: #FFFFFF; border-color: #E0E0E0; }
+        body[data-theme="light"] .chat-area, body[data-theme="light"] .messages-container { background: #F5F5F5; }
         body[data-theme="light"] .message-bubble, body[data-theme="light"] .modal-input, body[data-theme="light"] .login-input,
         body[data-theme="light"] .search-input, body[data-theme="light"] .settings-btn, body[data-theme="light"] .logout-btn,
         body[data-theme="light"] .chat-avatar { background: #E8E8E8; color: #000000; }
-        body[data-theme="light"] .message-other .message-bubble { background: #E8E8E8; color: #000000; }
+        body[data-theme="light"] .message-other .message-bubble { background: #E8E8E8; }
         body[data-theme="light"] .message-own .message-bubble { background: #5826FF; color: white; }
         body[data-theme="light"] .chat-preview, body[data-theme="light"] .message-meta, body[data-theme="light"] .voice-duration,
         body[data-theme="light"] .chat-section, body[data-theme="light"] .chat-header-status { color: #888888; }
-        body[data-theme="light"] .message-input { background: #E8E8E8; color: #000000; }
-        body[data-theme="light"] .input-btn { background: #E8E8E8; color: #666666; }
         
         body[data-theme="blue"] .plus-btn, body[data-theme="blue"] .subscribe-btn, body[data-theme="blue"] .send-btn,
         body[data-theme="blue"] .message-own .message-bubble, body[data-theme="blue"] .modal-btn-primary,
-        body[data-theme="blue"] .login-btn, body[data-theme="blue"] .voice-play, body[data-theme="blue"] .reaction.active { background: #0084FF; }
+        body[data-theme="blue"] .login-btn, body[data-theme="blue"] .voice-play { background: #0084FF; }
         body[data-theme="blue"] .login-title, body[data-theme="blue"] .message-sender { color: #0084FF; }
         
         body[data-theme="purple"] .plus-btn, body[data-theme="purple"] .subscribe-btn, body[data-theme="purple"] .send-btn,
         body[data-theme="purple"] .message-own .message-bubble, body[data-theme="purple"] .modal-btn-primary,
-        body[data-theme="purple"] .login-btn, body[data-theme="purple"] .voice-play, body[data-theme="purple"] .reaction.active { background: #9C27B0; }
+        body[data-theme="purple"] .login-btn, body[data-theme="purple"] .voice-play { background: #9C27B0; }
         body[data-theme="purple"] .login-title, body[data-theme="purple"] .message-sender { color: #9C27B0; }
         
         body[data-theme="pink"] .plus-btn, body[data-theme="pink"] .subscribe-btn, body[data-theme="pink"] .send-btn,
         body[data-theme="pink"] .message-own .message-bubble, body[data-theme="pink"] .modal-btn-primary,
-        body[data-theme="pink"] .login-btn, body[data-theme="pink"] .voice-play, body[data-theme="pink"] .reaction.active { background: #E91E63; }
+        body[data-theme="pink"] .login-btn, body[data-theme="pink"] .voice-play { background: #E91E63; }
         body[data-theme="pink"] .login-title, body[data-theme="pink"] .message-sender { color: #E91E63; }
 
         /* ОСНОВНОЙ ЛЕЙАУТ */
@@ -187,11 +183,11 @@
         }
 
         .chat-item:active {
-            background: rgba(88, 38, 255, 0.2);
+            background: rgba(88, 38, 255, 0.15);
         }
 
         .chat-item.active {
-            background: rgba(88, 38, 255, 0.15);
+            background: rgba(88, 38, 255, 0.2);
         }
 
         .chat-avatar {
@@ -248,6 +244,7 @@
             cursor: pointer;
             padding: 6px;
             border-radius: 8px;
+            opacity: 0.6;
         }
 
         /* ОБЛАСТЬ ЧАТА */
@@ -456,7 +453,6 @@
             padding: 10px 16px;
             border-top: 1px solid #2A2A2E;
             flex-shrink: 0;
-            background: inherit;
         }
 
         .input-wrapper {
@@ -475,6 +471,8 @@
             font-family: inherit;
             max-height: 80px;
             min-height: 38px;
+            background: #1A1A1E;
+            color: white;
         }
 
         .message-input:focus {
@@ -492,6 +490,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background: #1A1A1E;
+            color: #66666E;
+        }
+
+        .input-btn.send-btn {
+            background: #5826FF;
+            color: white;
         }
 
         /* МОБИЛЬНАЯ АДАПТАЦИЯ */
@@ -556,14 +561,14 @@
             }
         }
 
-        /* Для iPhone с вырезом - только отступ сверху для контента */
+        /* Защита от статус-бара на iPhone */
         @supports (padding-top: env(safe-area-inset-top)) {
             .sidebar-header, .chat-header {
                 padding-top: max(12px, env(safe-area-inset-top));
             }
         }
 
-        /* Остальные стили */
+        /* МОДАЛКИ */
         .modal {
             position: fixed;
             top: 0;
@@ -744,7 +749,7 @@
 
         .toast {
             position: fixed;
-            bottom: 80px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             background: #1A1A1E;
@@ -885,6 +890,7 @@
             font-size: 14px;
             text-align: center;
             padding: 20px;
+            color: #66666E;
         }
 
         .reaction-menu {
@@ -922,9 +928,7 @@
     <div id="app"></div>
 
     <script>
-        // ВЕСЬ ВАШ JS КОД ОСТАЁТСЯ БЕЗ ИЗМЕНЕНИЙ
-        // (такой же, как у вас был, я его не трогаю)
-        
+        // ВЕСЬ ВАШ JS КОД (сохранён как у вас)
         const SAVED_ACCOUNTS_KEY = 'danumes_saved_accounts';
         const CURRENT_USER_KEY = 'danumes_current_user';
         
@@ -1171,7 +1175,6 @@
                 }
             } catch(e) { 
                 toast('Нет доступа к микрофону'); 
-                console.error(e);
             }
         }
 
@@ -1195,7 +1198,6 @@
                 currentVoiceAudio = audio;
                 audio.play().catch(e => {
                     toast('Ошибка воспроизведения');
-                    console.error(e);
                 });
                 btn.textContent = '⏸️';
                 
@@ -1228,7 +1230,6 @@
                 };
             } catch(e) {
                 toast('Ошибка воспроизведения');
-                console.error(e);
             }
         }
 
