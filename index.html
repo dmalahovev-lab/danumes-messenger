@@ -48,6 +48,7 @@
             --text-secondary: #65676b;
             --border: #e4e6eb;
             --accent: #0088cc;
+            --accent-hover: #0099e6;
             --online: #31a24c;
         }
 
@@ -101,7 +102,7 @@
             height: 100vh;
         }
 
-        /* Сайдбар */
+        /* Сайдбар с закруглениями как раньше */
         .sidebar {
             width: 320px;
             background: var(--bg-sidebar);
@@ -109,23 +110,27 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            margin: 8px 0 8px 8px;
+            border-radius: 28px;
         }
 
         .sidebar-header {
             padding: 20px 16px;
             background: var(--bg-header);
             border-bottom: 1px solid var(--border);
+            border-radius: 28px 28px 0 0;
         }
 
         .user-card {
             display: flex;
             align-items: center;
             gap: 14px;
+            margin-bottom: 16px;
         }
 
         .avatar {
-            width: 52px;
-            height: 52px;
+            width: 56px;
+            height: 56px;
             background: linear-gradient(135deg, var(--accent), var(--accent-hover));
             border-radius: 50%;
             display: flex;
@@ -133,9 +138,19 @@
             justify-content: center;
             font-size: 28px;
             cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        .user-name {
+        .avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .username {
             font-weight: 700;
             font-size: 18px;
             display: flex;
@@ -144,14 +159,20 @@
         }
 
         .verified-badge {
-            color: #4caf50;
+            color: var(--online);
             font-size: 16px;
         }
 
-        .header-buttons {
+        .user-status {
+            font-size: 12px;
+            color: var(--online);
+            margin-top: 4px;
+        }
+
+        .action-buttons {
             display: flex;
             gap: 8px;
-            margin-top: 16px;
+            position: relative;
         }
 
         .action-btn {
@@ -159,14 +180,62 @@
             padding: 8px;
             background: var(--bg-page);
             border: none;
-            border-radius: 10px;
+            border-radius: 20px;
             color: var(--text-primary);
             cursor: pointer;
             font-size: 13px;
+            transition: all 0.2s;
         }
 
         .action-btn:hover {
             background: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        /* Выпадающее меню для кнопки + */
+        .plus-menu {
+            position: absolute;
+            bottom: 50px;
+            right: 0;
+            background: var(--bg-sidebar);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 0;
+            min-width: 180px;
+            z-index: 100;
+            display: none;
+            animation: menuPop 0.2s ease;
+        }
+
+        .plus-menu.show {
+            display: block;
+        }
+
+        .plus-menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .plus-menu-item:hover {
+            background: var(--accent);
+            padding-left: 28px;
+        }
+
+        @keyframes menuPop {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .search-container {
@@ -178,7 +247,7 @@
             padding: 10px 14px;
             background: var(--bg-page);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 28px;
             color: var(--text-primary);
             font-size: 14px;
         }
@@ -191,7 +260,7 @@
         .chats-list {
             flex: 1;
             overflow-y: auto;
-            padding: 8px;
+            padding: 8px 8px 16px 8px;
         }
 
         .chat-section {
@@ -210,12 +279,13 @@
             cursor: pointer;
             transition: all 0.2s;
             margin: 2px 8px;
-            border-radius: 12px;
+            border-radius: 20px;
             position: relative;
         }
 
         .chat-item:hover {
             background: var(--bg-header);
+            transform: translateX(4px);
         }
 
         .chat-item.active {
@@ -266,11 +336,12 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-top: 3px;
         }
 
         .delete-chat {
             position: absolute;
-            right: 8px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             opacity: 0;
@@ -281,37 +352,63 @@
             font-size: 16px;
             padding: 4px 8px;
             border-radius: 12px;
+            transition: all 0.2s;
         }
 
         .chat-item:hover .delete-chat {
             opacity: 1;
         }
 
+        .delete-chat:hover {
+            background: rgba(231,76,60,0.2);
+            color: #ef4444;
+        }
+
+        /* Область чата */
         .chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: var(--bg-chat);
+            margin: 8px 8px 8px 0;
+            border-radius: 28px;
+            overflow: hidden;
         }
 
         .chat-header {
-            padding: 16px 20px;
+            padding: 16px 24px;
             background: var(--bg-header);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
 
         .chat-header-avatar {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             background: var(--bg-page);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-size: 24px;
+            cursor: pointer;
         }
 
         .chat-header-name {
@@ -328,6 +425,7 @@
             margin-top: 3px;
         }
 
+        /* Сообщения */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -341,6 +439,12 @@
             max-width: 70%;
             display: flex;
             flex-direction: column;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .message-own {
@@ -448,24 +552,26 @@
             background: var(--accent);
         }
 
+        /* Панель ввода */
         .input-area {
-            padding: 16px 20px;
+            padding: 16px 24px;
             background: var(--bg-header);
+            backdrop-filter: blur(10px);
             border-top: 1px solid var(--border);
         }
 
         .input-wrapper {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 12px 16px;
+            padding: 12px 20px;
             background: var(--bg-input);
             border: 1px solid var(--border);
-            border-radius: 24px;
+            border-radius: 30px;
             color: var(--text-primary);
             font-size: 14px;
             resize: none;
@@ -479,44 +585,31 @@
         }
 
         .input-btn {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             background: var(--accent);
             border: none;
             border-radius: 50%;
             color: white;
             cursor: pointer;
             font-size: 18px;
+            transition: all 0.2s;
         }
 
-        .context-menu {
-            position: fixed;
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            z-index: 1000;
-            min-width: 180px;
-            overflow: hidden;
+        .input-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
         }
 
-        .context-menu-item {
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .context-menu-item:hover {
-            background: var(--accent);
-        }
-
+        /* Модалки */
         .modal {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -525,15 +618,29 @@
 
         .modal-content {
             background: var(--bg-sidebar);
-            border-radius: 20px;
-            padding: 24px;
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 28px;
             width: 90%;
-            max-width: 380px;
+            max-width: 420px;
+            border: 1px solid var(--border);
+            animation: modalSlide 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-30px) scale(0.95);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
         }
 
         .modal-title {
             font-size: 22px;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 20px;
         }
 
@@ -565,18 +672,42 @@
             color: white;
         }
 
+        /* Контекстное меню */
+        .context-menu {
+            position: fixed;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            z-index: 1000;
+            min-width: 180px;
+            overflow: hidden;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .context-menu-item:hover {
+            background: var(--accent);
+        }
+
+        /* Стикеры */
         .sticker-panel {
             position: fixed;
             bottom: 80px;
             right: 20px;
             background: var(--bg-sidebar);
-            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
             padding: 16px;
             z-index: 99;
             display: none;
             grid-template-columns: repeat(5, 1fr);
             gap: 12px;
             max-width: 280px;
+            border: 1px solid var(--border);
         }
 
         .sticker-panel.show {
@@ -593,8 +724,10 @@
 
         .sticker:hover {
             background: var(--accent);
+            transform: scale(1.1);
         }
 
+        /* Запись голоса */
         .voice-recording {
             display: flex;
             align-items: center;
@@ -609,6 +742,58 @@
             color: #e74c3c;
         }
 
+        /* Профиль */
+        .profile-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+        }
+
+        .profile-card {
+            background: var(--bg-sidebar);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 32px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin: 0 auto 20px;
+            cursor: pointer;
+        }
+
+        .profile-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .profile-status {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        /* Уведомления */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -622,6 +807,7 @@
             border: 1px solid var(--border);
         }
 
+        /* Логин */
         .login-container {
             display: flex;
             align-items: center;
@@ -632,8 +818,9 @@
 
         .login-card {
             background: var(--bg-sidebar);
+            backdrop-filter: blur(20px);
             padding: 40px;
-            border-radius: 28px;
+            border-radius: 32px;
             width: 100%;
             max-width: 380px;
         }
@@ -718,42 +905,24 @@
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
-                left: -100%;
-                top: 0;
-                height: 100vh;
+                left: -340px;
+                top: 8px;
+                height: calc(100% - 16px);
                 z-index: 100;
-                transition: left 0.3s;
-                width: 100%;
+                transition: left 0.3s ease;
             }
             .sidebar.open {
-                left: 0;
+                left: 8px;
             }
             .back-button {
-                display: block !important;
+                display: flex;
             }
             .message {
                 max-width: 85%;
             }
-            .chat-header .back-button {
-                display: none;
+            .chat-area {
+                margin: 8px;
             }
-            .chat-header .back-button.mobile {
-                display: flex;
-            }
-        }
-
-        .back-button {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-size: 24px;
-            cursor: pointer;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
         }
 
         ::-webkit-scrollbar {
@@ -820,6 +989,7 @@
         let updateInterval = null;
         let isSending = false;
         let currentAudio = null;
+        let plusMenuOpen = false;
 
         const VERIFIED = ['Danumala', 'RunFly'];
         const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -964,6 +1134,7 @@
             return Array.isArray(r) ? r : [];
         }
 
+        // Голосовые
         let mediaRec = null;
         let audioChunks = [];
         let isRec = false;
@@ -1156,9 +1327,17 @@
         function showProfile(user) {
             if (!user) return;
             const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.innerHTML = `<div class="modal-content" style="text-align:center;"><div class="avatar" style="width:100px;height:100px;font-size:48px;margin:0 auto 20px;">${user.avatar || '👤'}</div><div class="modal-title" style="font-size:28px;">${escapeHtml(user.username)}${VERIFIED.includes(user.username) ? ' ✓' : ''}</div><div class="profile-status" style="margin-bottom:20px;">${user.online ? '🟢 В сети' : '⚫ Не в сети'}</div><div class="modal-buttons"><button class="modal-btn modal-btn-primary" onclick="this.parentElement.parentElement.parentElement.remove(); selectChat('${user.username}', 'user', null)">💬 Написать</button><button class="modal-btn" onclick="this.parentElement.parentElement.parentElement.remove()">Закрыть</button></div></div>`;
+            modal.className = 'profile-modal';
+            modal.innerHTML = `<div class="profile-card"><div class="profile-avatar" onclick="viewAvatarExpanded('${user.avatar || '👤'}', '${escapeHtml(user.username)}')">${user.avatar || '👤'}</div><div class="profile-name">${escapeHtml(user.username)}${VERIFIED.includes(user.username) ? ' ✓' : ''}</div><div class="profile-status">${user.online ? '🟢 В сети' : '⚫ Не в сети'}</div><div class="profile-actions" style="display:flex;gap:10px;justify-content:center;"><button class="modal-btn modal-btn-primary" onclick="this.parentElement.parentElement.parentElement.remove(); selectChat('${user.username}', 'user', null)">💬 Написать</button><button class="modal-btn" onclick="this.parentElement.parentElement.parentElement.remove()">Закрыть</button></div></div>`;
             document.body.appendChild(modal);
+        }
+
+        function viewAvatarExpanded(avatar, name) {
+            const d = document.createElement('div');
+            d.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:6000;cursor:pointer';
+            d.innerHTML = `<div style="font-size:160px;background:var(--accent);border-radius:50%;padding:40px;">${avatar}</div><div style="position:absolute;bottom:100px;color:white;">${escapeHtml(name)}</div>`;
+            d.onclick = () => d.remove();
+            document.body.appendChild(d);
         }
 
         function viewImage(url) {
@@ -1212,12 +1391,10 @@
             menu.className = 'reaction-menu';
             menu.style.left = e.clientX + 'px';
             menu.style.top = (e.clientY - 50) + 'px';
-            menu.style.cssText += 'position:fixed;background:var(--bg-sidebar);border:1px solid var(--border);border-radius:30px;display:flex;gap:12px;padding:8px 16px;z-index:1001;';
             REACTIONS.forEach(emoji => {
                 const opt = document.createElement('div');
                 opt.className = 'reaction-option';
                 opt.textContent = emoji;
-                opt.style.cssText = 'font-size:24px;cursor:pointer;padding:5px;';
                 opt.onclick = () => { addReaction(mid, emoji, currentChatType); menu.remove(); };
                 menu.appendChild(opt);
             });
@@ -1249,7 +1426,7 @@
                 <div class="modal-title">Настройки</div>
                 <div style="margin-bottom:16px;">
                     <div style="margin-bottom:8px;color:var(--text-secondary);">Тема</div>
-                    <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:var(--bg-page);border:none;border-radius:8px;color:var(--text-primary);">
+                    <select id="themeSelect" onchange="setTheme(this.value)" style="width:100%;padding:12px;background:var(--bg-page);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);">
                         <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>🌙 Dark</option>
                         <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>☀️ Light</option>
                         <option value="blue" ${currentTheme === 'blue' ? 'selected' : ''}>💙 Blue</option>
@@ -1272,12 +1449,19 @@
             renderAuth();
         }
 
-        let dropdownOpen = false;
-        function toggleDropdown() {
-            const menu = document.getElementById('dropdownMenu');
+        function togglePlusMenu() {
+            const menu = document.getElementById('plusMenu');
             if (menu) {
-                dropdownOpen = !dropdownOpen;
-                menu.classList.toggle('show', dropdownOpen);
+                plusMenuOpen = !plusMenuOpen;
+                menu.classList.toggle('show', plusMenuOpen);
+            }
+        }
+
+        function closePlusMenu() {
+            const menu = document.getElementById('plusMenu');
+            if (menu && plusMenuOpen) {
+                menu.classList.remove('show');
+                plusMenuOpen = false;
             }
         }
 
@@ -1331,22 +1515,25 @@
                 <div class="sidebar-header">
                     <div class="user-card">
                         <div class="avatar" onclick="showAvatarModal()">${currentUser?.avatar || '👤'}</div>
-                        <div class="user-name">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div>
+                        <div class="user-info">
+                            <div class="username">${escapeHtml(currentUser?.username || '')}${isVerified ? '<span class="verified-badge">✓</span>' : ''}</div>
+                            <div class="user-status">● В сети</div>
+                        </div>
                     </div>
-                    <div class="header-buttons">
+                    <div class="action-buttons">
                         <button class="action-btn" onclick="openSettings()">⚙️</button>
                         <button class="action-btn" onclick="logout()">🚪</button>
                         <div style="position: relative;">
-                            <button class="action-btn" onclick="toggleDropdown()">+</button>
-                            <div id="dropdownMenu" class="dropdown-menu" style="position:absolute;top:50px;right:0;background:var(--bg-sidebar);border:1px solid var(--border);border-radius:8px;padding:8px 0;min-width:160px;display:none;">
-                                <div class="dropdown-item" style="padding:10px 16px;cursor:pointer;" onclick="showGroupModal(); closeDropdown()">👥 Создать группу</div>
-                                <div class="dropdown-item" style="padding:10px 16px;cursor:pointer;" onclick="showChannelModal(); closeDropdown()">📢 Создать канал</div>
+                            <button class="action-btn" onclick="togglePlusMenu()">+</button>
+                            <div id="plusMenu" class="plus-menu">
+                                <div class="plus-menu-item" onclick="showGroupModal(); closePlusMenu()">👥 Создать группу</div>
+                                <div class="plus-menu-item" onclick="showChannelModal(); closePlusMenu()">📢 Создать канал</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск..." oninput="renderSidebar()">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск..." oninput="renderSidebar()">
                 </div>
                 <div class="chats-list">
                     ${groupChats.length ? `<div class="chat-section">ГРУППЫ</div>${groupChats.map(c => `
@@ -1390,7 +1577,8 @@
                     ${userSearchResults.length ? `<div class="chat-section">НОВЫЕ ЛЮДИ</div>${userSearchResults.map(u => `
                         <div class="chat-item" onclick="selectChat('${u.username}', 'user', null)">
                             <div class="chat-avatar">${u.avatar}${u.online ? '<div class="online-dot"></div>' : ''}</div>
-                            <div class="chat-info">
+                            <div class>
+                                                        <div class="chat-info">
                                 <div class="chat-name">${escapeHtml(u.username)}${u.verified ? ' ✓' : ''}</div>
                                 <div class="chat-preview">${u.online ? 'В сети' : 'Не в сети'}</div>
                             </div>
@@ -1400,12 +1588,13 @@
                 <div id="stickerPanel" class="sticker-panel">${STICKERS.map(s => `<div class="sticker" onclick="sendMessage('${s}'); toggleSticker()">${s}</div>`).join('')}</div>
             `;
             
+            // Закрываем плюс меню при клике вне
             document.addEventListener('click', function(e) {
-                const menu = document.getElementById('dropdownMenu');
+                const menu = document.getElementById('plusMenu');
                 const btn = e.target.closest('.action-btn');
-                if (menu && !btn && dropdownOpen) {
+                if (menu && !btn && plusMenuOpen) {
                     menu.classList.remove('show');
-                    dropdownOpen = false;
+                    plusMenuOpen = false;
                 }
             });
         }
@@ -1485,7 +1674,7 @@
             
             ca.innerHTML = `
                 <div class="chat-header">
-                    <button class="back-button mobile" onclick="toggleSidebar()">←</button>
+                    <button class="back-button" onclick="toggleSidebar()">←</button>
                     <div class="chat-header-avatar" onclick="showProfile(allUsers.find(u=>u.username===currentChat)||{username:currentChat,avatar:currentChatAvatar,online:true})">
                         ${currentChatType === 'user' ? (allUsers.find(u=>u.username===currentChat)?.avatar || '👤') : (currentChatType === 'channel' ? '📢' : '👥')}
                     </div>
@@ -1650,7 +1839,8 @@
         window.viewImage = viewImage;
         window.showProfile = showProfile;
         window.uploadFile = uploadFile;
-        window.toggleDropdown = toggleDropdown;
+        window.togglePlusMenu = togglePlusMenu;
+        window.closePlusMenu = closePlusMenu;
         window.openSettings = openSettings;
         window.toggleSticker = toggleSticker;
         window.deleteChat = deleteChat;
