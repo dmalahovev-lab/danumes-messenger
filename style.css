@@ -1,1 +1,423 @@
+/* ==========================================================================
+   1. ПЕРЕМЕННЫЕ И СБРОС СТИЛЕЙ
+   ========================================================================== */
+:root {
+  /* Цветовая палитра глубокой темной темы */
+  --bg-main: #0a0b0c;
+  --text-primary: #ffffff;
+  --text-secondary: #8e8e93;
+  --accent-blue: #007aff;
+  
+  /* Стили панелей в обычном режиме (Скевоморфизм / Графит) */
+  --island-bg: linear-gradient(145deg, #1e2224, #141617);
+  --island-border: 1px solid rgba(255, 255, 255, 0.05);
+  --island-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 
+                   inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  --blur-value: none;
+  
+  /* Специфические цвета для облаков сообщений */
+  --msg-in-bg: linear-gradient(145deg, #23272a, #1a1c1e);
+  --msg-out-bg: linear-gradient(145deg, #1c1e20, #111214);
+  --msg-out-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Модификатор для включения стеклянного эффекта (Liquid Glass) */
+body.glass-mode {
+  --bg-main: #020304; /* Делаем подложку чуть темнее для контраста */
+  --island-bg: rgba(255, 255, 255, 0.06);
+  --island-border: 1px solid rgba(255, 255, 255, 0.12);
+  --island-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
+                   inset 0 1px 0px rgba(255, 255, 255, 0.2);
+  --blur-value: blur(20px); /* Тот самый эффект размытия заднего плана */
+  
+  --msg-in-bg: rgba(255, 255, 255, 0.08);
+  --msg-out-bg: rgba(255, 255, 255, 0.04);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent; /* Убираем синее выделение при тапе на iOS */
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  transition: background-color 0.4s ease;
+}
+
+/* Контейнер приложения, симулирующий пропорции экрана телефона */
+.app-container {
+  width: 100%;
+  max-width: 430px; /* Ширина экрана iPhone 15 Pro Max */
+  height: 100vh;
+  max-height: 932px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Базовый класс для экранов мессенджера */
+.messenger-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;
+}
+
+.hidden {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   2. СТИЛИЗАЦИЯ ОСТРОВКОВ (DYNAMIC ISLANDS) И КНОПОК
+   ========================================================================== */
+
+/* Универсальные круглые кнопки */
+.btn-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--island-bg);
+  border: var(--island-border);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: var(--blur-value);
+  -webkit-backdrop-filter: var(--blur-value);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-circle:active {
+  transform: scale(0.92);
+  opacity: 0.8;
+}
+
+/* Стилизация верхних шапок */
+.ios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 20px;
+  z-index: 10;
+}
+
+/* Капсульный центральный островок в шапке */
+.header-island {
+  flex-grow: 1;
+  margin: 0 12px;
+  height: 48px;
+  background: var(--island-bg);
+  border: var(--island-border);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: var(--blur-value);
+  -webkit-backdrop-filter: var(--blur-value);
+  border-radius: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.3px;
+}
+
+/* Особый двухстрочный островок статуса для экрана переписки */
+.dialog-status-island {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dialog-status-island .user-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dialog-status-island .user-status {
+  font-size: 11px;
+  color: #34c759; /* Красивый зеленый цвет iOS для статуса "в сети" */
+}
+
+/* ==========================================================================
+   3. СПИСОК ЧАТОВ И ЭЛЕМЕНТЫ
+   ========================================================================== */
+.chats-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 90px; /* Отступ, чтобы нижний таббар не перекрывал элементы */
+}
+
+/* Плавный скроллбар */
+.chats-list::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+  width: 0px; /* Скрываем стандартный скроллбар для эстетики */
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  background: transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.chat-item:active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Градиентные аватарки */
+.chat-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  font-size: 18px;
+  color: white;
+}
+
+.blue-gradient {
+  background: linear-gradient(135deg, #007aff, #00c6ff);
+}
+
+.chat-details {
+  flex-grow: 1;
+  margin-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.chat-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chat-preview {
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.badge-unread {
+  background-color: var(--accent-blue);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   4. НИЖНИЕ ПАНЕЛИ (TAB BAR & FOOTER)
+   ========================================================================== */
+.ios-tabbar {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+
+.tabbar-main-island {
+  flex-grow: 1;
+  margin-right: 12px;
+  height: 64px;
+  background: var(--island-bg);
+  border: var(--island-border);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: var(--blur-value);
+  -webkit-backdrop-filter: var(--blur-value);
+  border-radius: 35px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.tab-item {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tab-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tab-item span {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.tab-item.active {
+  color: var(--text-primary);
+}
+
+/* Панель ввода сообщений (Footer) */
+.ios-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.input-island {
+  flex-grow: 1;
+  margin: 0 12px;
+  height: 48px;
+  background: var(--island-bg);
+  border: var(--island-border);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: var(--blur-value);
+  -webkit-backdrop-filter: var(--blur-value);
+  border-radius: 30px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+}
+
+.input-island input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.input-island input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   5. ОБЛАКА СООБЩЕНИЙ
+   ========================================================================== */
+.messages-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 4px 20px 4px;
+}
+
+.message {
+  display: flex;
+  width: 100%;
+}
+
+.msg-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 22px;
+  font-size: 15px;
+  line-height: 1.4;
+  position: relative;
+}
+
+/* Входящие сообщения (Слева) */
+.msg-incoming {
+  justify-content: flex-start;
+}
+
+.msg-incoming .msg-bubble {
+  background: var(--msg-in-bg);
+  border: var(--island-border);
+  color: var(--text-primary);
+  border-bottom-left-radius: 6px; /* Элегантный "хвостик" сообщения */
+}
+
+.msg-incoming .msg-time {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-align: left;
+}
+
+/* Исходящие сообщения (Справа) */
+.msg-outgoing {
+  justify-content: flex-end;
+}
+
+.msg-outgoing .msg-bubble {
+  background: var(--msg-out-bg);
+  border: var(--island-border);
+  box-shadow: var(--msg-out-shadow);
+  color: var(--text-primary);
+  border-bottom-right-radius: 6px;
+}
+
+.msg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.msg-meta .msg-time {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.icon-status-read {
+  width: 14px !important;
+  height: 14px !important;
+  color: var(--accent-blue);
+}
 
