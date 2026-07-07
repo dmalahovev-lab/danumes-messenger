@@ -13,7 +13,7 @@
   --blur-value: none;
   
   --msg-in-bg: rgba(255, 255, 255, 0.06);
-  --msg-out-bg: rgba(0, 122, 255, 0.15);
+  --msg-out-bg: #007aff;
 }
 
 body.glass-mode {
@@ -201,7 +201,7 @@ body {
   display: none !important;
 }
 
-/* Фиксированные размеры круглых кнопок и встроенных SVG */
+/* ИКОНКИ СДЕЛАЛИ МЕНЬШЕ (С 20px ДО 16px) */
 .btn-circle {
   width: 44px;
   height: 44px;
@@ -221,8 +221,8 @@ body {
 }
 
 .btn-circle svg {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   display: block;
 }
 
@@ -300,14 +300,14 @@ body {
 }
 
 .icon-control-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .btn-back { display: none; }
 
 /* ==========================================================================
-   4. СПИСОК ЧАТОВ И ФИКСИРОВАННЫЙ ТАББАР
+   4. СПИСОК ЧАТОВ И НИЖНИЙ ТАББАР
    ========================================================================== */
 .chats-list {
   flex-grow: 1;
@@ -342,8 +342,8 @@ body {
 }
 
 .chat-avatar svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .blue-gradient { background: linear-gradient(135deg, #007aff, #00c6ff); }
@@ -379,7 +379,6 @@ body {
   align-items: center;
 }
 
-/* Стилизация внутренних кнопок меню (Текст больше не падает!) */
 .tab-item {
   background: transparent;
   border: none;
@@ -394,8 +393,8 @@ body {
 }
 
 .tab-item svg { 
-  width: 20px; 
-  height: 20px; 
+  width: 16px; 
+  height: 16px; 
   display: block;
 }
 
@@ -409,46 +408,67 @@ body {
 .tab-item.active { color: var(--text-primary); }
 
 /* ==========================================================================
-   5. СООБЩЕНИЯ И ВВОД
+   5. СООБЩЕНИЯ (ИСПРАВЛЕНО РАСТЯГИВАНИЕ НА ВЕСЬ ЭКРАН)
    ========================================================================== */
 .messages-container {
   flex-grow: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 20px 10px;
 }
 
-.item-sticker { justify-content: flex-end; }
-.sticker-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-end; }
-.mock-sticker { font-size: 96px; line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3)); user-select: none; }
-
-.sticker-wrapper .msg-meta {
+/* Базовый контейнер строки сообщения */
+.message {
   display: flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 2px 6px;
-  border-radius: 10px;
-  backdrop-filter: blur(5px);
-  margin-top: -10px;
-  margin-right: 10px;
+  width: 100%;
 }
 
-.sticker-wrapper .msg-time { font-size: 10px; color: #ffffff; font-weight: 500; }
-.sticker-wrapper svg { width: 12px; height: 12px; color: #ffffff; }
+/* Входящие — прижимаем влево */
+.msg-incoming {
+  justify-content: flex-start;
+}
 
-.ios-footer { display: flex; align-items: center; width: 100%; height: 44px; padding-top: 0px; margin-top: auto; }
+/* Исходящие — прижимаем строго вправо */
+.msg-outgoing {
+  justify-content: flex-end;
+}
 
-.input-island {
-  flex-grow: 1;
-  margin: 0 10px;
-  height: 44px;
-background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 8px; }.btn-inside-smile svg { width: 22px; height: 22px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 44px; height: 44px; opacity: 0.3; }@media (max-width: 768px) {.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--bg-main); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
+/* Компактное iMessage облачко текста */
+.msg-bubble {
+  max-width: 65%; /* Сообщение займет максимум 65% ширины экрана чата */
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.4;
+  word-break: break-word; /* Перенос длинных слов */
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.msg-incoming .msg-bubble {
+  background: var(--island-bg);
+  color: var(--text-primary);
+  border: var(--island-border);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-outgoing .msg-bubble {
+  background: var(--accent-blue);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+/* Мета-блок времени внутри облачка */
+.msg-meta {
+  display: flex;
+align-items: center;justify-content: flex-end;gap: 4px;margin-top: 4px;}.msg-time {font-size: 10px;opacity: 0.65;}.msg-meta svg {width: 12px;height: 12px;}/* Обработка больших стикеров-эмодзи */.item-sticker {justify-content: flex-end;}.sticker-wrapper {position: relative;display: flex;flex-direction: column;align-items: flex-end;}.mock-sticker {font-size: 96px;line-height: 1;filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));user-select: none;}.sticker-wrapper .msg-meta {background: rgba(0, 0, 0, 0.4);padding: 2px 6px;border-radius: 10px;backdrop-filter: blur(5px);margin-top: -10px;margin-right: 10px;}.sticker-wrapper .msg-time { color: #ffffff; font-weight: 500; }.sticker-wrapper svg { color: #ffffff; }/* Нижняя панель */.ios-footer { display: flex; align-items: center; width: 100%; height: 44px; margin-top: auto; }.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 8px; }.btn-inside-smile svg { width: 20px; height: 20px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 44px; height: 44px; opacity: 0.3; }@media (max-width: 768px) {.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--bg-main); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
 ---
 
-### 🧠 3. Полный код файла `app.js`
+### 📦 2. Полный код файла `app.js`
+
+Замени весь код в файле `app.js`. Здесь исправлен HTML-шаблон для вывода текстовых сообщений (теперь они заворачиваются в правильные CSS-классы).
 
 ```javascript
 let authMode = 'login';
@@ -530,7 +550,6 @@ function closeChatMobile() {
   document.getElementById('panel-dialog').classList.add('mobile-hidden');
 }
 
-// Переключение жидкого стекла
 function toggleGlassEffect() {
   const body = document.body;
   body.classList.toggle('glass-mode');
@@ -543,7 +562,6 @@ function logout() {
   document.getElementById('screen-auth').classList.remove('hidden');
 }
 
-// ФИКС ТЕКСТОВОГО ВВОДА БЕЗ СТОРОННИХ БИБЛИОТЕК
 function handleInputMessage(inputElement) {
   const btnSend = document.getElementById('btn-send');
   const iconContainer = document.getElementById('send-icon-container');
@@ -553,12 +571,10 @@ function handleInputMessage(inputElement) {
   if (text.length > 0) {
     btnSend.style.background = 'var(--accent-blue)';
     btnSend.style.color = 'white';
-    // Заменяем микрофон на SVG стрелочку вверх (iOS стиль)
     iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="19" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
   } else {
     btnSend.style.background = 'var(--island-bg)';
     btnSend.style.color = 'var(--text-primary)';
-    // Возвращаем микрофон обратно
     iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
   }
 }
@@ -573,6 +589,7 @@ function handleSendClick() {
   }
 }
 
+// ФУНКЦИЯ ОТПРАВКИ ИСПРАВЛЕНА
 function executeSendMessage(text) {
   const messagesView = document.getElementById('messages-view');
   const messageInput = document.getElementById('message-input');
@@ -585,10 +602,10 @@ function executeSendMessage(text) {
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const messageNode = document.createElement('div');
   
-  // Регулярка для проверки смайликов
   const isEmoji = /^\p{Emoji}$/u.test(text) || /^\p{Emoji}\p{Emoji}$/u.test(text);
 
   if (isEmoji) {
+    // 3D стикер-эмодзи
     messageNode.className = 'message msg-outgoing item-sticker';
     messageNode.innerHTML = `
       <div class="sticker-wrapper">
@@ -600,13 +617,13 @@ function executeSendMessage(text) {
       </div>
     `;
   } else {
+    // СТРУКТУРА ИСПРАВЛЕНА: Теперь облачко компактное и находится справа
     messageNode.className = 'message msg-outgoing';
-    messageNode.style.justifyContent = 'flex-end';
     messageNode.innerHTML = `
-      <div class="msg-bubble" style="background: var(--accent-blue); color: white; border-bottom-right-radius: 6px; padding: 12px 16px; border: var(--island-border)">
+      <div class="msg-bubble">
         ${text}
-        <div class="msg-meta" style="justify-content: flex-end; display: flex; gap: 4px; margin-top: 4px; background: transparent; padding: 0; backdrop-filter: none;">
-          <span class="msg-time" style="color: rgba(255,255,255,0.7); font-size: 10px;">${timeString}</span>
+        <div class="msg-meta">
+          <span class="msg-time">${timeString}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; color:white;"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
       </div>
