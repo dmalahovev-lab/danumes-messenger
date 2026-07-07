@@ -1,42 +1,47 @@
-// Железобетонная инициализация иконок сразу после загрузки страницы
+// Автоматическая загрузка иконок и настроек темы
 window.addEventListener('DOMContentLoaded', () => {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
-  } else {
-    console.error("Библиотека иконок Lucide не загрузилась.");
   }
 
-  // Восстановление режима стекла из памяти
   const savedGlassMode = localStorage.getItem('glassMode');
   if (savedGlassMode === 'false') {
     document.body.classList.remove('glass-mode');
   }
 });
 
-// Переключение между экранами с плавной анимацией iOS слайдинга
-function switchScreen(screenId) {
-  const chatsScreen = document.getElementById('screen-chats');
-  const dialogScreen = document.getElementById('screen-dialog');
-
-  if (screenId === 'screen-dialog') {
-    chatsScreen.classList.add('hidden');
-    dialogScreen.classList.remove('hidden');
-  } else {
-    dialogScreen.classList.add('hidden');
-    chatsScreen.classList.remove('hidden');
+// Клик по чату: на ПК просто переключает активный элемент, на мобилке — сдвигает экраны
+function selectChat(chatId) {
+  console.log("Выбран чат:", chatId);
+  
+  // Для мобильных устройств: активируем слайд-эффект переключения
+  const panelChats = document.getElementById('panel-chats');
+  const panelDialog = document.getElementById('panel-dialog');
+  
+  if (window.innerWidth <= 768) {
+    panelChats.classList.add('mobile-left');
+    panelDialog.classList.remove('mobile-hidden');
   }
 }
 
-// Функция-переключатель стеклянного режима (Liquid Glass)
+// Кнопка Назад на мобильных телефонах
+function closeChatMobile() {
+  const panelChats = document.getElementById('panel-chats');
+  const panelDialog = document.getElementById('panel-dialog');
+  
+  panelChats.classList.remove('mobile-left');
+  panelDialog.classList.add('mobile-hidden');
+}
+
+// Включение/выключение стеклянного эффекта
 function toggleGlassEffect() {
   const body = document.body;
   body.classList.toggle('glass-mode');
-  
   const isGlass = body.classList.contains('glass-mode');
   localStorage.setItem('glassMode', isGlass);
 }
 
-// Логика изменения кнопки ввода текста (Микрофон <-> Отправить)
+// Изменение состояния кнопки отправки при вводе текста (Микрофон -> Стрелочка)
 const messageInput = document.getElementById('message-input');
 const btnSend = document.getElementById('btn-send');
 const micIcon = document.getElementById('mic-icon');
@@ -54,11 +59,10 @@ messageInput.addEventListener('input', (e) => {
   lucide.createIcons();
 });
 
-// Обработка отправки сообщения по нажатию клавиши Enter на ПК
+// Отправка сообщений по Enter
 messageInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
-    
     const text = messageInput.value.trim();
     if (text.length > 0) {
       sendMessage(text);
@@ -66,11 +70,9 @@ messageInput.addEventListener('keydown', (event) => {
   }
 });
 
-// Функция отправки (Пока временная заглушка до подключения сокетов)
 function sendMessage(text) {
   console.log("Отправка сообщения:", text);
   messageInput.value = '';
-  
   btnSend.style.background = 'var(--island-bg)';
   micIcon.setAttribute('data-lucide', 'mic');
   lucide.createIcons();
