@@ -22,7 +22,8 @@
   <!-- ============================================= -->
   <div id="screen-auth" class="auth-container">
     <div class="auth-island">
-      <div class="auth-logo">t</div>
+      <!-- Логотип изменен на букву D -->
+      <div class="auth-logo">D</div>
       <h2 id="auth-title">Войти в DanuChat</h2>
       
       <div class="auth-form">
@@ -54,7 +55,10 @@
     <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ -->
     <aside id="panel-chats" class="messenger-panel">
       <header class="ios-header">
-        <button class="btn-circle avatar-main" onclick="logout()">t</button>
+        <!-- Аватарка теперь содержит иконку человека, а не букву t -->
+        <button class="btn-circle avatar-main" onclick="logout()">
+          <i data-lucide="user"></i>
+        </button>
         <div class="header-island">Чаты</div>
         <button class="btn-circle btn-action">
           <i data-lucide="square-pen"></i>
@@ -64,7 +68,10 @@
       <!-- Список диалогов -->
       <main class="chats-list">
         <div id="chat-item-test" class="chat-item" onclick="selectChat('test-id')">
-          <div class="chat-avatar blue-gradient">t</div>
+          <!-- Аватарка собеседника тоже заменена на аккуратную иконку пользователя -->
+          <div class="chat-avatar blue-gradient">
+            <i data-lucide="user"></i>
+          </div>
           <div class="chat-details">
             <div class="chat-row">
               <span class="chat-name">Test</span>
@@ -100,7 +107,7 @@
       </nav>
     </aside>
 
-    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ (СТИЛЬ ИЗ ТВОЕГО ФОТО) -->
+    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ -->
     <section id="panel-dialog" class="messenger-panel mobile-hidden">
       
       <!-- Заглушка на ПК -->
@@ -112,13 +119,12 @@
       <!-- Контент чата -->
       <div id="dialog-active-content" class="dialog-content-wrapper hidden-content">
         
-        <!-- Шапка из твоего скриншота (С кнопкой назад, звонком и тремя точками) -->
+        <!-- Шапка -->
         <header class="ios-header">
           <button class="btn-circle btn-back" onclick="closeChatMobile()">
             <i data-lucide="chevron-left"></i>
           </button>
           
-          <!-- Объединенный центральный островок профиля -->
           <div class="header-island profile-island">
             <div class="mini-avatar">🐮</div>
             <div class="profile-meta">
@@ -128,14 +134,13 @@
             <i data-lucide="chevron-right" class="icon-arrow-profile"></i>
           </div>
           
-          <!-- Правый островок управления: звонок и опции -->
           <div class="header-controls-island">
             <button class="icon-control-btn"><i data-lucide="phone"></i></button>
             <button class="icon-control-btn"><i data-lucide="ellipsis"></i></button>
           </div>
         </header>
 
-        <!-- Область сообщений (Стикерная лента как на фото) -->
+        <!-- Область сообщений -->
         <main class="messages-container" id="messages-view">
           <div class="message msg-outgoing item-sticker">
             <div class="sticker-wrapper">
@@ -148,20 +153,17 @@
           </div>
         </main>
 
-        <!-- Нижняя панель ввода (Точь-в-точь как на фото) -->
+        <!-- Нижняя панель ввода -->
         <footer class="ios-footer">
-          <!-- Кнопка плюс -->
           <button class="btn-circle btn-plus">
             <i data-lucide="plus"></i>
           </button>
           
-          <!-- Стеклянное поле ввода со смайликом внутри -->
-          <div class="input-island animate-input-box">
+          <div class="input-island">
             <input type="text" placeholder="Сообщение..." id="message-input" autocomplete="off">
             <button class="btn-inside-smile"><i data-lucide="smile"></i></button>
           </div>
           
-          <!-- Микрофон / Отправка -->
           <button class="btn-circle btn-mic" id="btn-send" onclick="handleSendClick()">
             <i data-lucide="mic" id="mic-icon"></i>
           </button>
