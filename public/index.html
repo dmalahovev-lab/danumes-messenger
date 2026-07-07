@@ -5,17 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram v27 Liquid</title>
     <style>
-        /* НАСТРОЙКА СИСТЕМНЫХ ШРИФТОВ APPLE */
+        /* ШРИФТЫ APPLE SF PRO ROUNDED */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, SF Pro Text, SF Pro Rounded, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             overflow: hidden;
-            background: #06070a;
+            background: #08090c;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,76 +24,81 @@
             color: #fff;
         }
 
-        /* ЖИДКИЙ ФОН ПОД СТЕКЛОМ */
+        /* КОРПУС СМАРТФОНА (ЗАЩИТА ОТ ИСКАЖЕНИЙ) */
+        .phone-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 390px; /* Идеальный размер iPhone 15 Pro */
+            height: 84vh;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 40px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            background: #0e1015;
+        }
+
+        /* ЖИДКИЙ ФОН ВНУТРИ ТЕЛЕФОНА */
         .liquid-bg {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             z-index: 1;
             overflow: hidden;
+            pointer-events: none;
         }
 
         .blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.5;
-            animation: float 15s infinite alternate ease-in-out;
+            filter: blur(50px);
+            opacity: 0.45;
+            animation: float 12s infinite alternate ease-in-out;
         }
 
         .blob-1 {
-            width: 450px;
-            height: 450px;
+            width: 250px;
+            height: 250px;
             background: linear-gradient(135px, #007aff, #00ffcc);
-            top: -5%;
-            left: -5%;
+            top: 10%;
+            left: -20%;
         }
 
         .blob-2 {
-            width: 550px;
-            height: 550px;
+            width: 300px;
+            height: 300px;
             background: linear-gradient(135px, #ff007f, #7000ff);
-            bottom: -5%;
-            right: -5%;
-            animation-delay: -3s;
+            bottom: 15%;
+            right: -20%;
+            animation-delay: -4s;
         }
 
         @keyframes float {
             0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(60px, 40px) scale(1.1); }
+            100% { transform: translate(40px, 60px) scale(1.15); }
         }
 
-        /* ОБОЛОЧКА СМАРТФОНА */
-        .phone-wrapper {
+        /* ИСТИННОЕ ЖИДКОЕ СТЕКЛО (ГЛУБОКИЙ БЛЮР) */
+        .chat-container {
             position: relative;
             z-index: 2;
             width: 100%;
-            max-width: 400px;
-            height: 85vh;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 35px;
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        /* LIQUID GLASS КОНТЕЙНЕР */
-        .chat-container {
-            width: 100%;
             height: 100%;
-            backdrop-filter: blur(40px) saturate(210%);
-            -webkit-backdrop-filter: blur(40px) saturate(210%);
+            background: rgba(10, 12, 18, 0.35);
+            backdrop-filter: blur(35px) saturate(200%);
+            -webkit-backdrop-filter: blur(35px) saturate(200%);
             display: flex;
             flex-direction: column;
         }
 
-        /* ШАПКА ЧАТА */
+        /* ШАПКА ЧАТА iOS */
         .chat-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.04);
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
@@ -103,49 +109,59 @@
             font-size: 16px;
             cursor: pointer;
             font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .header-btn:active {
+            opacity: 0.5;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .avatar {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             background: linear-gradient(135px, #ff9500, #ff5e62);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 15px;
-            color: #fff;
+            font-size: 14px;
+            color: white;
+            box-shadow: 0 0 10px rgba(255, 149, 0, 0.3);
+        }
+
+        .user-meta {
+            text-align: left;
         }
 
         .user-meta h2 {
             font-size: 15px;
             font-weight: 600;
-            line-height: 1.2;
         }
 
         .status {
             font-size: 11px;
             color: #34c759;
+            font-weight: 500;
         }
 
-        /* ОКНО СООБЩЕНИЙ */
+        /* ЛЕНТА СООБЩЕНИЙ */
         .chat-messages {
             flex: 1;
             padding: 16px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
-        /* ОБЛАЧКА ТЕКСТА */
+        /* ОБЛАЧКА СООБЩЕНИЙ С СУПЕР-БЛЮРОМ */
         .message {
             max-width: 75%;
             padding: 10px 14px;
@@ -154,44 +170,52 @@
             line-height: 1.4;
             display: flex;
             flex-direction: column;
+            animation: popUp 0.2s ease-out;
+        }
+
+        @keyframes popUp {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
 
         .message.incoming {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
             align-self: flex-start;
             border-bottom-left-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .message.outgoing {
-            background: linear-gradient(135px, #007aff, #0051a3);
+            background: linear-gradient(135px, rgba(0, 122, 255, 0.8), rgba(0, 81, 163, 0.8));
+            backdrop-filter: blur(10px);
             align-self: flex-end;
             border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
         }
 
         .msg-time {
-            font-size: 9.5px;
+            font-size: 10px;
             color: rgba(255, 255, 255, 0.5);
             align-self: flex-end;
-            margin-top: 3px;
+            margin-top: 4px;
         }
 
-        /* ЗОНА ВВОДА СЛОВА */
+        /* ПАНЕЛЬ ВВОДА Telegram iOS */
         .chat-input-area {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            background: rgba(0, 0, 0, 0.25);
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(10, 12, 18, 0.5);
             border-top: 1px solid rgba(255, 255, 255, 0.06);
-            margin-bottom: 60px;
+            margin-bottom: 60px; /* Место под таб-бар */
         }
 
         .input-action-btn {
             background: none;
             border: none;
-            font-size: 20px;
+            font-size: 22px;
             color: #007aff;
             cursor: pointer;
         }
@@ -200,35 +224,46 @@
             flex: 1;
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 9px 14px;
-            border-radius: 18px;
+            padding: 10px 16px;
+            border-radius: 20px;
             color: #fff;
             outline: none;
-            font-size: 14.5px;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        #message-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(0, 122, 255, 0.4);
         }
 
         #send-btn {
             background: #007aff;
             color: white;
             border: none;
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: transform 0.1s;
         }
 
-        /* НИЖНИЙ ТАБ-БАР */
+        #send-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* НИЖНИЙ ПЛАВАЮЩИЙ ТАБ-БАР */
         .tab-bar {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 60px;
-            background: rgba(15, 16, 22, 0.45);
+            background: rgba(15, 17, 23, 0.7);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -247,7 +282,10 @@
             color: rgba(255, 255, 255, 0.35);
             cursor: pointer;
             font-size: 10px;
-            gap: 3px;
+            gap: 4px;
+            width: 33%;
+            height: 100%;
+            justify-content: center;
         }
 
         .tab-item.active {
@@ -255,366 +293,25 @@
         }
 
         .tab-icon {
-            font-size: 18px;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Задний жидкий фон -->
-    <div class="liquid-bg">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-    </div>
-
-    <!-- Модель смартфона -->
-    <div class="phone-wrapper">
-        <div class="chat-container">
-            
-            <!-- Шапка Личного сообщения -->
-            <header class="chat-header">
-                <button class="header-btn" id="back-btn">◀ Назад</button>
-                <div class="user-info">
-                    <div class="avatar">T</div>
-                    <div class="user-meta">
-                        <h2>Test</h2>
-                        <span class="status">в сети</span>
-                    </div>
-                </div>
-                <button class="header-btn" id="call-btn">📞</button>
-            </header>
-
-            <!-- Лента сообщений -->
-            <main class="chat-messages" id="messages">
-                <div class="message incoming">
-                    <span class="msg-text">Привет! Это ЛС-чат Telegram v27. Проверяем жидкое стекло!</span>
-                    <span class="msg-time">23:52</span>
-                </div>
-            </main>
-
-            <!-- Форма отправки сообщения -->
-            <form class="chat-input-area" id="chat-form">
-                <button type="button" class="input-action-btn">📎</button>
-                <input type="text" id="message-input" placeholder="Сообщение" autocomplete="off" required>
-                <button type="submit" id="send-btn">➔</button>
-            </form>
-
-            <!-- Таб-бар iOS -->
-            <nav class="tab-bar">
-                <button type="button" class="tab-item" id="tab-contacts">
-                    <span class="tab-icon">👤</span>
-                    <span class="tab-label">Контакты</span>
-                </button>
-                <button type="button" class="tab-item active" id="tab-chats">
-                    <span class="tab-icon">💬</span>
-                    <span class="tab-label">Чаты</span>
-                </button>
-                <button type="button" class="tab-item" id="tab-settings">
-                    <span class="tab-icon">⚙️</span>
-                    <span class="tab-label">Настройки</span>
-                </button>
-            </nav>
-
-        </div>
-    </div>
-
-    <!-- СИСТЕМНАЯ ЛОГИКА МЕССЕНДЖЕРА -->
-    <script>
-        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const socketUrl = protocol + window.location.host;
-
-        let socket;
-
-        function connectWebSocket() {
-            socket = new WebSocket(socketUrl);
-
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.sender !== 'me') {
-                        displayMessage(data.text, 'incoming');
-                    }
-                } catch(e) {
-                    console.log("Получены сырые данные:", event.data);
-                }
-            };
-
-            socket.onclose = () => {
-                setTimeout(connectWebSocket, 3000);
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram v27 Liquid</title>
-    <style>
-        /* НАСТРОЙКА СИСТЕМНЫХ ШРИФТОВ APPLE */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, SF Pro Text, SF Pro Rounded, BlinkMacSystemFont, sans-serif;
-        }
-
-        body {
-            overflow: hidden;
-            background: #06070a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #fff;
-        }
-
-        /* ЖИДКИЙ ФОН ПОД СТЕКЛОМ */
-        .liquid-bg {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            overflow: hidden;
-        }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.5;
-            animation: float 15s infinite alternate ease-in-out;
-        }
-
-        .blob-1 {
-            width: 450px;
-            height: 450px;
-            background: linear-gradient(135px, #007aff, #00ffcc);
-            top: -5%;
-            left: -5%;
-        }
-
-        .blob-2 {
-            width: 550px;
-            height: 550px;
-            background: linear-gradient(135px, #ff007f, #7000ff);
-            bottom: -5%;
-            right: -5%;
-            animation-delay: -3s;
-        }
-
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(60px, 40px) scale(1.1); }
-        }
-
-        /* ОБОЛОЧКА СМАРТФОНА */
-        .phone-wrapper {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            max-width: 400px;
-            height: 85vh;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 35px;
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        /* LIQUID GLASS КОНТЕЙНЕР */
-        .chat-container {
-            width: 100%;
-            height: 100%;
-            backdrop-filter: blur(40px) saturate(210%);
-            -webkit-backdrop-filter: blur(40px) saturate(210%);
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ШАПКА ЧАТА */
-        .chat-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.04);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .header-btn {
-            background: none;
-            border: none;
-            color: #007aff;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .avatar {
-            width: 38px;
-            height: 38px;
-            background: linear-gradient(135px, #ff9500, #ff5e62);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 15px;
-            color: #fff;
-        }
-
-        .user-meta h2 {
-            font-size: 15px;
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .status {
-            font-size: 11px;
-            color: #34c759;
-        }
-
-        /* ОКНО СООБЩЕНИЙ */
-        .chat-messages {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        /* ОБЛАЧКА ТЕКСТА */
-        .message {
-            max-width: 75%;
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 14.5px;
-            line-height: 1.4;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message.incoming {
-            background: rgba(255, 255, 255, 0.08);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .message.outgoing {
-            background: linear-gradient(135px, #007aff, #0051a3);
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
-        }
-
-        .msg-time {
-            font-size: 9.5px;
-            color: rgba(255, 255, 255, 0.5);
-            align-self: flex-end;
-            margin-top: 3px;
-        }
-
-        /* ЗОНА ВВОДА СЛОВА */
-        .chat-input-area {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            background: rgba(0, 0, 0, 0.25);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            margin-bottom: 60px;
-        }
-
-        .input-action-btn {
-            background: none;
-            border: none;
             font-size: 20px;
-            color: #007aff;
-            cursor: pointer;
-        }
-
-        #message-input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 9px 14px;
-            border-radius: 18px;
-            color: #fff;
-            outline: none;
-            font-size: 14.5px;
-        }
-
-        #send-btn {
-            background: #007aff;
-            color: white;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* НИЖНИЙ ТАБ-БАР */
-        .tab-bar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background: rgba(15, 16, 22, 0.45);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding-bottom: 4px;
-        }
-
-        .tab-item {
-            background: none;
-            border: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: rgba(255, 255, 255, 0.35);
-            cursor: pointer;
-            font-size: 10px;
-            gap: 3px;
-        }
-
-        .tab-item.active {
-            color: #007aff;
-        }
-
-        .tab-icon {
-            font-size: 18px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Задний жидкий фон -->
-    <div class="liquid-bg">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-    </div>
-
-    <!-- Модель смартфона -->
+    <!-- Смартфон -->
     <div class="phone-wrapper">
+        
+        <!-- Задний анимированный фон внутри телефона -->
+        <div class="liquid-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+        </div>
+
+        <!-- Контент мессенджера -->
         <div class="chat-container">
             
-            <!-- Шапка Личного сообщения -->
+            <!-- Шапка чата -->
             <header class="chat-header">
                 <button class="header-btn" id="back-btn">◀ Назад</button>
                 <div class="user-info">
@@ -627,61 +324,23 @@
                 <button class="header-btn" id="call-btn">📞</button>
             </header>
 
-            <!-- Лента сообщений -->
+            <!-- Окно сообщений ЛС -->
             <main class="chat-messages" id="messages">
                 <div class="message incoming">
-                    <span class="msg-text">Привет! Это ЛС-чат Telegram v27. Проверяем жидкое стекло!</span>
-                    <span class="msg-time">23:52</span>
+                    <span class="msg-text">Привет! Теперь сферы летают под стеклом, проверяй ЛС! 💎</span>
+                    <span class="msg-time">23:58</span>
                 </div>
             </main>
 
-            <!-- Форма отправки сообщения -->
+            <!-- Панель ввода сообщения -->
             <form class="chat-input-area" id="chat-form">
-                <button type="button" class="input-action-btn">📎</button>
+                <button type="button" class="input-action-btn" id="clip-btn">📎</button>
                 <input type="text" id="message-input" placeholder="Сообщение" autocomplete="off" required>
                 <button type="submit" id="send-btn">➔</button>
             </form>
 
-            <!-- Таб-бар iOS -->
+            <!-- Нижний Таб-бар iOS -->
             <nav class="tab-bar">
                 <button type="button" class="tab-item" id="tab-contacts">
                     <span class="tab-icon">👤</span>
-                    <span class="tab-label">Контакты</span>
-                </button>
-                <button type="button" class="tab-item active" id="tab-chats">
-                    <span class="tab-icon">💬</span>
-                    <span class="tab-label">Чаты</span>
-                </button>
-                <button type="button" class="tab-item" id="tab-settings">
-                    <span class="tab-icon">⚙️</span>
-                    <span class="tab-label">Настройки</span>
-                </button>
-            </nav>
-
-        </div>
-    </div>
-
-    <!-- СИСТЕМНАЯ ЛОГИКА МЕССЕНДЖЕРА -->
-    <script>
-        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const socketUrl = protocol + window.location.host;
-
-        let socket;
-
-        function connectWebSocket() {
-            socket = new WebSocket(socketUrl);
-
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.sender !== 'me') {
-                        displayMessage(data.text, 'incoming');
-                    }
-                } catch(e) {
-                    console.log("Получены сырые данные:", event.data);
-                }
-            };
-
-            socket.onclose = () => {
-                setTimeout(connectWebSocket, 3000);
-};}const chatForm = document.getElementById('chat-form');const messageInput = document.getElementById('message-input');const messagesContainer = document.getElementById('messages');chatForm.addEventListener('submit', (e) => {e.preventDefault();const text = messageInput.value.trim();if (!text) return;const messageData = {text: text,sender: 'me'};if (socket && socket.readyState === WebSocket.OPEN) {socket.send(JSON.stringify(messageData));}displayMessage(text, 'outgoing');messageInput.value = '';messageInput.focus();});function displayMessage(text, type) {const messageEl = document.createElement('div');messageEl.classList.add('message', type);const now = new Date();const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');messageEl.innerHTML = <span class="msg-text"></span> <span class="msg-time">${timeStr}</span>;// Защита от XSS-инъекций текстаmessageEl.querySelector('.msg-text').innerText = text;messagesContainer.appendChild(messageEl);messagesContainer.scrollTop = messagesContainer.scrollHeight;}// ОБРАБОТКА НАЖАТИЙ НА КНОПКИdocument.getElementById('back-btn').addEventListener('click', () => alert('Кнопка Назад работает!'));document.getElementById('call-btn').addEventListener('click', () => alert('Вызов контакта Test...'));const tabs = document.querySelectorAll('.tab-item');tabs.forEach(tab => {tab.addEventListener('click', () => {tabs.forEach(t => t.classList.remove('active'));tab.classList.add('active');});});connectWebSocket();
+Контакты💬Чаты⚙️Настройкиconst protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';const socketUrl = protocol + window.location.host;let socket;function connectWebSocket() {socket = new WebSocket(socketUrl);socket.onmessage = (event) => {try {// Парсим входящую строку обратно в объектconst data = JSON.parse(event.data);// Если сообщение прислал другой пользователь (не мы сами)if (data.senderToken !== myToken) {displayMessage(data.text, 'incoming');}} catch(e) {console.log("Получено обычное текстовое сообщение:", event.data);}};socket.onclose = () => {setTimeout(connectWebSocket, 2000);};}const chatForm = document.getElementById('chat-form');const messageInput = document.getElementById('message-input');const messagesContainer = document.getElementById('messages');// Уникальный токен для этого окна, чтобы WebSocket не дублировал наши же сообщения нам обратноconst myToken = Math.random().toString(36).substring(2, 10);chatForm.addEventListener('submit', (e) => {e.preventDefault();const text = messageInput.value.trim();if (!text) return;// Структурируем данные перед отправкойconst messageData = {text: text,senderToken: myToken};// Превращаем объект в строку и отправляем через WebSocket серверif (socket && socket.readyState === WebSocket.OPEN) {socket.send(JSON.stringify(messageData));}// Сразу выводим сообщение у себя на экране как исходящееdisplayMessage(text, 'outgoing');messageInput.value = '';messageInput.focus();});function displayMessage(text, type) {const messageEl = document.createElement('div');messageEl.classList.add('message', type);const now = new Date();const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');messageEl.innerHTML = <span class="msg-text"></span> <span class="msg-time">${timeStr}</span>;// Безопасное добавление текстаmessageEl.querySelector('.msg-text').innerText = text;messagesContainer.appendChild(messageEl);messagesContainer.scrollTop = messagesContainer.scrollHeight;}// --- ТЕПЕРЬ ВСЕ КНОПКИ РАБОТАЮТ И ОТКЛИКАЮТСЯ ---document.getElementById('back-btn').addEventListener('click', () => {alert('📱 Telegram v27: Возврат к списку диалогов ЛС.');});document.getElementById('call-btn').addEventListener('click', () => {alert('📞 Вызов абонента Test по защищенному Liquid-каналу...');});document.getElementById('clip-btn').addEventListener('click', () => {alert('📎 Меню вложений iOS 27: Выберите фото, видео или файл.');});// Работа вкладок нижнего менюconst tabs = document.querySelectorAll('.tab-item');tabs.forEach(tab => {tab.addEventListener('click', () => {tabs.forEach(t => t.classList.remove('active'));tab.classList.add('active');const label = tab.querySelector('.tab-label').innerText;console.log(Открыт раздел: ${label});});});// ЗапускconnectWebSocket();
