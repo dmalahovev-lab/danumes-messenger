@@ -1,3 +1,11 @@
+// Железобетонная инициализация иконок сразу после загрузки страницы
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  } else {
+    console.error("Библиотека иконок Lucide не загрузилась. Проверь интернет или CDN-ссылку в index.html");
+  }
+});
 // Переключение между экранами с плавной анимацией iOS слайдинга
 function switchScreen(screenId) {
   // Находим оба экрана приложения
