@@ -1,195 +1,635 @@
-/* public/style.css */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    overflow: hidden;
-    background: #0a0b10;
+    background: #000;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    color: #fff;
+    min-height: 100vh;
+    overflow: hidden;
 }
 
-/* Анимированный жидкий фон */
-.liquid-bg {
+/* Эмуляция экрана iPhone Pro Max для удобства разработки и тестов */
+.iphone-shell {
+    width: 100%;
+    max-width: 430px;
+    height: 100vh;
+    background: url('https://unsplash.com') no-repeat center center;
+    background-size: cover;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+
+/* Логика экранов */
+.screen {
     position: absolute;
     width: 100%;
     height: 100%;
-    z-index: 1;
-    overflow: hidden;
-}
-
-.blob {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.6;
-    animation: float 20s infinite alternate;
-}
-
-.blob-1 {
-    width: 400px;
-    height: 400px;
-    background: linear-gradient(135px, #007aff, #00ffcc);
-    top: -10%;
-    left: -10%;
-}
-
-.blob-2 {
-    width: 500px;
-    height: 500px;
-    background: linear-gradient(135px, #ff007f, #7000ff);
-    bottom: -10%;
-    right: -10%;
-    animation-delay: -5s;
-}
-
-@keyframes float {
-    0% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(100px, 50px) scale(1.2); }
-    100% { transform: translate(-50px, 100px) scale(0.8); }
-}
-
-/* Контейнер Liquid Glass */
-.chat-container {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    max-width: 430px; /* Размер iPhone Pro Max */
-    height: 90vh;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(30px) saturate(190%);
-    -webkit-backdrop-filter: blur(30px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 40px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
-    display: flex;
+    top: 0;
+    left: 0;
+    display: none;
     flex-direction: column;
-    overflow: hidden;
+    z-index: 10;
 }
 
-/* Шапка */
-.chat-header {
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.02);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.screen.active {
+    display: flex;
 }
 
-.user-info {
+/* ================= ЭКРАН 1: СТИЛИ СПИСКА ЧАТОВ ================= */
+.ios-header {
+    background: rgba(15, 15, 15, 0.55);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+    padding-top: 25px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    color: #007aff;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.header-title-container {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 4px;
 }
 
-.avatar {
-    width: 45px;
-    height: 45px;
-    background: linear-gradient(135px, #007aff, #00c6ff);
+.header-title {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.header-icon-cloud {
+    font-size: 14px;
+}
+
+.btn-icon-round {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* Поиск */
+.search-bar-container {
+    padding: 4px 16px 10px 16px;
+}
+
+.search-bar {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    gap: 6px;
+}
+
+.search-icon {
+    font-size: 14px;
+    color: #8e8e93;
+}
+
+.search-bar input {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    width: 100%;
+    outline: none;
+}
+
+/* Вкладки / Папки */
+.folders-container {
+    display: flex;
+    gap: 8px;
+    padding: 6px 16px 12px 16px;
+    overflow-x: auto;
+}
+
+.folders-container::-webkit-scrollbar { display: none; }
+
+.folder-pill {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 6px 14px;
+    border-radius: 20px;
+    color: #8e8e93;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: 0.2s;
+    border: 0.5px solid rgba(255,255,255,0.02);
+}
+
+.folder-pill.active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.badge-pill {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #fff;
+}
+
+.folder-pill.active .badge-pill {
+    background: #8e8e93;
+}
+
+/* Список строк чатов */
+.chats-list {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+.chat-row {
+    display: flex;
+    padding: 12px 16px;
+    gap: 12px;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.chat-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.avatar-container {
+    position: relative;
+}
+
+.tg-avatar {
+    width: 54px;
+    height: 54px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    box-shadow: 0 0 15px rgba(0, 122, 255, 0.5);
-}
-
-.status {
-    font-size: 12px;
-    color: #00ffcc;
-    text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
-}
-
-/* Зона сообщений */
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* Стили сообщений */
-.message {
-    max-width: 75%;
-    padding: 12px 18px;
-    border-radius: 22px;
-    font-size: 15px;
-    line-height: 1.4;
-    animation: fadeIn 0.3s ease-out;
-}
-
-.message.incoming {
-    background: rgba(255, 255, 255, 0.07);
-    align-self: flex-start;
-    border-bottom-left-radius: 5px;
-    border: 1px solid rgba(255,255,255,0.05);
-}
-
-.message.outgoing {
-    background: linear-gradient(135px, rgba(0, 122, 255, 0.3), rgba(0, 198, 255, 0.2));
-    align-self: flex-end;
-    border-bottom-right-radius: 5px;
-    border: 1px solid rgba(0, 122, 255, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.15);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Поле ввода */
-.chat-input-area {
-    padding: 20px;
-    display: flex;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.1);
-}
-
-#message-input {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 14px 20px;
-    border-radius: 25px;
-    color: #fff;
-    outline: none;
-    font-size: 15px;
-    transition: 0.3s;
-}
-
-#message-input:focus {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(0, 122, 255, 0.5);
-    box-shadow: 0 0 15px rgba(0, 122, 255, 0.2);
-}
-
-#send-btn {
-    width: 48px;
-    height: 48px;
-    background: #fff;
-    color: #000;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
+    color: white;
     font-size: 18px;
+}
+
+.color-green { background: linear-gradient(135px, #34c759, #4cd964); }
+.color-blue { background: linear-gradient(135px, #007aff, #0a84ff); }
+
+.unread-count-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #ff3b30;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: 0.3s;
-    box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+    border: 1.5px solid #000;
 }
 
-#send-btn:hover {
-    transform: scale(1.05);
+.chat-row-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+}
+
+.chat-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.verified-badge {
+    color: #007aff;
+    font-size: 14px;
+}
+
+.chat-time {
+    color: #8e8e93;
+    font-size: 13px;
+}
+
+.chat-row-message {
+    display: flex;
+    gap: 4px;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.author-name {
+    color: #fff;
+    font-weight: 500;
+}
+
+.message-snippet {
+    color: #8e8e93;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* Плавающий Таб-бар */
+.tab-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 5%;
+    width: 90%;
+    background: rgba(25, 25, 27, 0.75);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 30px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 10px;
+    z-index: 30;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+}
+
+.tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: 0.2s;
+}
+
+.tab-item.active {
+    opacity: 1;
+}
+
+.tab-icon { font-size: 20px; }
+.tab-item.active .tab-icon { color: #0a84ff; }
+
+.tab-label {
+    font-size: 10px;
+    color: #fff;
+}
+
+.tab-item-search {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.search-circle-icon { font-size: 16px; color: #fff; }
+
+
+/* ================= ЭКРАН 2: СТИЛИ КАНАЛА ================= */
+.channel-header {
+    background: rgba(20, 20, 22, 0.75);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-bottom: 0.5px solid rgba(255,255,255,0.1);
+    padding: 30px 16px 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #007aff;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.channel-info-center {
+    text-align: center;
+    flex: 1;
+}
+
+.channel-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.channel-title-text {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.verified-badge-blue {
     background: #007aff;
     color: #fff;
-    box-shadow: 0 4px 20px rgba(0, 122, 255, 0.4);
+    font-size: 9px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
 }
+
+.channel-subs {
+    color: #8e8e93;
+    font-size: 11px;
+}
+
+.channel-avatar-mini {
+    width: 36px;
+    height: 36px;
+    background: #ff9500;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    color: #fff;
+}
+
+/* Лента постов */
+.channel-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 90px;
+}
+
+/* Карточка Поста Telegram */
+.tg-post {
+    background: rgba(25, 25, 27, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.post-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 180px;
+}
+
+.post-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.post-image-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.overlay-brand {
+    color: #34c759;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.overlay-tag {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+}
+
+.post-content {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.post-content h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.post-content p {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Комментарии */
+.post-comments-bar {
+    background: rgba(255, 255, 255, 0.04);
+    border-top: 0.5px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.comments-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comments-text {
+    color: #007aff;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.comments-arrow {
+    color: #007aff;
+    font-size: 12px;
+}
+
+/* Подвал поста */
+.post-footer {
+    padding: 10px 14px 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.post-link {
+    color: rgba(0, 122, 255, 0.7);
+    font-size: 12px;
+    text-decoration: none;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.post-meta {
+    display: flex;
+    gap: 8px;
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+}
+
+/* Ввод публикации */
+.channel-input-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(20, 20, 22, 0.85);
+    backdrop-filter: blur(30px);
+-webkit-backdrop-filter: blur(30px);padding: 10px 12px 25px 12px;display: flex;align-items: center;gap: 10px;border-top: 0.5px solid rgba(255,255,255,0.08);}.input-action-btn, .emoji-btn {background: none;border: none;font-size: 20px;color: #8e8e93;cursor: pointer;}.input-wrapper {flex: 1;background: rgba(255, 255, 255, 0.06);border: 0.5px solid rgba(255,255,255,0.1);border-radius: 20px;display: flex;align-items: center;padding: 6px 12px;}.input-wrapper input {background: none;border: none;color: #fff;font-size: 15px;width: 100%;outline: none;}.send-post-btn {width: 32px;height: 32px;background: #007aff;color: #fff;border: none;border-radius: 50%;display: flex;align-items: center;justify-content: center;font-size: 14px;cursor: pointer;}
+---
+
+### ⚙️ 3. Оживляем интерфейс навигации (`public/app.js`)
+Замени код в `public/app.js`. Этот скрипт свяжет WebSocket-сервер с нашей новой iOS-лентой и позволит мгновенно публиковать и принимать новые посты, а также переключаться между экранами:
+
+```javascript
+const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+const socketUrl = protocol + window.location.host;
+
+let socket;
+
+// Навигационные элементы
+const screenChats = document.getElementById('screen-chats');
+const screenChannel = document.getElementById('screen-channel');
+const openChannelBtn = document.getElementById('open-channel-btn');
+const backToChats = document.getElementById('back-to-chats');
+
+// Элементы формы
+const channelForm = document.getElementById('channel-form');
+const channelInput = document.getElementById('channel-input');
+const channelMessages = document.getElementById('channel-messages');
+
+// Функция переключения экранов
+openChannelBtn.addEventListener('click', () => {
+    screenChats.classList.remove('active');
+    screenChannel.classList.add('active');
+});
+
+backToChats.addEventListener('click', () => {
+    screenChannel.classList.remove('active');
+    screenChats.classList.add('active');
+});
+
+// WebSocket подключение
+function connectWebSocket() {
+    socket = new WebSocket(socketUrl);
+
+    socket.onopen = () => console.log('Связь с сервером iOS Liquid установлена!');
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // Создаем пост на экране, если прилетели новые данные
+        createNewPostElement(data.text, '11:44', false);
+    };
+
+    socket.onclose = () => {
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+// Отправка новой публикации
+channelForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = channelInput.value.trim();
+    if (!text) return;
+
+    const postData = { text: text };
+    socket.send(JSON.stringify(postData));
+
+    // Отрисовываем у себя локально
+    createNewPostElement(text, 'Сейчас', true);
+
+    channelInput.value = '';
+});
+
+// Генератор разметки полноценного поста в канале
+function createNewPostElement(text, time, isMyPost) {
+    const postDiv = document.createElement('div');
+    postDiv.classList.add('tg-post');
+
+    postDiv.innerHTML = `
+        <div class="post-content">
+            <p>${text}</p>
+        </div>
+        <div class="post-comments-bar">
+            <div class="comments-left">
+                <span class="comments-avatars">👥</span>
+                <span class="comments-text">0 комментариев</span>
+            </div>
+            <span class="comments-arrow">❯</span>
+        </div>
+        <div class="post-footer">
+            <span class="post-link">Публикация из сети</span>
+            <div class="post-meta">
+                <span class="views-count">👁 1</span>
+                <span class="post-time">${time}</span>
+            </div>
+        </div>
+    `;
+
+    channelMessages.appendChild(postDiv);
+    channelMessages.scrollTop = channelMessages.scrollHeight;
+}
+
+// Старт
+connectWebSocket();
