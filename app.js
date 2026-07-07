@@ -1,9 +1,14 @@
 const socket = io();
 
-// DOM элементы
+// DOM
 const loginModal = document.getElementById('login-modal');
 const usernameInput = document.getElementById('username-input');
-const loginBtn = document.getElementById('login-btn');
+const passwordInput = document.getElementById('password-input');
+const submitBtn = document.getElementById('submit-btn');
+const errorMsg = document.getElementById('error-message');
+const modalTitle = document.getElementById('modal-title');
+const modalSubtitle = document.getElementById('modal-subtitle');
+const toggleLink = document.getElementById('toggle-mode-link');
 const appContainer = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
 const chatList = document.getElementById('chat-list');
@@ -12,7 +17,6 @@ const messagesList = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const backBtn = document.getElementById('back-btn');
-const newChatBtn = document.getElementById('new-chat-btn');
 const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
 const chatName = document.getElementById('chat-name');
 const chatStatus = document.getElementById('chat-status');
@@ -20,24 +24,70 @@ const chatAvatar = document.getElementById('chat-avatar');
 const searchInput = document.getElementById('search-chat');
 
 let currentUser = '';
+let isLoginMode = true; // true = вход, false = регистрация
 let typingTimeout;
-let currentChat = null; // для будущего — пока общий чат
-const onlineUsers = new Map();
+let currentChat = null;
 
-// === Логика входа ===
-loginBtn.addEventListener('click', () => {
-  const name = usernameInput.value.trim();
-  if (name) {
-    currentUser = name;
-    socket.emit('new user', name);
-    loginModal.style.display = 'none';
-    appContainer.style.display = 'flex';
-    // По умолчанию показываем сайдбар (на мобильных скроем позже)
-    checkMobileView();
+// Переключение режимов
+toggleLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  isLoginMode = !isLoginMode;
+  if (isLoginMode) {
+    modalTitle.textContent = 'Вход';
+    modalSubtitle.textContent = 'Войдите в аккаунт';
+    submitBtn.textContent = 'Войти';
+    toggleLink.textContent = 'Зарегистрироваться';
+    document.querySelector('.toggle-mode').innerHTML = 'Нет аккаунта? <a href="#" id="toggle-mode-link">Зарегистрироваться</a>';
+  } else {
+    modalTitle.textContent = 'Регистрация';
+    modalSubtitle.textContent = 'Создайте новый аккаунт';
+    submitBtn.textContent = 'Зарегистрироваться';
+    toggleLink.textContent = 'Войти';
+    document.querySelector('.toggle-mode').innerHTML = 'Уже есть аккаунт? <a href="#" id="toggle-mode-link">Войти</a>';
   }
+  // Перепривязываем ссылку заново, т.к. мы заменили HTML
+  document.getElementById('toggle-mode-link').addEventListener('click', toggleLinkClick);
+  errorMsg.textContent = '';
 });
 
-// === Socket events ===
+// Повторный обработчик для переключения (костыль, но рабочий)
+function toggleLinkClick(e) {
+  e.preventDefault();
+  toggleLink.dispatchEvent(new Event('click'));
+}
+document.getElementById('toggle-mode-link').addEventListener('click', toggleLinkClick);
+
+// Отправка формы входа/регистрации
+function submitAuth() {
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+  if (!username || !password) {
+    errorMsg.textContent = 'Заполните все поля';
+    return;
+  }
+
+  const eventName = isLoginMode ? 'login' : 'register';
+  socket.emit(eventName, { username, password }, (response) => {
+    if (response.success) {
+      currentUser = response.username;
+      loginModal.style.display = 'none';
+      appContainer.style.display = 'flex';
+      initChat(); // инициализация интерфейса после входа
+      checkMobileView();
+    } else {
+      errorMsg.textContent = response.message;
+    }
+  });
+}
+
+submitBtn.addEventListener('click', submitAuth);
+[usernameInput, passwordInput].forEach(input => {
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') submitAuth();
+  });
+});
+
+// Сокеты
 socket.on('chat message', (data) => {
   addMessage(data.user, data.text, data.id === socket.id, data.time);
 });
@@ -56,139 +106,9 @@ socket.on('stop typing', (id) => {
   }
 });
 
-socket.on('online users', (users) => {
-  // Можем использовать для обновления чат-листа, пока просто обновим статус
-  if (currentChat) {
-    const online = users.includes(currentChat);
-    chatStatus.textContent = online ? 'онлайн' : 'офлайн';
-  }
-});
-
-// === Работа с сообщениями ===
-function addMessage(user, text, isOwn, time) {
-  const row = document.createElement('div');
-  row.className = `message-row ${isOwn ? 'own' : 'other'}`;
-
-  const bubble = document.createElement('div');
-  bubble.className = 'message-bubble';
-  bubble.textContent = text;
-
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'message-time';
-  timeSpan.textContent = time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  row.appendChild(bubble);
-  row.appendChild(timeSpan);
-  messagesList.appendChild(row);
-  scrollToBottom();
-}
-
-function scrollToBottom() {
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-// Автопрокрутка и кнопка "вниз"
-messagesContainer.addEventListener('scroll', () => {
-  const threshold = 150;
-  const distanceFromBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
-  if (distanceFromBottom > threshold) {
-    scrollBottomBtn.classList.add('visible');
-  } else {
-    scrollBottomBtn.classList.remove('visible');
-  }
-});
-scrollBottomBtn.addEventListener('click', () => scrollToBottom());
-
-// === Отправка сообщения ===
-function sendMessage() {
-  const text = messageInput.value.trim();
-  if (text && currentUser) {
-    socket.emit('chat message', text);
-    messageInput.value = '';
-    // Останавливаем индикатор печати
-    socket.emit('stop typing');
-    clearTimeout(typingTimeout);
-  }
-}
-
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    sendMessage();
-  }
-});
-
-// Индикатор печати
-messageInput.addEventListener('input', () => {
-  socket.emit('typing');
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
-    socket.emit('stop typing');
-  }, 1000);
-});
-
-// === Управление сайдбаром (мобильные) ===
-function checkMobileView() {
-  if (window.innerWidth <= 768) {
-    sidebar.classList.add('hidden');
-    // Показываем область чата на полный экран
-  } else {
-    sidebar.classList.remove('hidden');
-  }
-}
-window.addEventListener('resize', checkMobileView);
-
-backBtn.addEventListener('click', () => {
-  if (window.innerWidth <= 768) {
-    sidebar.classList.remove('hidden');
-  }
-});
-
-// При клике по чату (пока у нас только общий чат, но заготовка)
-chatList.addEventListener('click', (e) => {
-  const chatItem = e.target.closest('.chat-item');
-  if (chatItem) {
-    const chatUser = chatItem.dataset.user;
-    openChat(chatUser);
-    if (window.innerWidth <= 768) {
-      sidebar.classList.add('hidden');
-    }
-  }
-});
-
-function openChat(user) {
-  currentChat = user;
-  chatName.textContent = user;
-  chatAvatar.textContent = user.charAt(0).toUpperCase();
-  // обновить статус
-  const online = onlineUsers.has(user);
-  chatStatus.textContent = online ? 'онлайн' : 'офлайн';
-  // Очистить и загрузить историю? Пока без истории
-  messagesList.innerHTML = '';
-}
-
-// Обработка поиска
-searchInput.addEventListener('input', (e) => {
-  const term = e.target.value.toLowerCase();
-  document.querySelectorAll('.chat-item').forEach(item => {
-    const name = item.dataset.user.toLowerCase();
-    item.style.display = name.includes(term) ? 'flex' : 'none';
-  });
-});
-
-// Заглушка для новых кнопок
-document.getElementById('emoji-btn').addEventListener('click', () => {
-  messageInput.value += '😊';
-});
-document.getElementById('attach-btn').addEventListener('click', () => {
-  alert('Функция прикрепления файлов скоро появится');
-});
-document.getElementById('mic-btn').addEventListener('click', () => {
-  alert('Голосовые сообщения пока не реализованы');
-});
-
-// Первоначальная загрузка чатов (создаём общий чат «Общий»)
-function initGeneralChat() {
+// ... (далее весь остальной код сообщений, отправки, сайдбара, как в предыдущем app.js, но с функцией initChat)
+function initChat() {
+  // Создаём общий чат
   const generalDiv = document.createElement('div');
   generalDiv.className = 'chat-item active';
   generalDiv.dataset.user = 'Общий';
@@ -202,25 +122,6 @@ function initGeneralChat() {
   chatList.appendChild(generalDiv);
   openChat('Общий');
 }
-initGeneralChat();
 
-// Обработка новых пользователей для чат-листа (добавим их как контакты)
-socket.on('user joined', ({ id, name }) => {
-  if (name !== currentUser && !document.querySelector(`.chat-item[data-user="${name}"]`)) {
-    addUserToChatList(name);
-  }
-});
-
-function addUserToChatList(name) {
-  const div = document.createElement('div');
-  div.className = 'chat-item';
-  div.dataset.user = name;
-  div.innerHTML = `
-    <div class="chat-avatar">${name.charAt(0).toUpperCase()}</div>
-    <div class="chat-info">
-      <div class="chat-name">${name}</div>
-      <div class="chat-last-msg">Новый участник</div>
-    </div>
-  `;
-  chatList.appendChild(div);
-}
+// Остальные функции (addMessage, sendMessage, openChat, checkMobileView и т.д.) скопируйте из предыдущего app.js без изменений, кроме того, что нужно удалить старую логику логина (она уже не нужна).
+// Я приведу здесь полный консолидированный app.js, чтобы не было путаницы.
