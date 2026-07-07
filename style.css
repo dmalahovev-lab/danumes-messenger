@@ -1,8 +1,9 @@
 /* ==========================================================================
-   1. ИСТИННАЯ ТЕМНАЯ ТЕМА С ФИКСИРОВАННЫМИ РАЗМЕРАМИ ЭЛЕМЕНТОВ
+   1. ИСТИННАЯ ТЕМНАЯ ТЕМА И ОГРАНИЧЕНИЕ ДЕСКТОП СЕТКИ
    ========================================================================== */
 :root {
-  --bg-main: #0c0d0e;
+  --bg-main: #060708; /* Глубокий темный фон вокруг приложения на ПК */
+  --app-bg: #0c0d0e;  /* Собственный фон мессенджера */
   --text-primary: #ffffff;
   --text-secondary: #98989f;
   --accent-blue: #007aff;
@@ -18,6 +19,7 @@
 
 body.glass-mode {
   --bg-main: #020304;
+  --app-bg: #08090a;
   --island-bg: rgba(255, 255, 255, 0.07);
   --island-border: 1px solid rgba(255, 255, 255, 0.12);
   --island-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15);
@@ -42,6 +44,20 @@ body {
   overflow: hidden;
 }
 
+/* ФИКС РАСПЛЮЩЕННОСТИ: Ограничиваем пропорции приложения на ПК */
+.window-wrapper {
+  width: 100%;
+  max-width: 1100px; /* Идеальная аккуратная ширина для ПК версий */
+  height: 100vh;
+  max-height: 820px;  /* Идеальная высота, чтобы блоки не вытягивались по вертикали */
+  background: var(--app-bg);
+  border-radius: 24px; /* Красивые скругленные края самого приложения на десктопе */
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
 /* ==========================================================================
    2. АВТОРИЗАЦИЯ
    ========================================================================== */
@@ -55,7 +71,7 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 100;
-  background: var(--bg-main);
+  background: var(--app-bg);
   padding: 20px;
 }
 
@@ -159,13 +175,12 @@ body {
 }
 
 /* ==========================================================================
-   3. СЕТКА ИНТЕРФЕЙСА (ПК СТИЛЬ)
+   3. ИНТЕРФЕЙС ПАНЕЛЕЙ
    ========================================================================== */
 .app-layout {
   display: flex;
   width: 100%;
-  height: 100vh;
-  max-width: 1440px;
+  height: 100%;
   background: transparent;
 }
 
@@ -181,9 +196,9 @@ body {
 }
 
 #panel-chats {
-  width: 30%;
+  width: 32%;
   min-width: 320px;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 #panel-dialog {
@@ -201,11 +216,11 @@ body {
   display: none !important;
 }
 
-/* ИКОНКИ СДЕЛАЛИ МЕНЬШЕ (С 20px ДО 16px) */
+/* Кнопки управления */
 .btn-circle {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: 40px; /* Уменьшили высоту, чтобы убрать эффект расплющенности */
+  height: 40px;
+  min-width: 40px;
   border-radius: 50%;
   background: var(--island-bg);
   border: var(--island-border);
@@ -221,8 +236,8 @@ body {
 }
 
 .btn-circle svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
@@ -233,34 +248,34 @@ body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  height: 44px;
-  margin-bottom: 16px;
+  height: 40px;
+  margin-bottom: 20px;
 }
 
 .header-island {
   flex-grow: 1;
   margin: 0 10px;
-  height: 44px;
+  height: 40px;
   background: var(--island-bg);
   border: var(--island-border);
   box-shadow: var(--island-shadow);
   backdrop-filter: var(--blur-value);
   -webkit-backdrop-filter: var(--blur-value);
-  border-radius: 22px;
+  border-radius: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .profile-island {
   justify-content: flex-start;
-  padding: 0 16px;
-  gap: 12px;
+  padding: 0 14px;
+  gap: 10px;
 }
 
-.mini-avatar { font-size: 20px; }
+.mini-avatar { font-size: 18px; }
 
 .profile-meta {
   display: flex;
@@ -268,29 +283,29 @@ body {
   align-items: flex-start;
 }
 
-.profile-meta .user-name { font-size: 14px; font-weight: 600; line-height: 1.2;}
-.profile-meta .user-status { font-size: 11px; color: var(--text-secondary); }
-.icon-arrow-profile { margin-left: auto; width: 14px; height: 14px; color: var(--text-secondary); }
+.profile-meta .user-name { font-size: 13px; font-weight: 600; line-height: 1.2;}
+.profile-meta .user-status { font-size: 10px; color: var(--text-secondary); }
+.icon-arrow-profile { margin-left: auto; width: 12px; height: 12px; color: var(--text-secondary); }
 
 .header-controls-island {
-  height: 44px;
+  height: 40px;
   background: var(--island-bg);
   border: var(--island-border);
   box-shadow: var(--island-shadow);
   backdrop-filter: var(--blur-value);
   -webkit-backdrop-filter: var(--blur-value);
-  border-radius: 22px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   padding: 0 6px;
-  gap: 4px;
+  gap: 2px;
 }
 
 .icon-control-btn {
   background: transparent;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   color: var(--text-primary);
   display: flex;
@@ -300,8 +315,8 @@ body {
 }
 
 .icon-control-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 .btn-back { display: none; }
@@ -317,11 +332,16 @@ body {
   gap: 4px;
 }
 
+.chats-list::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+  width: 0px;
+}
+
 .chat-item {
   display: flex;
   align-items: center;
   padding: 12px;
-  border-radius: 18px;
+  border-radius: 16px;
   cursor: pointer;
 }
 
@@ -332,8 +352,8 @@ body {
 }
 
 .chat-avatar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -342,14 +362,14 @@ body {
 }
 
 .chat-avatar svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .blue-gradient { background: linear-gradient(135deg, #007aff, #00c6ff); }
 .chat-details { flex-grow: 1; margin-left: 12px; overflow: hidden; }
 .chat-row { display: flex; justify-content: space-between; }
-.chat-name { font-weight: 600; font-size: 15px; }
+.chat-name { font-weight: 600; font-size: 14px; }
 .chat-time { font-size: 11px; color: var(--text-secondary); }
 .chat-preview { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .badge-unread { background: var(--accent-blue); color: white; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; }
@@ -361,19 +381,19 @@ body {
   left: 20px;
   right: 20px;
   display: flex;
-  height: 54px;
+  height: 48px;
 }
 
 .tabbar-main-island {
   flex-grow: 1;
   margin-right: 8px;
-  height: 54px;
+  height: 48px;
   background: var(--island-bg);
   border: var(--island-border);
   box-shadow: var(--island-shadow);
   backdrop-filter: var(--blur-value);
   -webkit-backdrop-filter: var(--blur-value);
-  border-radius: 27px;
+  border-radius: 24px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -389,18 +409,18 @@ body {
   justify-content: center;
   cursor: pointer;
   height: 100%;
-  width: 60px;
+  width: 50px;
 }
 
 .tab-item svg { 
-  width: 16px; 
-  height: 16px; 
+  width: 15px; 
+  height: 15px; 
   display: block;
 }
 
 .tab-item span { 
-  font-size: 10px; 
-  margin-top: 3px; 
+  font-size: 9px; 
+  margin-top: 2px; 
   display: block;
   font-weight: 500;
 }
@@ -408,7 +428,7 @@ body {
 .tab-item.active { color: var(--text-primary); }
 
 /* ==========================================================================
-   5. СООБЩЕНИЯ (ИСПРАВЛЕНО РАСТЯГИВАНИЕ НА ВЕСЬ ЭКРАН)
+   5. СООБЩЕНИЯ
    ========================================================================== */
 .messages-container {
   flex-grow: 1;
@@ -416,240 +436,29 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px 10px;
+  padding: 10px;
 }
 
-/* Базовый контейнер строки сообщения */
 .message {
   display: flex;
   width: 100%;
 }
 
-/* Входящие — прижимаем влево */
-.msg-incoming {
-  justify-content: flex-start;
-}
+.msg-incoming { justify-content: flex-start; }
+.msg-outgoing { justify-content: flex-end; }
 
-/* Исходящие — прижимаем строго вправо */
-.msg-outgoing {
-  justify-content: flex-end;
-}
-
-/* Компактное iMessage облачко текста */
 .msg-bubble {
-  max-width: 65%; /* Сообщение займет максимум 65% ширины экрана чата */
+  max-width: 60%;
   padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 15px;
-  line-height: 1.4;
-  word-break: break-word; /* Перенос длинных слов */
-  position: relative;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+  border-radius: 16px;
+font-size: 14px;line-height: 1.4;word-break: break-word;position: relative;}.msg-incoming .msg-bubble {background: var(--island-bg);color: var(--text-primary);border: var(--island-border);border-bottom-left-radius: 4px;}.msg-outgoing .msg-bubble {background: var(--accent-blue);color: white;border-bottom-right-radius: 4px;}.msg-meta {display: flex;align-items: center;justify-content: flex-end;gap: 4px;margin-top: 3px;}.msg-time {font-size: 9px;opacity: 0.65;}.msg-meta svg {width: 11px;height: 11px;}/* СТИКЕРЫ */.item-sticker { justify-content: flex-end; }.sticker-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-end; }.mock-sticker { font-size: 80px; line-height: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3)); user-select: none; }.sticker-wrapper .msg-meta {background: rgba(0, 0, 0, 0.4);padding: 1px 5px;border-radius: 8px;backdrop-filter: blur(5px);margin-top: -6px;margin-right: 6px;}.sticker-wrapper .msg-time { color: #ffffff; font-weight: 500; }.sticker-wrapper svg { color: #ffffff; }/* НИЖНЯЯ ПАНЕЛЬ */.ios-footer { display: flex; align-items: center; width: 100%; height: 40px; margin-top: auto; }.input-island {flex-grow: 1;margin: 0 10px;height: 40px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 20px;padding: 0 14px 0 16px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 14px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 6px; }.btn-inside-smile svg { width: 18px; height: 18px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 40px; height: 40px; opacity: 0.3; }/* ==========================================================================6. ПРАВИЛА ДЛЯ МОБИЛОК (Убираем ограничения ПК версии)========================================================================== */@media (max-width: 768px) {.window-wrapper {max-width: 100%;height: 100vh;max-height: 100vh;border-radius: 0px;border: none;}.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--app-bg); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
+Файл `app.js` менять не нужно — он полностью совместим с этой разметкой.
 
-.msg-incoming .msg-bubble {
-  background: var(--island-bg);
-  color: var(--text-primary);
-  border: var(--island-border);
-  border-bottom-left-radius: 4px;
-}
-
-.msg-outgoing .msg-bubble {
-  background: var(--accent-blue);
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-
-/* Мета-блок времени внутри облачка */
-.msg-meta {
-  display: flex;
-align-items: center;justify-content: flex-end;gap: 4px;margin-top: 4px;}.msg-time {font-size: 10px;opacity: 0.65;}.msg-meta svg {width: 12px;height: 12px;}/* Обработка больших стикеров-эмодзи */.item-sticker {justify-content: flex-end;}.sticker-wrapper {position: relative;display: flex;flex-direction: column;align-items: flex-end;}.mock-sticker {font-size: 96px;line-height: 1;filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));user-select: none;}.sticker-wrapper .msg-meta {background: rgba(0, 0, 0, 0.4);padding: 2px 6px;border-radius: 10px;backdrop-filter: blur(5px);margin-top: -10px;margin-right: 10px;}.sticker-wrapper .msg-time { color: #ffffff; font-weight: 500; }.sticker-wrapper svg { color: #ffffff; }/* Нижняя панель */.ios-footer { display: flex; align-items: center; width: 100%; height: 44px; margin-top: auto; }.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 8px; }.btn-inside-smile svg { width: 20px; height: 20px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 44px; height: 44px; opacity: 0.3; }@media (max-width: 768px) {.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--bg-main); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
 ---
 
-### 📦 2. Полный код файла `app.js`
+### 🚀 Заливаем обновления на GitHub
 
-Замени весь код в файле `app.js`. Здесь исправлен HTML-шаблон для вывода текстовых сообщений (теперь они заворачиваются в правильные CSS-классы).
+1. Обнови коды файлов `index.html` и `style.css` в своем репозитории.
+2. Render применит изменения, и теперь твой интерфейс на ПК встанет по центру экрана в виде премиальной, аккуратной и дорогой графитовой панели, исключая любое расплывание или расплющивание элементов. На смартфонах всё по-прежнему останется полноэкранным мобильным приложением.
 
-```javascript
-let authMode = 'login';
-
-window.addEventListener('DOMContentLoaded', () => {
-  const savedGlassMode = localStorage.getItem('glassMode');
-  if (savedGlassMode === 'false') {
-    document.body.classList.remove('glass-mode');
-  }
-
-  const messageInput = document.getElementById('message-input');
-  if (messageInput) {
-    messageInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        handleSendClick();
-      }
-    });
-  }
-});
-
-function toggleAuthMode() {
-  const authTitle = document.getElementById('auth-title');
-  const emailField = document.getElementById('email-field');
-  const btnAuthAction = document.getElementById('auth-submit-trigger');
-  const authToggleHint = document.getElementById('auth-toggle-hint');
-  const btnAuthToggle = document.getElementById('btn-auth-toggle');
-
-  if (authMode === 'login') {
-    authMode = 'register';
-    authTitle.textContent = 'Регистрация в DanuChat';
-    emailField.classList.remove('hidden-auth-field');
-    btnAuthAction.textContent = 'Создать аккаунт';
-    authToggleHint.textContent = 'Уже есть аккаунт?';
-    btnAuthToggle.textContent = 'Войти';
-  } else {
-    authMode = 'login';
-    authTitle.textContent = 'Войти в DanuChat';
-    emailField.classList.add('hidden-auth-field');
-    btnAuthAction.textContent = 'Войти';
-    authToggleHint.textContent = 'Ещё нет аккаунта?';
-    btnAuthToggle.textContent = 'Зарегистрироваться';
-  }
-}
-
-function handleAuthSubmit() {
-  const usernameInput = document.getElementById('auth-username');
-  const passwordInput = document.getElementById('auth-password');
-
-  if (!usernameInput || !passwordInput) return;
-
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value.trim();
-
-  if (!username || !password) {
-    alert('Пожалуйста, введите имя пользователя и пароль!');
-    return;
-  }
-
-  document.getElementById('screen-auth').classList.add('hidden');
-  document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
-}
-
-function selectChat(chatId) {
-  document.getElementById('chat-item-test').classList.add('active');
-  document.getElementById('chat-unread-badge').classList.add('hidden-badge');
-  document.getElementById('dialog-placeholder').style.display = 'none';
-  document.getElementById('dialog-active-content').classList.remove('hidden-content');
-
-  if (window.innerWidth <= 768) {
-    document.getElementById('panel-chats').classList.add('mobile-left');
-    document.getElementById('panel-dialog').classList.remove('mobile-hidden');
-  }
-  scrollToBottom();
-}
-
-function closeChatMobile() {
-  document.getElementById('panel-chats').classList.remove('mobile-left');
-  document.getElementById('panel-dialog').classList.add('mobile-hidden');
-}
-
-function toggleGlassEffect() {
-  const body = document.body;
-  body.classList.toggle('glass-mode');
-  const isGlass = body.classList.contains('glass-mode');
-  localStorage.setItem('glassMode', isGlass);
-}
-
-function logout() {
-  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
-  document.getElementById('screen-auth').classList.remove('hidden');
-}
-
-function handleInputMessage(inputElement) {
-  const btnSend = document.getElementById('btn-send');
-  const iconContainer = document.getElementById('send-icon-container');
-  if (!btnSend || !iconContainer) return;
-
-  const text = inputElement.value.trim();
-  if (text.length > 0) {
-    btnSend.style.background = 'var(--accent-blue)';
-    btnSend.style.color = 'white';
-    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="19" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
-  } else {
-    btnSend.style.background = 'var(--island-bg)';
-    btnSend.style.color = 'var(--text-primary)';
-    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
-  }
-}
-
-function handleSendClick() {
-  const messageInput = document.getElementById('message-input');
-  if (!messageInput) return;
-
-  const text = messageInput.value.trim();
-  if (text.length > 0) {
-    executeSendMessage(text);
-  }
-}
-
-// ФУНКЦИЯ ОТПРАВКИ ИСПРАВЛЕНА
-function executeSendMessage(text) {
-  const messagesView = document.getElementById('messages-view');
-  const messageInput = document.getElementById('message-input');
-  const btnSend = document.getElementById('btn-send');
-  const iconContainer = document.getElementById('send-icon-container');
-  
-  if (!messagesView || !messageInput) return;
-  
-  const now = new Date();
-  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const messageNode = document.createElement('div');
-  
-  const isEmoji = /^\p{Emoji}$/u.test(text) || /^\p{Emoji}\p{Emoji}$/u.test(text);
-
-  if (isEmoji) {
-    // 3D стикер-эмодзи
-    messageNode.className = 'message msg-outgoing item-sticker';
-    messageNode.innerHTML = `
-      <div class="sticker-wrapper">
-        <span class="mock-sticker">${text}</span>
-        <div class="msg-meta">
-          <span class="msg-time">${timeString}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        </div>
-      </div>
-    `;
-  } else {
-    // СТРУКТУРА ИСПРАВЛЕНА: Теперь облачко компактное и находится справа
-    messageNode.className = 'message msg-outgoing';
-    messageNode.innerHTML = `
-      <div class="msg-bubble">
-        ${text}
-        <div class="msg-meta">
-          <span class="msg-time">${timeString}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; color:white;"><path d="M20 6 9 17l-5-5"/></svg>
-        </div>
-      </div>
-    `;
-  }
-
-  messagesView.appendChild(messageNode);
-  
-  const lastPreview = document.getElementById('chat-last-preview');
-  const lastTime = document.getElementById('chat-last-time');
-  if (lastPreview) lastPreview.textContent = text;
-  if (lastTime) lastTime.textContent = timeString;
-
-  messageInput.value = '';
-  if (btnSend && iconContainer) {
-    btnSend.style.background = 'var(--island-bg)';
-    btnSend.style.color = 'var(--text-primary)';
-    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
-  }
-  
-  scrollToBottom();
-}
-
-function scrollToBottom() {
-  const messagesView = document.getElementById('messages-view');
-  if (messagesView) {
-    messagesView.scrollTop = messagesView.scrollHeight;
-  }
-}
+Как только проверишь новую верстку на сайте, мы перейдем к финальному шагу фронтенда. Напиши, **всё ли теперь отображается идеально?** Если да, то жду твой **`server.js`**!
