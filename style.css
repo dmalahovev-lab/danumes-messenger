@@ -12,6 +12,10 @@
   --island-shadow: 0 10px 25px rgba(140, 125, 125, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.6);
   --blur-value: blur(25px);
   
+  /* Фикс цвета кнопки для светлой темы */
+  --btn-auth-bg: #1c1c1e;
+  --btn-auth-text: #ffffff;
+
   --msg-in-bg: transparent;
   --msg-out-bg: transparent;
 }
@@ -23,6 +27,10 @@ body.glass-mode {
   --island-bg: rgba(255, 255, 255, 0.07);
   --island-border: 1px solid rgba(255, 255, 255, 0.12);
   --island-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  
+  /* Фикс цвета кнопки для темной темы */
+  --btn-auth-bg: #ffffff;
+  --btn-auth-text: #1c1c1e;
 }
 
 * {
@@ -45,7 +53,7 @@ body {
 }
 
 /* ==========================================================================
-   2. СТИЛИЗАЦИЯ ФОРМЫ ВХОДА
+   2. СТИЛИЗАЦИЯ ФОРМЫ ВХОДА (ИСПРАВЛЕНО)
    ========================================================================== */
 .auth-container {
   position: absolute;
@@ -112,8 +120,8 @@ body {
 .auth-input-wrapper {
   width: 100%;
   height: 48px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 0 16px;
   display: flex;
@@ -121,8 +129,8 @@ body {
 }
 
 body.glass-mode .auth-input-wrapper {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .auth-input-wrapper input {
@@ -138,17 +146,23 @@ body.glass-mode .auth-input-wrapper {
   display: none !important;
 }
 
+/* ФИКС СЛИВАЮЩЕЙСЯ БЕЛОЙ КНОПКИ */
 .btn-auth-submit {
   width: 100%;
   height: 48px;
-  background: var(--text-primary);
-  color: var(--bg-main);
+  background: var(--btn-auth-bg);
+  color: var(--btn-auth-text);
   border: none;
   border-radius: 14px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.btn-auth-submit:hover {
+  opacity: 0.9;
 }
 
 .auth-toggle-text {
@@ -212,7 +226,6 @@ body.glass-mode #panel-chats {
   display: none !important;
 }
 
-/* Круглые глянцевые кнопки-островки */
 .btn-circle {
   width: 44px;
   height: 44px;
@@ -239,7 +252,6 @@ body.glass-mode #panel-chats {
   transform: scale(0.9);
 }
 
-/* Шапки модулей */
 .ios-header {
   display: flex;
   justify-content: space-between;
@@ -248,7 +260,6 @@ body.glass-mode #panel-chats {
   margin-bottom: 16px;
 }
 
-/* Капсульный островок */
 .header-island {
   flex-grow: 1;
   margin: 0 10px;
@@ -266,7 +277,6 @@ body.glass-mode #panel-chats {
   font-size: 15px;
 }
 
-/* Объединенный островок профиля */
 .profile-island {
   justify-content: flex-start;
   padding: 0 16px;
@@ -302,7 +312,6 @@ body.glass-mode #panel-chats {
   color: var(--text-secondary);
 }
 
-/* Островок управления */
 .header-controls-island {
   height: 44px;
   background: var(--island-bg);
@@ -461,7 +470,7 @@ body.glass-mode #panel-chats {
 .tab-item.active { color: var(--text-primary); }
 
 /* ==========================================================================
-   5. СТИЛИЗАЦИЯ СТИКЕРОВ И ВВОДА С ФОТО
+   5. СТИЛИЗАЦИЯ СТИКЕРОВ И ВВОДА
    ========================================================================== */
 .messages-container {
   flex-grow: 1;
@@ -496,17 +505,7 @@ body.glass-mode #panel-chats {
   gap: 3px;
   background: rgba(255, 255, 255, 0.4);
   padding: 2px 6px;
-  border-radius: 10px;
-  backdrop-filter: blur(5px);
-  margin-top: -10px;
-  margin-right: 10px;
-}
-
-.sticker-wrapper .msg-time {
-  font-size: 10px;
-  color: #1c1c1e;
-  font-weight: 500;
-}.sticker-wrapper svg {width: 12px;height: 12px;color: #1c1c1e;}.ios-footer {display: flex;align-items: center;width: 100%;padding-top: 10px;}.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input {width: 100%;background: transparent;border: none;outline: none;color: var(--text-primary);font-size: 15px;}.btn-inside-smile {background: transparent;border: none;color: var(--text-secondary);cursor: pointer;display: flex;align-items: center;padding-left: 8px;}.btn-inside-smile svg {width: 20px;height: 20px;}.dialog-empty-state {width: 100%;height: 100%;display: flex;flex-direction: column;justify-content: center;align-items: center;color: var(--text-secondary);gap: 12px;}@media (max-width: 768px) {.messenger-panel {width: 100% !important;position: absolute;top: 0;left: 0;background: var(--bg-main);transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;}.mobile-hidden {transform: translateX(100%);opacity: 0;}#panel-chats.mobile-left {transform: translateX(-100%);opacity: 0;}.btn-back {display: flex;}#dialog-placeholder {display: none;}.hidden-content {display: flex !important;}}
+border-radius: 10px;backdrop-filter: blur(5px);margin-top: -10px;margin-right: 10px;}.sticker-wrapper .msg-time {font-size: 10px;color: #1c1c1e;font-weight: 500;}.sticker-wrapper svg {width: 12px;height: 12px;color: #1c1c1e;}.ios-footer {display: flex;align-items: center;width: 100%;padding-top: 10px;}.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input {width: 100%;background: transparent;border: none;outline: none;color: var(--text-primary);font-size: 15px;}.btn-inside-smile {background: transparent;border: none;color: var(--text-secondary);cursor: pointer;display: flex;align-items: center;padding-left: 8px;}.btn-inside-smile svg {width: 20px;height: 20px;}.dialog-empty-state {width: 100%;height: 100%;display: flex;flex-direction: column;justify-content: center;align-items: center;color: var(--text-secondary);gap: 12px;}@media (max-width: 768px) {.messenger-panel {width: 100% !important;position: absolute;top: 0;left: 0;background: var(--bg-main);transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;}.mobile-hidden {transform: translateX(100%);opacity: 0;}#panel-chats.mobile-left {transform: translateX(-100%);opacity: 0;}.btn-back {display: flex;}#dialog-placeholder {display: none;}.hidden-content {display: flex !important;}}
 ---
 
 ### 🧠 3. Полный код файла `app.js`
@@ -514,22 +513,103 @@ body.glass-mode #panel-chats {
 ```javascript
 let authMode = 'login';
 
+// Железобетонное навешивание обработчиков событий (Фикс неработающих кнопок)
 window.addEventListener('DOMContentLoaded', () => {
+  // 1. Инициализация иконок Lucide
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
+
+  // 2. Восстановление сохраненного режима стекла
   const savedGlassMode = localStorage.getItem('glassMode');
   if (savedGlassMode === 'false') {
     document.body.classList.remove('glass-mode');
   }
+
+  // 3. Навешивание события на переключатель "Войти / Зарегистрироваться"
+  const toggleBtn = document.getElementById('btn-auth-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleAuthMode);
+  }
+
+  // 4. Навешивание события на сабмит формы авторизации
+  const submitBtn = document.getElementById('auth-submit-trigger');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', handleAuthSubmit);
+  }
+
+  // 5. Клик по кнопке выхода из аккаунта
+  const logoutBtn = document.getElementById('logout-trigger');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+  }
+
+  // 6. Клик по кнопке переключения стеклянного режима
+  const glassToggleBtn = document.getElementById('glass-toggle-trigger');
+  if (glassToggleBtn) {
+    glassToggleBtn.addEventListener('click', toggleGlassEffect);
+  }
+
+  // 7. Клик по чату в списке
+  const testChatItem = document.getElementById('chat-item-test');
+  if (testChatItem) {
+    testChatItem.addEventListener('click', () => selectChat('test-id'));
+  }
+
+  // 8. Кнопка возврата к чатам на мобилках
+  const backToChatsBtn = document.getElementById('back-to-chats-trigger');
+  if (backToChatsBtn) {
+    backToChatsBtn.addEventListener('click', closeChatMobile);
+  }
+
+  // 9. Кнопка микрофона / отправки сообщения
+  const sendBtn = document.getElementById('btn-send');
+  if (sendBtn) {
+    sendBtn.addEventListener('click', handleSendClick);
+  }
+
+  // 10. Логика ввода текста в инпут
+  const messageInput = document.getElementById('message-input');
+  if (messageInput) {
+    messageInput.addEventListener('input', (e) => {
+      const btnSend = document.getElementById('btn-send');
+      const micIcon = document.getElementById('mic-icon');
+      if (!btnSend || !micIcon) return;
+
+      const text = e.target.value.trim();
+      if (text.length > 0) {
+        btnSend.style.background = 'var(--accent-blue)';
+        btnSend.style.color = 'white';
+        micIcon.setAttribute('data-lucide', 'arrow-up');
+      } else {
+        btnSend.style.background = 'var(--island-bg)';
+        btnSend.style.color = 'var(--text-primary)';
+        micIcon.setAttribute('data-lucide', 'mic');
+      }
+      lucide.createIcons();
+    });
+
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        const text = messageInput.value.trim();
+        if (text.length > 0) {
+          executeSendMessage(text);
+        }
+      }
+    });
+  }
 });
 
+// Переключение режимов работы формы авторизации
 function toggleAuthMode() {
   const authTitle = document.getElementById('auth-title');
   const emailField = document.getElementById('email-field');
-  const btnAuthAction = document.getElementById('btn-auth-action');
+  const btnAuthAction = document.getElementById('auth-submit-trigger');
   const authToggleHint = document.getElementById('auth-toggle-hint');
   const btnAuthToggle = document.getElementById('btn-auth-toggle');
+
+  if (!authTitle || !emailField || !btnAuthAction || !authToggleHint || !btnAuthToggle) return;
 
   if (authMode === 'login') {
     authMode = 'register';
@@ -548,7 +628,7 @@ function toggleAuthMode() {
   }
 }
 
-// ИСПРАВЛЕННАЯ НАЖАТИЕ КНОПКИ АВТОРИЗАЦИИ
+// Сабмит формы авторизации
 function handleAuthSubmit() {
   const usernameInput = document.getElementById('auth-username');
   const passwordInput = document.getElementById('auth-password');
@@ -563,19 +643,23 @@ function handleAuthSubmit() {
     return;
   }
 
-  // Скрываем форму и показываем интерфейс
   document.getElementById('screen-auth').classList.add('hidden');
   document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
   
-  // Обновляем иконки, чтобы аватарки корректно отобразили силуэт человека
   lucide.createIcons();
 }
 
+// Выбор конкретного чата
 function selectChat(chatId) {
-  document.getElementById('chat-item-test').classList.add('active');
-  document.getElementById('chat-unread-badge').classList.add('hidden-badge');
-  document.getElementById('dialog-placeholder').style.display = 'none';
-  document.getElementById('dialog-active-content').classList.remove('hidden-content');
+  const testChatItem = document.getElementById('chat-item-test');
+  const unreadBadge = document.getElementById('chat-unread-badge');
+  const placeholder = document.getElementById('dialog-placeholder');
+  const activeContent = document.getElementById('dialog-active-content');
+
+  if (testChatItem) testChatItem.classList.add('active');
+  if (unreadBadge) unreadBadge.classList.add('hidden-badge');
+  if (placeholder) placeholder.style.display = 'none';
+  if (activeContent) activeContent.classList.remove('hidden-content');
 
   if (window.innerWidth <= 768) {
     document.getElementById('panel-chats').classList.add('mobile-left');
@@ -601,37 +685,9 @@ function toggleGlassEffect() {
   localStorage.setItem('glassMode', isGlass);
 }
 
-const messageInput = document.getElementById('message-input');
-const btnSend = document.getElementById('btn-send');
-const micIcon = document.getElementById('mic-icon');
-
-if (messageInput) {
-  messageInput.addEventListener('input', (e) => {
-    const text = e.target.value.trim();
-    if (text.length > 0) {
-      btnSend.style.background = 'var(--accent-blue)';
-      btnSend.style.color = 'white';
-      micIcon.setAttribute('data-lucide', 'arrow-up');
-    } else {
-      btnSend.style.background = 'var(--island-bg)';
-      btnSend.style.color = 'var(--text-primary)';
-      micIcon.setAttribute('data-lucide', 'mic');
-    }
-    lucide.createIcons();
-  });
-
-  messageInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      const text = messageInput.value.trim();
-      if (text.length > 0) {
-        executeSendMessage(text);
-      }
-    }
-  });
-}
-
 function handleSendClick() {
+  const messageInput = document.getElementById('message-input');
+  if (!messageInput) return;
   const text = messageInput.value.trim();
   if (text.length > 0) {
     executeSendMessage(text);
@@ -640,7 +696,11 @@ function handleSendClick() {
 
 function executeSendMessage(text) {
   const messagesView = document.getElementById('messages-view');
-  if (!messagesView) return;
+  const messageInput = document.getElementById('message-input');
+  const btnSend = document.getElementById('btn-send');
+  const micIcon = document.getElementById('mic-icon');
+  
+  if (!messagesView || !messageInput) return;
   
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -674,13 +734,18 @@ function executeSendMessage(text) {
   }
 
   messagesView.appendChild(messageNode);
-  document.getElementById('chat-last-preview').textContent = text;
-  document.getElementById('chat-last-time').textContent = timeString;
+  
+  const lastPreview = document.getElementById('chat-last-preview');
+  const lastTime = document.getElementById('chat-last-time');
+  if (lastPreview) lastPreview.textContent = text;
+  if (lastTime) lastTime.textContent = timeString;
 
   messageInput.value = '';
-  btnSend.style.background = 'var(--island-bg)';
-  btnSend.style.color = 'var(--text-primary)';
-  micIcon.setAttribute('data-lucide', 'mic');
+  if (btnSend && micIcon) {
+    btnSend.style.background = 'var(--island-bg)';
+    btnSend.style.color = 'var(--text-primary)';
+    micIcon.setAttribute('data-lucide', 'mic');
+  }
   
   lucide.createIcons();
   scrollToBottom();
