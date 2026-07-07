@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. ИСТИННАЯ ТЕМНАЯ ТЕМА И ГРАФИТОВЫЕ ОСТРОВКИ
+   1. ИСТИННАЯ ТЕМНАЯ ТЕМА С ФИКСИРОВАННЫМИ РАЗМЕРАМИ ЭЛЕМЕНТОВ
    ========================================================================== */
 :root {
   --bg-main: #0c0d0e;
@@ -16,7 +16,6 @@
   --msg-out-bg: rgba(0, 122, 255, 0.15);
 }
 
-/* Режим Жидкого Матового Стекла (Glass Mode) */
 body.glass-mode {
   --bg-main: #020304;
   --island-bg: rgba(255, 255, 255, 0.07);
@@ -44,7 +43,7 @@ body {
 }
 
 /* ==========================================================================
-   2. ФОРМА АВТОРИЗАЦИИ
+   2. АВТОРИЗАЦИЯ
    ========================================================================== */
 .auth-container {
   position: absolute;
@@ -160,7 +159,7 @@ body {
 }
 
 /* ==========================================================================
-   3. СЕТКА ИНТЕРФЕЙСА (ПРАВИЛЬНЫЙ ДЕСКТОП СТИЛЬ)
+   3. СЕТКА ИНТЕРФЕЙСА (ПК СТИЛЬ)
    ========================================================================== */
 .app-layout {
   display: flex;
@@ -202,10 +201,11 @@ body {
   display: none !important;
 }
 
-/* Кнопки-капсулы */
+/* Фиксированные размеры круглых кнопок и встроенных SVG */
 .btn-circle {
   width: 44px;
   height: 44px;
+  min-width: 44px;
   border-radius: 50%;
   background: var(--island-bg);
   border: var(--island-border);
@@ -220,6 +220,12 @@ body {
   transition: transform 0.2s ease;
 }
 
+.btn-circle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .btn-circle:active { transform: scale(0.9); }
 
 .ios-header {
@@ -227,6 +233,7 @@ body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  height: 44px;
   margin-bottom: 16px;
 }
 
@@ -261,7 +268,7 @@ body {
   align-items: flex-start;
 }
 
-.profile-meta .user-name { font-size: 14px; font-weight: 600; }
+.profile-meta .user-name { font-size: 14px; font-weight: 600; line-height: 1.2;}
 .profile-meta .user-status { font-size: 11px; color: var(--text-secondary); }
 .icon-arrow-profile { margin-left: auto; width: 14px; height: 14px; color: var(--text-secondary); }
 
@@ -292,10 +299,15 @@ body {
   cursor: pointer;
 }
 
+.icon-control-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .btn-back { display: none; }
 
 /* ==========================================================================
-   4. СПИСОК ЧАТОВ И НИЖНИЙ ТАББАР
+   4. СПИСОК ЧАТОВ И ФИКСИРОВАННЫЙ ТАББАР
    ========================================================================== */
 .chats-list {
   flex-grow: 1;
@@ -329,6 +341,11 @@ body {
   color: white;
 }
 
+.chat-avatar svg {
+  width: 20px;
+  height: 20px;
+}
+
 .blue-gradient { background: linear-gradient(135deg, #007aff, #00c6ff); }
 .chat-details { flex-grow: 1; margin-left: 12px; overflow: hidden; }
 .chat-row { display: flex; justify-content: space-between; }
@@ -344,6 +361,7 @@ body {
   left: 20px;
   right: 20px;
   display: flex;
+  height: 54px;
 }
 
 .tabbar-main-island {
@@ -361,6 +379,7 @@ body {
   align-items: center;
 }
 
+/* Стилизация внутренних кнопок меню (Текст больше не падает!) */
 .tab-item {
   background: transparent;
   border: none;
@@ -368,11 +387,25 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
+  height: 100%;
+  width: 60px;
 }
 
-.tab-item svg { width: 18px; height: 18px; }
-.tab-item span { font-size: 9px; margin-top: 2px; }
+.tab-item svg { 
+  width: 20px; 
+  height: 20px; 
+  display: block;
+}
+
+.tab-item span { 
+  font-size: 10px; 
+  margin-top: 3px; 
+  display: block;
+  font-weight: 500;
+}
+
 .tab-item.active { color: var(--text-primary); }
 
 /* ==========================================================================
@@ -406,25 +439,13 @@ body {
 .sticker-wrapper .msg-time { font-size: 10px; color: #ffffff; font-weight: 500; }
 .sticker-wrapper svg { width: 12px; height: 12px; color: #ffffff; }
 
-.ios-footer { display: flex; align-items: center; width: 100%; padding-top: 10px; }
+.ios-footer { display: flex; align-items: center; width: 100%; height: 44px; padding-top: 0px; margin-top: auto; }
 
 .input-island {
   flex-grow: 1;
   margin: 0 10px;
   height: 44px;
-  background: var(--island-bg);
-  border: var(--island-border);
-  box-shadow: var(--island-shadow);
-  backdrop-filter: var(--blur-value);
-  -webkit-backdrop-filter: var(--blur-value);
-  border-radius: 22px;
-  padding: 0 14px 0 18px;
-  display: flex;
-  align-items: center;
-}
-
-.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }
-.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 8px; }.btn-inside-smile svg { width: 20px; height: 20px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }@media (max-width: 768px) {.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--bg-main); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
+background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 8px; }.btn-inside-smile svg { width: 22px; height: 22px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 44px; height: 44px; opacity: 0.3; }@media (max-width: 768px) {.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--bg-main); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
 ---
 
 ### 🧠 3. Полный код файла `app.js`
@@ -432,16 +453,7 @@ body {
 ```javascript
 let authMode = 'login';
 
-// Функция рендеринга иконок библиотеки Lucide
-function refreshIcons() {
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-}
-
 window.addEventListener('DOMContentLoaded', () => {
-  refreshIcons();
-
   const savedGlassMode = localStorage.getItem('glassMode');
   if (savedGlassMode === 'false') {
     document.body.classList.remove('glass-mode');
@@ -498,8 +510,6 @@ function handleAuthSubmit() {
 
   document.getElementById('screen-auth').classList.add('hidden');
   document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
-  
-  refreshIcons();
 }
 
 function selectChat(chatId) {
@@ -512,8 +522,6 @@ function selectChat(chatId) {
     document.getElementById('panel-chats').classList.add('mobile-left');
     document.getElementById('panel-dialog').classList.remove('mobile-hidden');
   }
-  
-  refreshIcons();
   scrollToBottom();
 }
 
@@ -522,11 +530,7 @@ function closeChatMobile() {
   document.getElementById('panel-dialog').classList.add('mobile-hidden');
 }
 
-function logout() {
-  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
-  document.getElementById('screen-auth').classList.remove('hidden');
-}
-
+// Переключение жидкого стекла
 function toggleGlassEffect() {
   const body = document.body;
   body.classList.toggle('glass-mode');
@@ -534,22 +538,29 @@ function toggleGlassEffect() {
   localStorage.setItem('glassMode', isGlass);
 }
 
+function logout() {
+  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
+  document.getElementById('screen-auth').classList.remove('hidden');
+}
+
+// ФИКС ТЕКСТОВОГО ВВОДА БЕЗ СТОРОННИХ БИБЛИОТЕК
 function handleInputMessage(inputElement) {
   const btnSend = document.getElementById('btn-send');
-  const micIcon = document.getElementById('mic-icon');
-  if (!btnSend || !micIcon) return;
+  const iconContainer = document.getElementById('send-icon-container');
+  if (!btnSend || !iconContainer) return;
 
   const text = inputElement.value.trim();
   if (text.length > 0) {
     btnSend.style.background = 'var(--accent-blue)';
     btnSend.style.color = 'white';
-    micIcon.setAttribute('data-lucide', 'arrow-up');
+    // Заменяем микрофон на SVG стрелочку вверх (iOS стиль)
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="19" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
   } else {
     btnSend.style.background = 'var(--island-bg)';
     btnSend.style.color = 'var(--text-primary)';
-    micIcon.setAttribute('data-lucide', 'mic');
+    // Возвращаем микрофон обратно
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
   }
-  refreshIcons();
 }
 
 function handleSendClick() {
@@ -566,14 +577,15 @@ function executeSendMessage(text) {
   const messagesView = document.getElementById('messages-view');
   const messageInput = document.getElementById('message-input');
   const btnSend = document.getElementById('btn-send');
-  const micIcon = document.getElementById('mic-icon');
+  const iconContainer = document.getElementById('send-icon-container');
   
   if (!messagesView || !messageInput) return;
   
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   const messageNode = document.createElement('div');
+  
+  // Регулярка для проверки смайликов
   const isEmoji = /^\p{Emoji}$/u.test(text) || /^\p{Emoji}\p{Emoji}$/u.test(text);
 
   if (isEmoji) {
@@ -583,7 +595,7 @@ function executeSendMessage(text) {
         <span class="mock-sticker">${text}</span>
         <div class="msg-meta">
           <span class="msg-time">${timeString}</span>
-          <i data-lucide="check" class="icon-status-read"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
       </div>
     `;
@@ -593,9 +605,9 @@ function executeSendMessage(text) {
     messageNode.innerHTML = `
       <div class="msg-bubble" style="background: var(--accent-blue); color: white; border-bottom-right-radius: 6px; padding: 12px 16px; border: var(--island-border)">
         ${text}
-        <div class="msg-meta" style="justify-content: flex-end; display: flex; gap: 4px; margin-top: 4px;">
+        <div class="msg-meta" style="justify-content: flex-end; display: flex; gap: 4px; margin-top: 4px; background: transparent; padding: 0; backdrop-filter: none;">
           <span class="msg-time" style="color: rgba(255,255,255,0.7); font-size: 10px;">${timeString}</span>
-          <i data-lucide="check" style="color: white; width:12px; height:12px;"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; color:white;"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
       </div>
     `;
@@ -609,13 +621,12 @@ function executeSendMessage(text) {
   if (lastTime) lastTime.textContent = timeString;
 
   messageInput.value = '';
-  if (btnSend && micIcon) {
+  if (btnSend && iconContainer) {
     btnSend.style.background = 'var(--island-bg)';
     btnSend.style.color = 'var(--text-primary)';
-    micIcon.setAttribute('data-lucide', 'mic');
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
   }
   
-  refreshIcons();
   scrollToBottom();
 }
 
