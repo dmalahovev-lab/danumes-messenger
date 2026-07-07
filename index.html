@@ -4,22 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DanuChat Premium</title>
-  
-  <!-- Шрифт Inter -->
   <link rel="preconnect" href="https://googleapis.com">
   <link rel="preconnect" href="https://gstatic.com" crossorigin>
   <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Иконки Lucide -->
-  <script src="https://unpkg.com"></script>
-  
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="glass-mode">
 
-  <!-- ============================================= -->
-  <!-- ЭКРАН 0: АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ -->
-  <!-- ============================================= -->
+  <!-- ЭКРАН АВТОРИЗАЦИИ -->
   <div id="screen-auth" class="auth-container">
     <div class="auth-island">
       <div class="auth-logo">D</div>
@@ -35,7 +27,6 @@
         <div class="auth-input-wrapper">
           <input type="password" id="auth-password" placeholder="Пароль">
         </div>
-        
         <button class="btn-auth-submit" id="auth-submit-trigger" onclick="handleAuthSubmit()">Войти</button>
       </div>
 
@@ -46,28 +37,25 @@
     </div>
   </div>
 
-  <!-- ============================================= -->
-  <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
-  <!-- ============================================= -->
+  <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
   <div id="main-messenger-layout" class="app-layout auth-hidden">
     
-    <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ -->
+    <!-- ЛЕВАЯ ПАНЕЛЬ -->
     <aside id="panel-chats" class="messenger-panel">
       <header class="ios-header">
         <button class="btn-circle avatar-main" onclick="logout()">
-          <i data-lucide="user"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
         <div class="header-island">Чаты</div>
         <button class="btn-circle btn-action">
-          <i data-lucide="square-pen"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </button>
       </header>
 
-      <!-- Список диалогов -->
       <main class="chats-list">
         <div id="chat-item-test" class="chat-item" onclick="selectChat('test-id')">
           <div class="chat-avatar blue-gradient">
-            <i data-lucide="user"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div class="chat-details">
             <div class="chat-row">
@@ -82,44 +70,40 @@
         </div>
       </main>
 
-      <!-- Нижний Таб-бар (ИКОНКИ ВЕРНУЛИСЬ) -->
       <nav class="ios-tabbar">
         <div class="tabbar-main-island">
           <button class="tab-item">
-            <i data-lucide="user"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span>Вы</span>
           </button>
           <button class="tab-item active">
-            <i data-lucide="message-square"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>Чаты</span>
           </button>
           <button class="tab-item" onclick="toggleGlassEffect()">
-            <i data-lucide="sliders"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/></svg>
             <span>Стекло</span>
           </button>
         </div>
         <button class="btn-circle btn-search">
-          <i data-lucide="search"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
       </nav>
     </aside>
 
-    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ -->
+    <!-- ПРАВАЯ ПАНЕЛЬ -->
     <section id="panel-dialog" class="messenger-panel mobile-hidden">
-      
-      <!-- Заглушка на ПК -->
       <div id="dialog-placeholder" class="dialog-empty-state">
-        <div class="placeholder-icon"><i data-lucide="message-square-dashed"></i></div>
+        <div class="placeholder-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
         <p>Выберите чат, чтобы начать общение</p>
       </div>
 
-      <!-- Контент чата -->
       <div id="dialog-active-content" class="dialog-content-wrapper hidden-content">
-        
-        <!-- Шапка -->
         <header class="ios-header">
           <button class="btn-circle btn-back" onclick="closeChatMobile()">
-            <i data-lucide="chevron-left"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           
           <div class="header-island profile-island">
@@ -128,44 +112,50 @@
               <span class="user-name">Test</span>
               <span class="user-status">был(а) 1 ч. назад</span>
             </div>
-            <i data-lucide="chevron-right" class="icon-arrow-profile"></i>
+            <svg class="icon-arrow-profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
           </div>
           
           <div class="header-controls-island">
-            <button class="icon-control-btn"><i data-lucide="phone"></i></button>
-            <button class="icon-control-btn"><i data-lucide="ellipsis"></i></button>
+            <button class="icon-control-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </button>
+            <button class="icon-control-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
           </div>
         </header>
 
-        <!-- Область сообщений -->
         <main class="messages-container" id="messages-view">
           <div class="message msg-outgoing item-sticker">
             <div class="sticker-wrapper">
               <span class="mock-sticker">🐮😂</span>
               <div class="msg-meta">
                 <span class="msg-time">04:03</span>
-                <i data-lucide="check" class="icon-status-read"></i>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
               </div>
             </div>
           </div>
         </main>
 
-        <!-- Нижняя панель ввода -->
         <footer class="ios-footer">
           <button class="btn-circle btn-plus">
-            <i data-lucide="plus"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
           </button>
           
           <div class="input-island">
             <input type="text" placeholder="Сообщение..." id="message-input" autocomplete="off" oninput="handleInputMessage(this)">
-            <button class="btn-inside-smile"><i data-lucide="smile"></i></button>
+            <button class="btn-inside-smile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+            </button>
           </div>
           
           <button class="btn-circle btn-mic" id="btn-send" onclick="handleSendClick()">
-            <i data-lucide="mic" id="mic-icon"></i>
+            <!-- Внутри один тег под иконку, который мы будем менять через внутренний SVG -->
+            <span id="send-icon-container" style="display:flex; justify-content:center; align-items:center; width:100%; height:100%;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </span>
           </button>
         </footer>
-        
       </div>
     </section>
 
