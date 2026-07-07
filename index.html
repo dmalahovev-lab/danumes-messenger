@@ -11,7 +11,6 @@
 </head>
 <body class="glass-mode">
 
-  <!-- Главная обертка для центрирования всего мессенджера на ПК -->
   <div class="window-wrapper">
 
     <!-- ЭКРАН АВТОРИЗАЦИИ -->
@@ -43,18 +42,19 @@
     <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
     <div id="main-messenger-layout" class="app-layout auth-hidden">
       
-      <!-- ЛЕВАЯ ПАНЕЛЬ -->
+      <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ И ТАБ-БАР ВНУТРИ -->
       <aside id="panel-chats" class="messenger-panel">
         <header class="ios-header">
           <button class="btn-circle avatar-main" onclick="logout()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </button>
           <div class="header-island">Чаты</div>
-          <button class="btn-circle btn-action">
+          <button class="btn-circle btn-action" onclick="alert('Создание группы/чата (В разработке)')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           </button>
         </header>
 
+        <!-- Прокручиваемый список -->
         <main class="chats-list">
           <div id="chat-item-test" class="chat-item" onclick="selectChat('test-id')">
             <div class="chat-avatar blue-gradient">
@@ -73,9 +73,10 @@
           </div>
         </main>
 
+        <!-- ТАБ-БАР ТЕПЕРЬ ЖИВЕТ СТРОГО ТУТ (В ЛЕВОЙ ЧАСТИ) -->
         <nav class="ios-tabbar">
           <div class="tabbar-main-island">
-            <button class="tab-item">
+            <button class="tab-item" onclick="alert('Ваш профиль в разработке')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               <span>Вы</span>
             </button>
@@ -88,13 +89,13 @@
               <span>Стекло</span>
             </button>
           </div>
-          <button class="btn-circle btn-search">
+          <button class="btn-circle btn-search" onclick="alert('Поиск чатов (В разработке)')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </button>
         </nav>
       </aside>
 
-      <!-- ПРАВАЯ ПАНЕЛЬ -->
+      <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ -->
       <section id="panel-dialog" class="messenger-panel mobile-hidden">
         <div id="dialog-placeholder" class="dialog-empty-state">
           <div class="placeholder-icon">
@@ -109,7 +110,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             
-            <div class="header-island profile-island">
+            <div class="header-island profile-island" onclick="alert('Информация о пользователе')">
               <div class="mini-avatar">🐮</div>
               <div class="profile-meta">
                 <span class="user-name">Test</span>
@@ -119,16 +120,26 @@
             </div>
             
             <div class="header-controls-island">
-              <button class="icon-control-btn">
+              <button class="icon-control-btn" onclick="alert('Звонки временно недоступны')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               </button>
-              <button class="icon-control-btn">
+              <button class="icon-control-btn" onclick="alert('Настройки чата (В разработке)')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
               </button>
             </div>
           </header>
 
           <main class="messages-container" id="messages-view">
+            <!-- Скрытая всплывающая панель смайликов внутри чата -->
+            <div id="emoji-picker-popup" class="emoji-picker-card hidden-emoji">
+              <span class="emoji-opt" onclick="insertEmoji('🐮')">🐮</span>
+              <span class="emoji-opt" onclick="insertEmoji('😂')">😂</span>
+              <span class="emoji-opt" onclick="insertEmoji('🔥')">🔥</span>
+              <span class="emoji-opt" onclick="insertEmoji('❤️')">❤️</span>
+              <span class="emoji-opt" onclick="insertEmoji('👍')">👍</span>
+              <span class="emoji-opt" onclick="insertEmoji('💩')">💩</span>
+            </div>
+
             <div class="message msg-outgoing item-sticker">
               <div class="sticker-wrapper">
                 <span class="mock-sticker">🐮😂</span>
@@ -141,13 +152,13 @@
           </main>
 
           <footer class="ios-footer">
-            <button class="btn-circle btn-plus">
+            <button class="btn-circle btn-plus" onclick="triggerAttachFile()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
             </button>
             
             <div class="input-island">
               <input type="text" placeholder="Сообщение..." id="message-input" autocomplete="off" oninput="handleInputMessage(this)">
-              <button class="btn-inside-smile">
+              <button class="btn-inside-smile" onclick="toggleEmojiPicker()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
               </button>
             </div>
