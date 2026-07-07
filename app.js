@@ -1,20 +1,11 @@
-// Переменная текущего режима входа
 let authMode = 'login';
 
-// Запуск при старте страницы
 window.addEventListener('DOMContentLoaded', () => {
-  // Перерисовываем иконки Lucide
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-  
-  // Проверяем режим стекла
   const savedGlassMode = localStorage.getItem('glassMode');
   if (savedGlassMode === 'false') {
     document.body.classList.remove('glass-mode');
   }
 
-  // Навешиваем Enter на поле ввода сообщения, если оно есть
   const messageInput = document.getElementById('message-input');
   if (messageInput) {
     messageInput.addEventListener('keydown', (event) => {
@@ -26,7 +17,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Переключатель "Войти" / "Зарегистрироваться"
 function toggleAuthMode() {
   const authTitle = document.getElementById('auth-title');
   const emailField = document.getElementById('email-field');
@@ -51,65 +41,41 @@ function toggleAuthMode() {
   }
 }
 
-// Нажатие на кнопку Войти / Создать аккаунт
 function handleAuthSubmit() {
   const usernameInput = document.getElementById('auth-username');
   const passwordInput = document.getElementById('auth-password');
-
   if (!usernameInput || !passwordInput) return;
 
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
 
   if (!username || !password) {
-    alert('Пожалуйста, введите имя пользователя и пароль!');
+    alert('Пожалуйста, введите данные!');
     return;
   }
 
-  // Пропускаем в мессенджер
   document.getElementById('screen-auth').classList.add('hidden');
   document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
-  
-  // Обновляем иконки внутри мессенджера
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
 }
 
-// Открытие чата из списка
 function selectChat(chatId) {
-  const testChatItem = document.getElementById('chat-item-test');
-  const unreadBadge = document.getElementById('chat-unread-badge');
-  const placeholder = document.getElementById('dialog-placeholder');
-  const activeContent = document.getElementById('dialog-active-content');
+  document.getElementById('chat-item-test').classList.add('active');
+  document.getElementById('chat-unread-badge').classList.add('hidden-badge');
+  document.getElementById('dialog-placeholder').style.display = 'none';
+  document.getElementById('dialog-active-content').classList.remove('hidden-content');
 
-  if (testChatItem) testChatItem.classList.add('active');
-  if (unreadBadge) unreadBadge.classList.add('hidden-badge');
-  if (placeholder) placeholder.style.display = 'none';
-  if (activeContent) activeContent.classList.remove('hidden-content');
-
-  // Адаптив под мобилки
   if (window.innerWidth <= 768) {
     document.getElementById('panel-chats').classList.add('mobile-left');
     document.getElementById('panel-dialog').classList.remove('mobile-hidden');
   }
-  
   scrollToBottom();
 }
 
-// Назад к списку чатов на смартфонах
 function closeChatMobile() {
   document.getElementById('panel-chats').classList.remove('mobile-left');
   document.getElementById('panel-dialog').classList.add('mobile-hidden');
 }
 
-// Выход из мессенджера обратно к окну входа
-function logout() {
-  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
-  document.getElementById('screen-auth').classList.remove('hidden');
-}
-
-// Переключение эффекта жидкого стекла
 function toggleGlassEffect() {
   const body = document.body;
   body.classList.toggle('glass-mode');
@@ -117,29 +83,60 @@ function toggleGlassEffect() {
   localStorage.setItem('glassMode', isGlass);
 }
 
-// Логика набора текста в поле (Микрофон меняется на Стрелочку отправки)
+function logout() {
+  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
+  document.getElementById('screen-auth').classList.remove('hidden');
+}
+
+// РАБОТА КНОПОК УПРАВЛЕНИЯ ВВОДА ДО МЕЛЬЧАЙШИХ ДЕТАЛЕЙ
+
+// 1. Оживление кнопки "Плюс" (Прикрепление медиафайлов)
+function triggerAttachFile() {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*,audio/*';
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      alert(`Файл "${file.name}" успешно выбран для отправки (Загрузка в Supabase в разработке)`);
+    }
+  };
+  fileInput.click();
+}
+
+// 2. Включение / Выключение шторки эмодзи-пикера
+function toggleEmojiPicker() {
+  const picker = document.getElementById('emoji-picker-popup');
+  if (picker) picker.classList.toggle('hidden-emoji');
+}
+
+// 3. Выбор эмодзи из панели в поле ввода
+function insertEmoji(emoji) {
+  const messageInput = document.getElementById('message-input');
+  if (messageInput) {
+    messageInput.value += emoji;
+    handleInputMessage(messageInput); // Переключаем микрофон на стрелочку
+  }
+  toggleEmojiPicker(); // Прячем панель смайликов
+}
+
 function handleInputMessage(inputElement) {
   const btnSend = document.getElementById('btn-send');
-  const micIcon = document.getElementById('mic-icon');
-  if (!btnSend || !micIcon) return;
+  const iconContainer = document.getElementById('send-icon-container');
+  if (!btnSend || !iconContainer) return;
 
   const text = inputElement.value.trim();
   if (text.length > 0) {
     btnSend.style.background = 'var(--accent-blue)';
     btnSend.style.color = 'white';
-    micIcon.setAttribute('data-lucide', 'arrow-up');
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="19" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
   } else {
     btnSend.style.background = 'var(--island-bg)';
     btnSend.style.color = 'var(--text-primary)';
-    micIcon.setAttribute('data-lucide', 'mic');
-  }
-  
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
   }
 }
 
-// Клик по кнопке отправки сообщения
 function handleSendClick() {
   const messageInput = document.getElementById('message-input');
   if (!messageInput) return;
@@ -147,46 +144,44 @@ function handleSendClick() {
   const text = messageInput.value.trim();
   if (text.length > 0) {
     executeSendMessage(text);
+  } else {
+    // 4. Оживление кнопки Микрофона, если поле ввода пустое (Запись ГС)
+    alert("🎙️ Запись голосового сообщения начата... Скажите что-нибудь!");
   }
 }
 
-// Рендеринг нового сообщения на экран
 function executeSendMessage(text) {
   const messagesView = document.getElementById('messages-view');
   const messageInput = document.getElementById('message-input');
   const btnSend = document.getElementById('btn-send');
-  const micIcon = document.getElementById('mic-icon');
-  
+  const iconContainer = document.getElementById('send-icon-container');
   if (!messagesView || !messageInput) return;
   
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   const messageNode = document.createElement('div');
+  
   const isEmoji = /^\p{Emoji}$/u.test(text) || /^\p{Emoji}\p{Emoji}$/u.test(text);
 
   if (isEmoji) {
-    // 3D эмодзи-стикер
     messageNode.className = 'message msg-outgoing item-sticker';
     messageNode.innerHTML = `
       <div class="sticker-wrapper">
         <span class="mock-sticker">${text}</span>
         <div class="msg-meta">
           <span class="msg-time">${timeString}</span>
-          <i data-lucide="check" class="icon-status-read"></i>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
       </div>
     `;
   } else {
-    // Стильное iMessage облачко
     messageNode.className = 'message msg-outgoing';
-    messageNode.style.justifyContent = 'flex-end';
     messageNode.innerHTML = `
-      <div class="msg-bubble" style="background: var(--accent-blue); color: white; border-bottom-right-radius: 6px;">
+      <div class="msg-bubble">
         ${text}
         <div class="msg-meta">
-          <span class="msg-time" style="color: rgba(255,255,255,0.7)">${timeString}</span>
-          <i data-lucide="check" style="color: white; width:12px; height:12px;"></i>
+          <span class="msg-time">${timeString}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px; color:white;"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
       </div>
     `;
@@ -194,29 +189,21 @@ function executeSendMessage(text) {
 
   messagesView.appendChild(messageNode);
   
-  // Обновляем текст в левой панели
   const lastPreview = document.getElementById('chat-last-preview');
   const lastTime = document.getElementById('chat-last-time');
   if (lastPreview) lastPreview.textContent = text;
   if (lastTime) lastTime.textContent = timeString;
 
-  // Сброс поля
   messageInput.value = '';
-  if (btnSend && micIcon) {
+  if (btnSend && iconContainer) {
     btnSend.style.background = 'var(--island-bg)';
     btnSend.style.color = 'var(--text-primary)';
-    micIcon.setAttribute('data-lucide', 'mic');
-  }
-  
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
+    iconContainer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
   }
   scrollToBottom();
 }
 
 function scrollToBottom() {
   const messagesView = document.getElementById('messages-view');
-  if (messagesView) {
-    messagesView.scrollTop = messagesView.scrollHeight;
-  }
+  if (messagesView) messagesView.scrollTop = messagesView.scrollHeight;
 }
