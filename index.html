@@ -10,19 +10,28 @@
 <body>
   <div class="app-background"></div>
 
-  <!-- Модальное окно входа -->
+  <!-- Модальное окно входа / регистрации -->
   <div id="login-modal" class="modal-overlay">
     <div class="modal-glass">
-      <h2>Добро пожаловать</h2>
-      <p class="modal-subtitle">Введите имя, чтобы начать</p>
-      <input type="text" id="username-input" class="glass-input" placeholder="Ваше имя" autofocus maxlength="20">
-      <button id="login-btn" class="glass-btn primary-btn">Присоединиться</button>
+      <h2 id="modal-title">Вход</h2>
+      <p class="modal-subtitle" id="modal-subtitle">Войдите в аккаунт</p>
+      <div class="input-group">
+        <input type="text" id="username-input" class="glass-input" placeholder="Логин" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <input type="password" id="password-input" class="glass-input" placeholder="Пароль" autocomplete="current-password">
+      </div>
+      <div id="error-message" class="error-message"></div>
+      <button id="submit-btn" class="glass-btn primary-btn">Войти</button>
+      <p class="toggle-mode">
+        Нет аккаунта? <a href="#" id="toggle-mode-link">Зарегистрироваться</a>
+      </p>
     </div>
   </div>
 
-  <!-- Основной контейнер -->
+  <!-- Основной интерфейс (скрыт до входа) -->
   <div id="app" class="app-container" style="display: none;">
-    <!-- Панель чатов (сайдбар) -->
+    <!-- Сайдбар -->
     <aside id="sidebar" class="glass-panel sidebar">
       <div class="sidebar-header">
         <h1 class="sidebar-title">Чаты</h1>
@@ -34,12 +43,10 @@
         <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="search-chat" class="glass-input search-input" placeholder="Поиск чатов...">
       </div>
-      <div id="chat-list" class="chat-list">
-        <!-- динамически заполняется -->
-      </div>
+      <div id="chat-list" class="chat-list"></div>
     </aside>
 
-    <!-- Основная область переписки -->
+    <!-- Область переписки -->
     <main id="chat-area" class="glass-panel chat-area">
       <div class="chat-header">
         <button id="back-btn" class="icon-btn back-btn" aria-label="Назад">
@@ -56,9 +63,7 @@
       </div>
 
       <div id="messages-container" class="messages-container">
-        <div id="messages" class="messages-list">
-          <!-- сообщения рендерятся здесь -->
-        </div>
+        <div id="messages" class="messages-list"></div>
         <button id="scroll-bottom-btn" class="scroll-bottom-btn glass-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
