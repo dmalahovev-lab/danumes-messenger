@@ -2,170 +2,66 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telegram iOS 27 Liquid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram v27 Liquid</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-
-    <!-- Единый iPhone-контейнер для тестирования -->
-    <div class="iphone-shell">
-        
-        <!-- ================= ЭКРАН 1: СПИСОК ЧАТОВ ================= -->
-        <div class="screen active" id="screen-chats">
-            <!-- Верхняя панель (Header) -->
-            <header class="ios-header">
-                <div class="header-top">
-                    <button class="btn-text">Изм.</button>
-                    <div class="header-title-container">
-                        <span class="header-title">Чаты</span>
-                        <span class="header-icon-cloud">☁️</span>
-                    </div>
-                    <div class="header-right-icons">
-                        <button class="btn-icon-round">📝</button>
-                    </div>
-                </div>
-                
-                <!-- Поисковая строка -->
-                <div class="search-bar-container">
-                    <div class="search-bar">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" placeholder="Поиск" disabled>
-                    </div>
-                </div>
-
-                <!-- Папки чатов (Вкладки) -->
-                <div class="folders-container">
-                    <div class="folder-pill active">Unread <span class="badge-pill">559</span></div>
-                    <div class="folder-pill">Трендовое <span class="badge-pill">8</span></div>
-                    <div class="folder-pill">iPhones</div>
-                </div>
-            </header>
-
-            <!-- Лента чатов -->
-            <main class="chats-list">
-                <!-- Пример чата/канала из твоего скриншота -->
-                <div class="chat-row" id="open-channel-btn">
-                    <div class="avatar-container">
-                        <div class="tg-avatar color-green">iPhones</div>
-                        <span class="unread-count-badge">1</span>
-                    </div>
-                    <div class="chat-row-content">
-                        <div class="chat-row-header">
-                            <span class="chat-name">iPhones.ru | Чат 📌</span>
-                            <span class="chat-time">20:12</span>
-                        </div>
-                        <div class="chat-row-message">
-                            <span class="author-name">iPhones.ru:</span>
-                            <p class="message-snippet">➔ Срочно скачиваем. Приложение Т-Банка (Тинькофф) вернулось на iPhone под названием Craf...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-row">
-                    <div class="avatar-container">
-                        <div class="tg-avatar color-blue">iP</div>
-                    </div>
-                    <div class="chat-row-content">
-                        <div class="chat-row-header">
-                            <span class="chat-name">iPhones.ru <span class="verified-badge">✓</span></span>
-                            <span class="chat-time">20:12</span>
-                        </div>
-                        <div class="chat-row-message">
-                            <p class="message-snippet">➔ Срочно скачиваем. Приложение Т-Банка (Тинькофф) вернулось на iPhone под названием Craf...</p>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Нижний Таб-бар (Плавающий) -->
-            <nav class="tab-bar">
-                <div class="tab-item">
-                    <span class="tab-icon">👤</span>
-                    <span class="tab-label">Контакты</span>
-                </div>
-                <div class="tab-item active">
-                    <span class="tab-icon">💬</span>
-                    <span class="tab-label">Чаты</span>
-                </div>
-                <div class="tab-item">
-                    <span class="tab-icon">⚙️</span>
-                    <span class="tab-label">Настройки</span>
-                </div>
-                <div class="tab-item-search">
-                    <span class="search-circle-icon">🔍</span>
-                </div>
-            </nav>
-        </div>
-
-
-        <!-- ================= ЭКРАН 2: ВНУТРИ КАНАЛА ================= -->
-        <div class="screen" id="screen-channel">
-            <!-- Верхняя панель канала -->
-            <header class="channel-header">
-                <button class="back-btn" id="back-to-chats">❮</button>
-                <div class="channel-info-center">
-                    <div class="channel-title-row">
-                        <span class="channel-title-text">AppleInsider.ru #новости</span>
-                        <span class="verified-badge-blue">✓</span>
-                    </div>
-                    <span class="channel-subs">33 560 подписчиков</span>
-                </div>
-                <div class="channel-avatar-mini">AI</div>
-            </header>
-
-            <!-- Лента постов канала -->
-            <main class="channel-feed" id="channel-messages">
-                <!-- Шаблон поста из твоего второго скриншота -->
-                <div class="tg-post">
-                    <div class="post-image-wrapper">
-                        <img src="https://unsplash.com" alt="Превью" class="post-preview-img">
-                        <div class="post-image-overlay">
-                            <span class="overlay-brand">AppleInsider.ru</span>
-                            <span class="overlay-tag">Главные новости из мира Apple</span>
-                        </div>
-                    </div>
-                    
-                    <div class="post-content">
-                        <h3>Абстрактные обои для iPhone: легкие, воздушные и невероятно стильные</h3>
-                        <p>Спокойные абстрактные обои для iPhone после новогоднего визуального перегруза.</p>
-                        <p>Праздники закончились, гирлянды убраны, а вот глаза все еще отдыха просят. Яркие анимированные заставки внезапно начинают раздражать и даже фирменные обои iOS уже не кажутся такими уж изящными.</p>
-                        <p>Мы собрали вариант, который выглядит как системные обои iPhone, но с более сдержанным характером и без визуального шума. Вдобавок они не спорят с виджетами, часами и иконками и подойдут не только для iOS.</p>
-                    </div>
-
-                    <!-- Кнопка комментариев -->
-                    <div class="post-comments-bar">
-                        <div class="comments-left">
-                            <span class="comments-avatars">👥</span>
-                            <span class="comments-text">3 комментария</span>
-                        </div>
-                        <span class="comments-arrow">❯</span>
-                    </div>
-                    
-                    <!-- Нижняя инфо-плашка поста -->
-                    <div class="post-footer">
-                        <span class="post-link">https://appleinsider.ru</span>
-                        <div class="post-meta">
-                            <span class="views-count">👁 3,5K</span>
-                            <span class="post-time">22:43</span>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Нижняя панель публикаций (Для админа) -->
-            <form class="channel-input-bar" id="channel-form">
-                <button type="button" class="input-action-btn">📎</button>
-                <div class="input-wrapper">
-                    <input type="text" id="channel-input" placeholder="Публикация" autocomplete="off" required>
-                    <button type="button" class="emoji-btn">😊</button>
-                </div>
-                <button type="submit" class="send-post-btn">➔</button>
-            </form>
-        </div>
-
+    <!-- Жидкий анимированный фон под стеклом -->
+    <div class="liquid-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
     </div>
 
-    <script src="/app.js"></script>
+    <!-- Основной контейнер iPhone -->
+    <div class="phone-wrapper">
+        <div class="chat-container">
+            
+            <!-- Шапка чата (Личные сообщения с Test) -->
+            <header class="chat-header">
+                <button class="header-btn" id="back-btn">◀ Назад</button>
+                <div class="user-info">
+                    <div class="avatar">T</div>
+                    <div class="user-meta">
+                        <h2>Test</h2>
+                        <span class="status">в сети</span>
+                    </div>
+                </div>
+                <button class="header-btn" id="call-btn">📞</button>
+            </header>
+
+            <!-- Окно сообщений -->
+            <main class="chat-messages" id="messages">
+                <div class="message incoming">
+                    <span class="msg-text">Привет! Это твой мессенджер Telegram v27? Выглядит круто!</span>
+                    <span class="msg-time">23:35</span>
+                </div>
+            </main>
+
+            <!-- Рабочая панель ввода сообщения -->
+            <form class="chat-input-area" id="chat-form">
+                <button type="button" class="input-action-btn">📎</button>
+                <input type="text" id="message-input" placeholder="Сообщение" autocomplete="off" required>
+                <button type="submit" id="send-btn">➔</button>
+            </form>
+
+            <!-- Плавающий нижний Таб-бар -->
+            <nav class="tab-bar">
+                <button class="tab-item" id="tab-contacts">
+                    <span class="tab-icon">👤</span>
+                    <span class="tab-label">Контакты</span>
+                </button>
+                <button class="tab-item active" id="tab-chats">
+                    <span class="tab-icon">💬</span>
+                    <span class="tab-label">Чаты</span>
+                </button>
+                <button class="tab-item" id="tab-settings">
+                    <span class="tab-icon">⚙️</span>
+                    <span class="tab-label">Настройки</span>
+                </button>
+            </nav>
+
+        </div>
+    </div>
 </body>
 </html>
