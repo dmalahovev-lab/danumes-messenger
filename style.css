@@ -2,33 +2,27 @@
    1. ПЕРЕМЕННЫЕ И ПРЕМИУМ ГРАДИЕНТЫ (СТИЛЬ С ФОТО)
    ========================================================================== */
 :root {
-  /* Нежный размытый розово-серый градиент на фоне как на твоем скриншоте */
   --bg-main: linear-gradient(135deg, #e5dcd9 0%, #ecdcd7 35%, #dfd3d3 70%, #d2c5ca 100%);
   --text-primary: #1c1c1e;
   --text-secondary: #7d7d82;
   --accent-blue: #007aff;
   
-  /* Объемный Неоморфизм / Жидкое стекло (Белые матовые плашки с бликами) */
   --island-bg: rgba(255, 255, 255, 0.65);
   --island-border: 1px solid rgba(255, 255, 255, 0.4);
-  --island-shadow: 0 10px 25px rgba(140, 125, 125, 0.15), 
-                   inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  --island-shadow: 0 10px 25px rgba(140, 125, 125, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.6);
   --blur-value: blur(25px);
   
-  /* Сообщения без уродливых рамок, чистый контент */
   --msg-in-bg: transparent;
   --msg-out-bg: transparent;
 }
 
-/* Переключатель на Темное жидкое стекло (если захочется сменить тему) */
 body.glass-mode {
   --bg-main: linear-gradient(135deg, #1f1a1a 0%, #171213 40%, #0f0a0c 100%);
   --text-primary: #ffffff;
   --text-secondary: #98989f;
   --island-bg: rgba(255, 255, 255, 0.07);
   --island-border: 1px solid rgba(255, 255, 255, 0.12);
-  --island-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 
-                   inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  --island-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -95,10 +89,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
   color: white;
   margin-bottom: 16px;
+  box-shadow: 0 6px 20px rgba(255, 94, 58, 0.3);
 }
 
 .auth-island h2 {
@@ -271,7 +266,7 @@ body.glass-mode #panel-chats {
   font-size: 15px;
 }
 
-/* Объединенный островок профиля (Как на фото!) */
+/* Объединенный островок профиля */
 .profile-island {
   justify-content: flex-start;
   padding: 0 16px;
@@ -307,7 +302,7 @@ body.glass-mode #panel-chats {
   color: var(--text-secondary);
 }
 
-/* Островок управления (Звонок и три точки) */
+/* Островок управления */
 .header-controls-island {
   height: 44px;
   background: var(--island-bg);
@@ -376,8 +371,12 @@ body.glass-mode #panel-chats {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: 600;
   color: white;
+}
+
+.chat-avatar svg {
+  width: 20px;
+  height: 20px;
 }
 
 .blue-gradient {
@@ -473,7 +472,6 @@ body.glass-mode #panel-chats {
   padding: 20px 10px;
 }
 
-/* Облако сообщений превратилось в прозрачный контейнер для больших картинок/стикеров */
 .item-sticker {
   justify-content: flex-end;
 }
@@ -485,9 +483,30 @@ body.glass-mode #panel-chats {
   align-items: flex-end;
 }
 
-/* Огромный объемный 3D эмодзи-стикер как на твоем скриншоте */
 .mock-sticker {
-font-size: 96px; /* Гигантский размер */line-height: 1;filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));user-select: none;}/* Мета-данные сбоку от стикера /.sticker-wrapper .msg-meta {display: flex;align-items: center;gap: 3px;background: rgba(255, 255, 255, 0.4);padding: 2px 6px;border-radius: 10px;backdrop-filter: blur(5px);margin-top: -10px; / Прижимаем ближе к стикеру */margin-right: 10px;}.sticker-wrapper .msg-time {font-size: 10px;color: #1c1c1e;font-weight: 500;}.sticker-wrapper svg {width: 12px;height: 12px;color: #1c1c1e;}/* Нижняя панель ввода (Капсула iMessage) */.ios-footer {display: flex;align-items: center;width: 100%;padding-top: 10px;}.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input {width: 100%;background: transparent;border: none;outline: none;color: var(--text-primary);font-size: 15px;}.btn-inside-smile {background: transparent;border: none;color: var(--text-secondary);cursor: pointer;display: flex;align-items: center;padding-left: 8px;}.btn-inside-smile svg {width: 20px;height: 20px;}.dialog-empty-state {width: 100%;height: 100%;display: flex;flex-direction: column;justify-content: center;align-items: center;color: var(--text-secondary);gap: 12px;}/* Адаптивность для мобилок */@media (max-width: 768px) {.messenger-panel {width: 100% !important;position: absolute;top: 0;left: 0;background: var(--bg-main);transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;}.mobile-hidden {transform: translateX(100%);opacity: 0;}#panel-chats.mobile-left {transform: translateX(-100%);opacity: 0;}.btn-back {display: flex;}#dialog-placeholder {display: none;}.hidden-content {display: flex !important;}}
+  font-size: 96px;
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));
+  user-select: none;
+}
+
+.sticker-wrapper .msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 2px 6px;
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+  margin-top: -10px;
+  margin-right: 10px;
+}
+
+.sticker-wrapper .msg-time {
+  font-size: 10px;
+  color: #1c1c1e;
+  font-weight: 500;
+}.sticker-wrapper svg {width: 12px;height: 12px;color: #1c1c1e;}.ios-footer {display: flex;align-items: center;width: 100%;padding-top: 10px;}.input-island {flex-grow: 1;margin: 0 10px;height: 44px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 22px;padding: 0 14px 0 18px;display: flex;align-items: center;}.input-island input {width: 100%;background: transparent;border: none;outline: none;color: var(--text-primary);font-size: 15px;}.btn-inside-smile {background: transparent;border: none;color: var(--text-secondary);cursor: pointer;display: flex;align-items: center;padding-left: 8px;}.btn-inside-smile svg {width: 20px;height: 20px;}.dialog-empty-state {width: 100%;height: 100%;display: flex;flex-direction: column;justify-content: center;align-items: center;color: var(--text-secondary);gap: 12px;}@media (max-width: 768px) {.messenger-panel {width: 100% !important;position: absolute;top: 0;left: 0;background: var(--bg-main);transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;}.mobile-hidden {transform: translateX(100%);opacity: 0;}#panel-chats.mobile-left {transform: translateX(-100%);opacity: 0;}.btn-back {display: flex;}#dialog-placeholder {display: none;}.hidden-content {display: flex !important;}}
 ---
 
 ### 🧠 3. Полный код файла `app.js`
@@ -529,24 +548,29 @@ function toggleAuthMode() {
   }
 }
 
+// ИСПРАВЛЕННАЯ НАЖАТИЕ КНОПКИ АВТОРИЗАЦИИ
 function handleAuthSubmit() {
-  const username = document.getElementById('auth-username').value.trim();
-  const password = document.getElementById('auth-password').value.trim();
+  const usernameInput = document.getElementById('auth-username');
+  const passwordInput = document.getElementById('auth-password');
+
+  if (!usernameInput || !passwordInput) return;
+
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
 
   if (!username || !password) {
-    alert('Пожалуйста, занесите данные!');
+    alert('Пожалуйста, заполните форму входа!');
     return;
   }
 
+  // Скрываем форму и показываем интерфейс
   document.getElementById('screen-auth').classList.add('hidden');
   document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
   
-  document.querySelectorAll('.avatar-main').forEach(el => {
-    el.textContent = username.charAt(0).toLowerCase();
-  });
+  // Обновляем иконки, чтобы аватарки корректно отобразили силуэт человека
+  lucide.createIcons();
 }
 
-// Клик по чату
 function selectChat(chatId) {
   document.getElementById('chat-item-test').classList.add('active');
   document.getElementById('chat-unread-badge').classList.add('hidden-badge');
@@ -577,34 +601,35 @@ function toggleGlassEffect() {
   localStorage.setItem('glassMode', isGlass);
 }
 
-// Инпут эффекты
 const messageInput = document.getElementById('message-input');
 const btnSend = document.getElementById('btn-send');
 const micIcon = document.getElementById('mic-icon');
 
-messageInput.addEventListener('input', (e) => {
-  const text = e.target.value.trim();
-  if (text.length > 0) {
-    btnSend.style.background = 'var(--accent-blue)';
-    btnSend.style.color = 'white';
-    micIcon.setAttribute('data-lucide', 'arrow-up');
-  } else {
-    btnSend.style.background = 'var(--island-bg)';
-    btnSend.style.color = 'var(--text-primary)';
-    micIcon.setAttribute('data-lucide', 'mic');
-  }
-  lucide.createIcons();
-});
-
-messageInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    const text = messageInput.value.trim();
+if (messageInput) {
+  messageInput.addEventListener('input', (e) => {
+    const text = e.target.value.trim();
     if (text.length > 0) {
-      executeSendMessage(text);
+      btnSend.style.background = 'var(--accent-blue)';
+      btnSend.style.color = 'white';
+      micIcon.setAttribute('data-lucide', 'arrow-up');
+    } else {
+      btnSend.style.background = 'var(--island-bg)';
+      btnSend.style.color = 'var(--text-primary)';
+      micIcon.setAttribute('data-lucide', 'mic');
     }
-  }
-});
+    lucide.createIcons();
+  });
+
+  messageInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      const text = messageInput.value.trim();
+      if (text.length > 0) {
+        executeSendMessage(text);
+      }
+    }
+  });
+}
 
 function handleSendClick() {
   const text = messageInput.value.trim();
@@ -613,15 +638,14 @@ function handleSendClick() {
   }
 }
 
-// КРУТАЯ ОТПРАВКА СТИКЕРОВ-ЭМОДЗИ (КАК НА СКРИНШОТЕ!)
 function executeSendMessage(text) {
   const messagesView = document.getElementById('messages-view');
+  if (!messagesView) return;
+  
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const messageNode = document.createElement('div');
-  
-  // Проверяем, является ли сообщение чистым эмодзи (чтобы отрендерить его как гигантский стикер с фото)
   const isEmoji = /^\p{Emoji}$/u.test(text) || /^\p{Emoji}\p{Emoji}$/u.test(text);
 
   if (isEmoji) {
@@ -636,7 +660,6 @@ function executeSendMessage(text) {
       </div>
     `;
   } else {
-    // Если это обычный текст, берем стили аккуратного iMessage облачка
     messageNode.className = 'message msg-outgoing';
     messageNode.style.justifyContent = 'flex-end';
     messageNode.innerHTML = `
@@ -665,5 +688,7 @@ function executeSendMessage(text) {
 
 function scrollToBottom() {
   const messagesView = document.getElementById('messages-view');
-  messagesView.scrollTop = messagesView.scrollHeight;
+  if (messagesView) {
+    messagesView.scrollTop = messagesView.scrollHeight;
+  }
 }
