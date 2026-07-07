@@ -13,20 +13,50 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const users = {};
+// Простейшая база пользователей (в памяти)
+const usersDB = [];
+
+// Сессии: socket.id -> username
+const sessions = {};
 
 io.on('connection', (socket) => {
-  console.log('Новый пользователь подключился:', socket.id);
+  console.log('Новое подключение:', socket.id);
 
-  socket.on('new user', (name) => {
-    users[socket.id] = name;
-    io.emit('user joined', { id: socket.id, name });
-    // Отправляем список активных пользователей (можно использовать для чат‑листа)
-    io.emit('online users', Object.values(users));
+  // Регистрация
+  socket.on('register', (data, callback) => {
+    const { username, password } = data;
+    if (!username || !password) {
+      return callback({ success: false, message: 'Заполните все поля' });
+    }
+    if (usersDB.find(u => u.username === username)) {
+      return callback({ success: false, message: 'Пользователь уже существует' });
+    }
+    usersDB.push({ username, password });
+    // Автоматически авторизуем после регистрации
+    sessions[socket.id] = username;
+    console.log(`Зарегистрирован и вошёл: ${username}`);
+    callback({ success: true, username });
+    // Уведомим всех о новом пользователе (можно для чат-листа)
+    io.emit('user joined', { id: socket.id, name: username });
   });
 
+  // Вход
+  socket.on('login', (data, callback) => {
+    const { username, password } = data;
+    const user = usersDB.find(u => u.username === username && u.password === password);
+    if (!user) {
+      return callback({ success: false, message: 'Неверный логин или пароль' });
+    }
+    sessions[socket.id] = username;
+    console.log(`Вошёл: ${username}`);
+    callback({ success: true, username });
+    io.emit('user joined', { id: socket.id, name: username });
+  });
+
+  // Сообщения
   socket.on('chat message', (msg) => {
-    const user = users[socket.id] || 'Аноним';
+    const user = sessions[socket.id];
+    if (!user) return;
     io.emit('chat message', {
       user,
       text: msg,
@@ -35,21 +65,22 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Индикатор печати
   socket.on('typing', () => {
-    const user = users[socket.id] || 'Аноним';
-    socket.broadcast.emit('typing', { user, id: socket.id });
+    const user = sessions[socket.id];
+    if (user) socket.broadcast.emit('typing', { user, id: socket.id });
   });
-
   socket.on('stop typing', () => {
     socket.broadcast.emit('stop typing', socket.id);
   });
 
+  // Отключение
   socket.on('disconnect', () => {
-    console.log('Пользователь отключился:', socket.id);
-    if (users[socket.id]) {
-      io.emit('user left', { id: socket.id, name: users[socket.id] });
-      delete users[socket.id];
-      io.emit('online users', Object.values(users));
+    const user = sessions[socket.id];
+    if (user) {
+      console.log(`${user} отключился`);
+      delete sessions[socket.id];
+      io.emit('user left', { id: socket.id, name: user });
     }
   });
 });
