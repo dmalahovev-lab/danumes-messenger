@@ -47,17 +47,156 @@ body {
   transition: background-color 0.4s ease;
 }
 
-/* ДВУХПАНЕЛЬНАЯ СЕТКА ДЛЯ ПК И ТЕЛЕГРАМ-СТИЛЯ */
+/* ==========================================================================
+   2. СТИЛИ ЭКРАНА АВТОРИЗАЦИИ И РЕГИСТРАЦИИ
+   ========================================================================== */
+.auth-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  background-color: var(--bg-main);
+  padding: 20px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.auth-container.hidden {
+  opacity: 0;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+
+.auth-island {
+  width: 100%;
+  max-width: 360px;
+  background: var(--island-bg);
+  border: var(--island-border);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: var(--blur-value);
+  -webkit-backdrop-filter: var(--blur-value);
+  border-radius: 30px;
+  padding: 30px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007aff, #00c6ff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+}
+
+.auth-island h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  letter-spacing: -0.4px;
+}
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-input-wrapper {
+  width: 100%;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.auth-input-wrapper:focus-within {
+  border-color: var(--accent-blue);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.auth-input-wrapper input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.hidden-auth-field {
+  display: none !important;
+}
+
+.btn-auth-submit {
+  width: 100%;
+  height: 48px;
+  background: var(--accent-blue);
+  border: none;
+  border-radius: 14px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-auth-submit:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.auth-toggle-text {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+#btn-auth-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent-blue);
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* ==========================================================================
+   3. СНОВНОЙ ДВУХПАНЕЛЬНЫЙ ЛЕЙАУТ МЕССЕНДЖЕРА
+   ========================================================================== */
 .app-layout {
   display: flex;
   width: 100%;
   height: 100vh;
-  max-width: 1440px; /* Ограничение по ширине на гигантских мониторах */
+  max-width: 1440px;
   background: var(--bg-main);
   position: relative;
+  transition: opacity 0.3s ease;
 }
 
-/* Базовые стили для левой и правой панелей */
+.auth-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .messenger-panel {
   height: 100%;
   display: flex;
@@ -66,20 +205,47 @@ body {
   position: relative;
 }
 
-/* Левая панель занимает 30% экрана ПК */
 #panel-chats {
   width: 32%;
   min-width: 340px;
   border-right: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-/* Правая панель занимает всю оставшуюся ширину (68%) */
 #panel-dialog {
   flex-grow: 1;
 }
 
+.dialog-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.hidden-content {
+  display: none !important;
+}
+
+/* Пустое состояние чата на ПК */
+.dialog-empty-state {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-secondary);
+  gap: 12px;
+}
+
+.placeholder-icon svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
+
 /* ==========================================================================
-   2. СТИЛИЗАЦИЯ КНОПОК И ОСТРОВКОВ (ПОД IOS НАБРОСОК)
+   4. СТИЛИЗАЦИЯ ИНТЕРФЕЙСНЫХ БЛОКОВ ПО ФОТО ВВОДНЫХ
    ========================================================================== */
 .btn-circle {
   width: 48px;
@@ -147,11 +313,11 @@ body {
 }
 
 .btn-back {
-  display: none; /* По умолчанию скрываем кнопку Назад на ПК */
+  display: none;
 }
 
 /* ==========================================================================
-   3. СПИСОК ЧАТОВ
+   5. СПИСОК ЧАТОВ
    ========================================================================== */
 .chats-list {
   flex-grow: 1;
@@ -178,7 +344,8 @@ body {
 }
 
 .chat-item.active {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
 }
 
 .chat-item:hover {
@@ -246,8 +413,12 @@ body {
   text-align: center;
 }
 
+.badge-unread.hidden-badge {
+  display: none;
+}
+
 /* ==========================================================================
-   4. НИЖНИЕ ЭЛЕМЕНТЫ (TABBAR И FOOTER)
+   6. ПАНЕЛИ НАВИГАЦИИ И ВВОДА
    ========================================================================== */
 .ios-tabbar {
   position: absolute;
@@ -317,141 +488,191 @@ body {
   height: 48px;
   background: var(--island-bg);
   border: var(--island-border);
-  box-shadow: var(--island-shadow);
-  backdrop-filter: var(--blur-value);
-  -webkit-backdrop-filter: var(--blur-value);
-  border-radius: 30px;
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-}
+box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 30px;padding: 0 18px;display: flex;align-items: center;}.input-island input {width: 100%;background: transparent;border: none;outline: none;color: var(--text-primary);font-size: 15px;}.input-island input::placeholder {color: var(--text-secondary);}/* ==========================================================================7. ОБЛАКА СООБЩЕНИЙ========================================================================== */.messages-container {flex-grow: 1;overflow-y: auto;display: flex;flex-direction: column;gap: 12px;padding: 10px 4px 20px 4px;}.message {display: flex;width: 100%;}.msg-bubble {max-width: 65%;padding: 12px 16px;border-radius: 22px;font-size: 15px;line-height: 1.4;}.msg-incoming {justify-content: flex-start;}.msg-incoming .msg-bubble {background: var(--msg-in-bg);border: var(--island-border);color: var(--text-primary);border-bottom-left-radius: 6px;}.msg-incoming .msg-time {display: block;font-size: 10px;color: var(--text-secondary);margin-top: 4px;}.msg-outgoing {justify-content: flex-end;}.msg-outgoing .msg-bubble {background: var(--msg-out-bg);border: var(--island-border);box-shadow: var(--msg-out-shadow);color: var(--text-primary);border-bottom-right-radius: 6px;}.msg-meta {display: flex;align-items: center;justify-content: flex-end;gap: 4px;margin-top: 4px;}.msg-meta .msg-time {font-size: 10px;color: var(--text-secondary);}.icon-status-read {width: 14px !important;height: 14px !important;color: var(--accent-blue);}/* ==========================================================================8. АДАПТИВНОСТЬ (МОБИЛЬНЫЕ УСТРОЙСТВА)========================================================================== */@media (max-width: 768px) {.app-layout {flex-direction: column;}.messenger-panel {width: 100% !important;padding: 16px;position: absolute;top: 0;left: 0;transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;}.mobile-hidden {transform: translateX(100%);opacity: 0;pointer-events: none;}#panel-chats.mobile-left {transform: translateX(-100%);opacity: 0;pointer-events: none;}.btn-back {display: flex;}.ios-tabbar {bottom: 12px;left: 12px;right: 12px;}/* Скрываем заглушку на мобильных устройствах */#dialog-placeholder {display: none;}.hidden-content {display: flex !important;}}
+---
 
-.input-island input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 15px;
-}
+### 🧠 3. Полный код файла `app.js`
 
-.input-island input::placeholder {
-  color: var(--text-secondary);
-}
+```javascript
+// Переменная для отслеживания режима авторизации (login или register)
+let authMode = 'login';
 
-/* ==========================================================================
-   5. СООБЩЕНИЯ
-   ========================================================================== */
-.messages-container {
-  flex-grow: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 10px 4px 20px 4px;
-}
-
-.message {
-  display: flex;
-  width: 100%;
-}
-
-.msg-bubble {
-  max-width: 65%;
-  padding: 12px 16px;
-  border-radius: 22px;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.msg-incoming {
-  justify-content: flex-start;
-}
-
-.msg-incoming .msg-bubble {
-  background: var(--msg-in-bg);
-  border: var(--island-border);
-  color: var(--text-primary);
-  border-bottom-left-radius: 6px;
-}
-
-.msg-incoming .msg-time {
-  display: block;
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.msg-outgoing {
-  justify-content: flex-end;
-}
-
-.msg-outgoing .msg-bubble {
-  background: var(--msg-out-bg);
-  border: var(--island-border);
-  box-shadow: var(--msg-out-shadow);
-  color: var(--text-primary);
-  border-bottom-right-radius: 6px;
-}
-
-.msg-meta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.msg-meta .msg-time {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.icon-status-read {
-  width: 14px !important;
-  height: 14px !important;
-  color: var(--accent-blue);
-}
-
-/* ==========================================================================
-   6. ПРАВИЛА ДЛЯ МОБИЛЬНЫХ ТЕЛЕФОНОВ (ЭКРАНЫ МЕНЬШЕ 768px)
-   ========================================================================== */
-@media (max-width: 768px) {
-  .app-layout {
-    flex-direction: column;
+// Первичная настройка при загрузке страницы
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
   }
 
-  .messenger-panel {
-    width: 100% !important;
-    padding: 16px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;
+  const savedGlassMode = localStorage.getItem('glassMode');
+  if (savedGlassMode === 'false') {
+    document.body.classList.remove('glass-mode');
   }
+});
 
-  /* На мобилках скрываем окно диалога по умолчанию */
-  .mobile-hidden {
-    transform: translateX(100%);
-    opacity: 0;
-    pointer-events: none;
-  }
+// Переключатель между экранами входа и регистрации
+function toggleAuthMode() {
+  const authTitle = document.getElementById('auth-title');
+  const emailField = document.getElementById('email-field');
+  const btnAuthAction = document.getElementById('btn-auth-action');
+  const authToggleHint = document.getElementById('auth-toggle-hint');
+  const btnAuthToggle = document.getElementById('btn-auth-toggle');
 
-  /* Смещаем список чатов влево, если открыта переписка */
-  #panel-chats.mobile-left {
-    transform: translateX(-100%);
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* Показываем кнопку Назад только на смартфонах */
-  .btn-back {
-    display: flex;
-  }
-
-  .ios-tabbar {
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
+  if (authMode === 'login') {
+    authMode = 'register';
+    authTitle.textContent = 'Регистрация в DanuChat';
+    emailField.classList.remove('hidden-auth-field');
+    btnAuthAction.textContent = 'Создать аккаунт';
+    authToggleHint.textContent = 'Уже есть аккаунт?';
+    btnAuthToggle.textContent = 'Войти';
+  } else {
+    authMode = 'login';
+    authTitle.textContent = 'Войти в DanuChat';
+    emailField.classList.add('hidden-auth-field');
+    btnAuthAction.textContent = 'Войти';
+    authToggleHint.textContent = 'Ещё нет аккаунта?';
+    btnAuthToggle.textContent = 'Зарегистрироваться';
   }
 }
+
+// Клик по кнопке Войти / Зарегистрироваться
+function handleAuthSubmit() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+
+  if (!username || !password) {
+    alert('Пожалуйста, заполните поля формы!');
+    return;
+  }
+
+  // Скрываем форму входа и открываем мессенджер
+  document.getElementById('screen-auth').classList.add('hidden');
+  document.getElementById('main-messenger-layout').classList.remove('auth-hidden');
+  
+  // Устанавливаем букву юзера на аватарку
+  document.querySelectorAll('.avatar-main').forEach(el => {
+    el.textContent = username.charAt(0).toLowerCase();
+  });
+}
+
+// Выход из аккаунта
+function logout() {
+  document.getElementById('main-messenger-layout').classList.add('auth-hidden');
+  document.getElementById('screen-auth').classList.remove('hidden');
+}
+
+// КЛИК ПО ЧАТУ (ИСПРАВЛЕНО И ОЖИВЛЕНО)
+function selectChat(chatId) {
+  console.log("Открываем чат:", chatId);
+  
+  // 1. Подсвечиваем выбранный чат в списке
+  document.getElementById('chat-item-test').classList.add('active');
+  
+  // 2. Скрываем непрочитанную цифру 1 при клике
+  document.getElementById('chat-unread-badge').classList.add('hidden-badge');
+
+  // 3. Убираем заглушку и показываем панель ввода и сообщений на ПК
+  document.getElementById('dialog-placeholder').style.display = 'none';
+  document.getElementById('dialog-active-content').classList.remove('hidden-content');
+
+  // 4. Логика переключения экранов для мобильных версий
+  if (window.innerWidth <= 768) {
+    document.getElementById('panel-chats').classList.add('mobile-left');
+    document.getElementById('panel-dialog').classList.remove('mobile-hidden');
+  }
+  
+  // Прокручиваем переписку вниз
+  scrollToBottom();
+}
+
+// Кнопка Назад на смартфонах
+function closeChatMobile() {
+  document.getElementById('panel-chats').classList.remove('mobile-left');
+  document.getElementById('panel-dialog').classList.add('mobile-hidden');
+}
+
+// Включение/выключение жидкого стеклянного эффекта
+function toggleGlassEffect() {
+  const body = document.body;
+  body.classList.toggle('glass-mode');
+  const isGlass = body.classList.contains('glass-mode');
+  localStorage.setItem('glassMode', isGlass);
+}
+
+// Логика изменения кнопки (Микрофон <-> Самолетик отправки)
+const messageInput = document.getElementById('message-input');
+const btnSend = document.getElementById('btn-send');
+const micIcon = document.getElementById('mic-icon');
+
+messageInput.addEventListener('input', (e) => {
+  const text = e.target.value.trim();
+  if (text.length > 0) {
+    btnSend.style.background = 'var(--accent-blue)';
+    micIcon.setAttribute('data-lucide', 'arrow-up');
+  } else {
+    btnSend.style.background = 'var(--island-bg)';
+    micIcon.setAttribute('data-lucide', 'mic');
+  }
+  lucide.createIcons();
+});
+
+// Отправка сообщений по кнопке Enter на ПК
+messageInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    const text = messageInput.value.trim();
+    if (text.length > 0) {
+      executeSendMessage(text);
+    }
+  }
+});
+
+// Клик по кнопке отправки
+function handleSendClick() {
+  const text = messageInput.value.trim();
+  if (text.length > 0) {
+    executeSendMessage(text);
+  } else {
+    console.log("Запись голосового сообщения (в разработке)");
+  }
+}
+
+// ФУНКЦИЯ ДОБАВЛЕНИЯ СООБЩЕНИЯ НА ЭКРАН (ИСПРАВЛЕНО)
+function executeSendMessage(text) {
+  const messagesView = document.getElementById('messages-view');
+  const now = new Date();
+  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Создаем HTML элемент нового исходящего сообщения
+  const messageNode = document.createElement('div');
+  messageNode.className = 'message msg-outgoing';
+  messageNode.innerHTML = `
+    <div class="msg-bubble">
+      ${text}
+      <div class="msg-meta">
+        <span class="msg-time">${timeString}</span>
+        <i data-lucide="check" class="icon-status-read"></i>
+      </div>
+    </div>
+  `;
+
+  // Рендерим сообщение на экран и скроллим вниз
+  messagesView.appendChild(messageNode);
+  
+  // Обновляем текст и время в левой боковой панели
+  document.getElementById('chat-last-preview').textContent = text;
+  document.getElementById('chat-last-time').textContent = timeString;
+
+  // Очищаем форму и возвращаем иконку микрофона
+  messageInput.value = '';
+  btnSend.style.background = 'var(--island-bg)';
+  micIcon.setAttribute('data-lucide', 'mic');
+  
+  lucide.createIcons();
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const messagesView = document.getElementById('messages-view');
+  messagesView.scrollTop = messagesView.scrollHeight;
+}
+м
