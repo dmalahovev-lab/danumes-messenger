@@ -2,33 +2,27 @@
    1. ПЕРЕМЕННЫЕ И СБРОС СТИЛЕЙ
    ========================================================================== */
 :root {
-  /* Цветовая палитра глубокой темной темы */
   --bg-main: #0a0b0c;
   --text-primary: #ffffff;
   --text-secondary: #8e8e93;
   --accent-blue: #007aff;
   
-  /* Стили панелей в обычном режиме (Скевоморфизм / Графит) */
   --island-bg: linear-gradient(145deg, #1e2224, #141617);
   --island-border: 1px solid rgba(255, 255, 255, 0.05);
-  --island-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 
-                   inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  --island-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
   --blur-value: none;
   
-  /* Специфические цвета для облаков сообщений */
   --msg-in-bg: linear-gradient(145deg, #23272a, #1a1c1e);
   --msg-out-bg: linear-gradient(145deg, #1c1e20, #111214);
   --msg-out-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Модификатор для включения стеклянного эффекта (Liquid Glass) */
 body.glass-mode {
-  --bg-main: #020304; /* Делаем подложку чуть темнее для контраста */
+  --bg-main: #020304;
   --island-bg: rgba(255, 255, 255, 0.06);
   --island-border: 1px solid rgba(255, 255, 255, 0.12);
-  --island-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
-                   inset 0 1px 0px rgba(255, 255, 255, 0.2);
-  --blur-value: blur(20px); /* Тот самый эффект размытия заднего плана */
+  --island-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0px rgba(255, 255, 255, 0.2);
+  --blur-value: blur(20px);
   
   --msg-in-bg: rgba(255, 255, 255, 0.08);
   --msg-out-bg: rgba(255, 255, 255, 0.04);
@@ -39,7 +33,7 @@ body.glass-mode {
   padding: 0;
   box-sizing: border-box;
   font-family: 'Inter', sans-serif;
-  -webkit-tap-highlight-color: transparent; /* Убираем синее выделение при тапе на iOS */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -53,19 +47,16 @@ body {
   transition: background-color 0.4s ease;
 }
 
-/* Контейнер приложения, симулирующий пропорции экрана телефона */
+/* Контейнер приложения: на ПК открывается во весь экран */
 .app-container {
   width: 100%;
-  max-width: 430px; /* Ширина экрана iPhone 15 Pro Max */
   height: 100vh;
-  max-height: 932px;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Базовый класс для экранов мессенджера */
 .messenger-screen {
   position: absolute;
   top: 0;
@@ -74,7 +65,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 24px;
   transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94), opacity 0.3s ease;
 }
 
@@ -85,10 +76,8 @@ body {
 }
 
 /* ==========================================================================
-   2. СТИЛИЗАЦИЯ ОСТРОВКОВ (DYNAMIC ISLANDS) И КНОПОК
+   2. СТИЛИЗАЦИЯ ОСТРОВКОВ И КНОПОК
    ========================================================================== */
-
-/* Универсальные круглые кнопки */
 .btn-circle {
   width: 48px;
   height: 48px;
@@ -111,7 +100,6 @@ body {
   opacity: 0.8;
 }
 
-/* Стилизация верхних шапок */
 .ios-header {
   display: flex;
   justify-content: space-between;
@@ -121,7 +109,6 @@ body {
   z-index: 10;
 }
 
-/* Капсульный центральный островок в шапке */
 .header-island {
   flex-grow: 1;
   margin: 0 12px;
@@ -140,7 +127,6 @@ body {
   letter-spacing: -0.3px;
 }
 
-/* Особый двухстрочный островок статуса для экрана переписки */
 .dialog-status-island {
   flex-direction: column;
   gap: 2px;
@@ -153,11 +139,11 @@ body {
 
 .dialog-status-island .user-status {
   font-size: 11px;
-  color: #34c759; /* Красивый зеленый цвет iOS для статуса "в сети" */
+  color: #34c759;
 }
 
 /* ==========================================================================
-   3. СПИСОК ЧАТОВ И ЭЛЕМЕНТЫ
+   3. СПИСОК ЧАТОВ
    ========================================================================== */
 .chats-list {
   flex-grow: 1;
@@ -165,13 +151,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-bottom: 90px; /* Отступ, чтобы нижний таббар не перекрывал элементы */
+  padding-bottom: 90px;
 }
 
-/* Плавный скроллбар */
 .chats-list::-webkit-scrollbar,
 .messages-container::-webkit-scrollbar {
-  width: 0px; /* Скрываем стандартный скроллбар для эстетики */
+  width: 0px;
 }
 
 .chat-item {
@@ -188,7 +173,6 @@ body {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Градиентные аватарки */
 .chat-avatar {
   width: 50px;
   height: 50px;
@@ -199,6 +183,7 @@ body {
   font-weight: 600;
   font-size: 18px;
   color: white;
+  flex-shrink: 0;
 }
 
 .blue-gradient {
@@ -211,6 +196,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow: hidden;
 }
 
 .chat-row {
@@ -235,7 +221,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
 }
 
 .badge-unread {
@@ -250,7 +235,7 @@ body {
 }
 
 /* ==========================================================================
-   4. НИЖНИЕ ПАНЕЛИ (TAB BAR & FOOTER)
+   4. НИЖНИЕ ПАНЕЛИ
    ========================================================================== */
 .ios-tabbar {
   position: absolute;
@@ -305,7 +290,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Панель ввода сообщений (Footer) */
 .ios-footer {
   display: flex;
   justify-content: space-between;
@@ -369,7 +353,6 @@ body {
   position: relative;
 }
 
-/* Входящие сообщения (Слева) */
 .msg-incoming {
   justify-content: flex-start;
 }
@@ -378,7 +361,7 @@ body {
   background: var(--msg-in-bg);
   border: var(--island-border);
   color: var(--text-primary);
-  border-bottom-left-radius: 6px; /* Элегантный "хвостик" сообщения */
+  border-bottom-left-radius: 6px;
 }
 
 .msg-incoming .msg-time {
@@ -389,7 +372,6 @@ body {
   text-align: left;
 }
 
-/* Исходящие сообщения (Справа) */
 .msg-outgoing {
   justify-content: flex-end;
 }
@@ -421,3 +403,21 @@ body {
   color: var(--accent-blue);
 }
 
+/* ==========================================================================
+   6. АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ
+   ========================================================================== */
+@media (max-width: 480px) {
+  .messenger-screen {
+    padding: 16px;
+  }
+  
+  .ios-tabbar {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+  }
+  
+  .ios-header {
+    margin-bottom: 12px;
+  }
+}
