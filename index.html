@@ -2,22 +2,20 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <!-- Настройка viewport для корректного отображения на экранах смартфонов без зума -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DanuChat</title>
   
-  <!-- Подключаем премиальный шрифт Inter -->
+  <!-- Подключение шрифта Inter -->
   <link rel="preconnect" href="https://googleapis.com">
   <link rel="preconnect" href="https://gstatic.com" crossorigin>
   <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Подключаем легкие иконки Lucide (замена тяжелому FontAwesome) -->
+  <!-- Подключение иконок Lucide -->
   <script src="https://unpkg.com"></script>
   
-  <!-- Подключаем наш файл стилей -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="glass-mode"> <!-- Класс glass-mode управляет стеклянным эффектом -->
+<body class="glass-mode">
 
   <div class="app-container">
     
@@ -28,19 +26,15 @@
       
       <!-- Верхняя панель (Header) -->
       <header class="ios-header">
-        <!-- Круглая кнопка профиля пользователя -->
         <button class="btn-circle avatar-main">t</button>
-        <!-- Центральный островок названия экрана -->
         <div class="header-island">Чаты</div>
-        <!-- Кнопка создания нового чата/группы -->
         <button class="btn-circle btn-action">
           <i data-lucide="square-pen"></i>
         </button>
       </header>
 
-      <!-- Основная область со списком диалогов -->
+      <!-- Список диалогов -->
       <main class="chats-list">
-        <!-- Пример одного элемента чата -->
         <div class="chat-item" onclick="switchScreen('screen-dialog')">
           <div class="chat-avatar blue-gradient">t</div>
           <div class="chat-details">
@@ -50,16 +44,14 @@
             </div>
             <div class="chat-row">
               <p class="chat-preview">Тестовое сообщение</p>
-              <!-- Индикатор непрочитанных сообщений (опционально) -->
               <span class="badge-unread">1</span>
             </div>
           </div>
         </div>
       </main>
 
-      <!-- Нижняя навигационная панель (Tab Bar) -->
+      <!-- Нижняя навигация (Tab Bar) -->
       <nav class="ios-tabbar">
-        <!-- Основной объединенный островок навигации -->
         <div class="tabbar-main-island">
           <button class="tab-item">
             <i data-lucide="user"></i>
@@ -74,7 +66,6 @@
             <span>Стекло</span>
           </button>
         </div>
-        <!-- Вынесенная круглая кнопка поиска -->
         <button class="btn-circle btn-search">
           <i data-lucide="search"></i>
         </button>
@@ -87,25 +78,21 @@
     <!-- ============================================= -->
     <div id="screen-dialog" class="messenger-screen hidden">
       
-      <!-- Верхний статус-бар диалога -->
+      <!-- Верхний статус-бар -->
       <header class="ios-header">
-        <!-- Кнопка Назад в список чатов -->
         <button class="btn-circle btn-back" onclick="switchScreen('screen-chats')">
           <i data-lucide="chevron-left"></i>
         </button>
-        <!-- Информационный островок о собеседнике -->
         <div class="header-island dialog-status-island">
           <span class="user-name">test</span>
           <span class="user-status">в сети</span>
         </div>
-        <!-- Аватарка собеседника вверху справа -->
         <div class="btn-circle chat-avatar blue-gradient">t</div>
       </header>
 
-      <!-- Область вывода сообщений -->
+      <!-- Сообщения -->
       <main class="messages-container" id="messages-view">
         
-        <!-- Входящее сообщение (Слева) -->
         <div class="message msg-incoming">
           <div class="msg-bubble">
             Тестовое сообщение
@@ -113,13 +100,11 @@
           </div>
         </div>
 
-        <!-- Исходящее сообщение (Справа) -->
         <div class="message msg-outgoing">
           <div class="msg-bubble">
             Тестовое сообщение
             <div class="msg-meta">
               <span class="msg-time">12:42</span>
-              <!-- Иконка двух галочек (прочитано) -->
               <i data-lucide="check-check" class="icon-status-read"></i>
             </div>
           </div>
@@ -127,19 +112,16 @@
 
       </main>
 
-      <!-- Нижняя панель ввода текста и отправки -->
+      <!-- Панель ввода текста -->
       <footer class="ios-footer">
-        <!-- Кнопка прикрепления файлов/плюс -->
         <button class="btn-circle btn-plus">
           <i data-lucide="plus"></i>
         </button>
         
-        <!-- Островок поля ввода -->
         <div class="input-island">
           <input type="text" placeholder="Сообщение" id="message-input" autocomplete="off">
         </div>
         
-        <!-- Кнопка микрофона / отправки сообщения -->
         <button class="btn-circle btn-mic" id="btn-send">
           <i data-lucide="mic" id="mic-icon"></i>
         </button>
@@ -149,11 +131,6 @@
 
   </div>
 
-  <!-- Инициализация иконок Lucide -->
-  <script>
-    lucide.createIcons();
-  </script>
-  <!-- Подключаем фронтенд логику -->
   <script src="app.js"></script>
 </body>
 </html>
