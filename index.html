@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>DanuChat</title>
+  <title>DanuChat Premium</title>
   
   <!-- Шрифт Inter -->
   <link rel="preconnect" href="https://googleapis.com">
@@ -17,40 +17,68 @@
 </head>
 <body class="glass-mode">
 
-  <!-- Главный двухпанельный контейнер мессенджера -->
-  <div class="app-layout">
+  <!-- ============================================= -->
+  <!-- ЭКРАН 0: АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ -->
+  <!-- ============================================= -->
+  <div id="screen-auth" class="auth-container">
+    <div class="auth-island">
+      <div class="auth-logo">t</div>
+      <h2 id="auth-title">Войти в DanuChat</h2>
+      
+      <div class="auth-form">
+        <div class="auth-input-wrapper">
+          <input type="text" id="auth-username" placeholder="Имя пользователя">
+        </div>
+        <div class="auth-input-wrapper hidden-auth-field" id="email-field">
+          <input type="email" id="auth-email" placeholder="Email адрес">
+        </div>
+        <div class="auth-input-wrapper">
+          <input type="password" id="auth-password" placeholder="Пароль">
+        </div>
+        
+        <button class="btn-auth-submit" id="btn-auth-action" onclick="handleAuthSubmit()">Войти</button>
+      </div>
+
+      <div class="auth-toggle-text">
+        <span id="auth-toggle-hint">Ещё нет аккаунта?</span>
+        <button id="btn-auth-toggle" onclick="toggleAuthMode()">Зарегистрироваться</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
+  <!-- ============================================= -->
+  <div id="main-messenger-layout" class="app-layout auth-hidden">
     
-    <!-- ============================================= -->
     <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ -->
-    <!-- ============================================= -->
     <aside id="panel-chats" class="messenger-panel">
-      <!-- Верхняя шапка списка чатов -->
       <header class="ios-header">
-        <button class="btn-circle avatar-main">t</button>
+        <button class="btn-circle avatar-main" onclick="logout()">t</button>
         <div class="header-island">Чаты</div>
         <button class="btn-circle btn-action">
           <i data-lucide="square-pen"></i>
         </button>
       </header>
 
-      <!-- Список доступных диалогов -->
+      <!-- Список диалогов -->
       <main class="chats-list">
-        <div class="chat-item active" onclick="selectChat('test-id')">
+        <div id="chat-item-test" class="chat-item" onclick="selectChat('test-id')">
           <div class="chat-avatar blue-gradient">t</div>
           <div class="chat-details">
             <div class="chat-row">
               <span class="chat-name">Test</span>
-              <span class="chat-time">12:45</span>
+              <span class="chat-time" id="chat-last-time">04:03</span>
             </div>
             <div class="chat-row">
-              <p class="chat-preview">Тестовое сообщение</p>
-              <span class="badge-unread">1</span>
+              <p class="chat-preview" id="chat-last-preview">В закрепе: новые стикеры...</p>
+              <span class="badge-unread" id="chat-unread-badge">1</span>
             </div>
           </div>
         </div>
       </main>
 
-      <!-- Нижний Таб-бар списка чатов -->
+      <!-- Нижний Таб-бар -->
       <nav class="ios-tabbar">
         <div class="tabbar-main-island">
           <button class="tab-item">
@@ -72,57 +100,74 @@
       </nav>
     </aside>
 
-    <!-- ============================================= -->
-    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ (ДИАЛОГ) -->
-    <!-- ============================================= -->
+    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ (СТИЛЬ ИЗ ТВОЕГО ФОТО) -->
     <section id="panel-dialog" class="messenger-panel mobile-hidden">
-      <!-- Верхняя шапка открытого чата -->
-      <header class="ios-header">
-        <!-- Кнопка Назад нужна ТОЛЬКО на смартфонах, на ПК она скрыта -->
-        <button class="btn-circle btn-back" onclick="closeChatMobile()">
-          <i data-lucide="chevron-left"></i>
-        </button>
-        <div class="header-island dialog-status-island">
-          <span class="user-name">test</span>
-          <span class="user-status">в сети</span>
-        </div>
-        <div class="btn-circle chat-avatar blue-gradient">t</div>
-      </header>
+      
+      <!-- Заглушка на ПК -->
+      <div id="dialog-placeholder" class="dialog-empty-state">
+        <div class="placeholder-icon"><i data-lucide="message-square-dashed"></i></div>
+        <p>Выберите чат, чтобы начать общение</p>
+      </div>
 
-      <!-- Окно вывода сообщений чата -->
-      <main class="messages-container" id="messages-view">
-        <div class="message msg-incoming">
-          <div class="msg-bubble">
-            Тестовое сообщение
-            <span class="msg-time">12:40</span>
+      <!-- Контент чата -->
+      <div id="dialog-active-content" class="dialog-content-wrapper hidden-content">
+        
+        <!-- Шапка из твоего скриншота (С кнопкой назад, звонком и тремя точками) -->
+        <header class="ios-header">
+          <button class="btn-circle btn-back" onclick="closeChatMobile()">
+            <i data-lucide="chevron-left"></i>
+          </button>
+          
+          <!-- Объединенный центральный островок профиля -->
+          <div class="header-island profile-island">
+            <div class="mini-avatar">🐮</div>
+            <div class="profile-meta">
+              <span class="user-name">Test</span>
+              <span class="user-status">был(а) 1 ч. назад</span>
+            </div>
+            <i data-lucide="chevron-right" class="icon-arrow-profile"></i>
           </div>
-        </div>
+          
+          <!-- Правый островок управления: звонок и опции -->
+          <div class="header-controls-island">
+            <button class="icon-control-btn"><i data-lucide="phone"></i></button>
+            <button class="icon-control-btn"><i data-lucide="ellipsis"></i></button>
+          </div>
+        </header>
 
-        <div class="message msg-outgoing">
-          <div class="msg-bubble">
-            Тестовое сообщение
-            <div class="msg-meta">
-              <span class="msg-time">12:42</span>
-              <i data-lucide="check-check" class="icon-status-read"></i>
+        <!-- Область сообщений (Стикерная лента как на фото) -->
+        <main class="messages-container" id="messages-view">
+          <div class="message msg-outgoing item-sticker">
+            <div class="sticker-wrapper">
+              <span class="mock-sticker">🐮😂</span>
+              <div class="msg-meta">
+                <span class="msg-time">04:03</span>
+                <i data-lucide="check" class="icon-status-read"></i>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <!-- Нижняя панель отправки сообщений -->
-      <footer class="ios-footer">
-        <button class="btn-circle btn-plus">
-          <i data-lucide="plus"></i>
-        </button>
+        <!-- Нижняя панель ввода (Точь-в-точь как на фото) -->
+        <footer class="ios-footer">
+          <!-- Кнопка плюс -->
+          <button class="btn-circle btn-plus">
+            <i data-lucide="plus"></i>
+          </button>
+          
+          <!-- Стеклянное поле ввода со смайликом внутри -->
+          <div class="input-island animate-input-box">
+            <input type="text" placeholder="Сообщение..." id="message-input" autocomplete="off">
+            <button class="btn-inside-smile"><i data-lucide="smile"></i></button>
+          </div>
+          
+          <!-- Микрофон / Отправка -->
+          <button class="btn-circle btn-mic" id="btn-send" onclick="handleSendClick()">
+            <i data-lucide="mic" id="mic-icon"></i>
+          </button>
+        </footer>
         
-        <div class="input-island">
-          <input type="text" placeholder="Сообщение" id="message-input" autocomplete="off">
-        </div>
-        
-        <button class="btn-circle btn-mic" id="btn-send">
-          <i data-lucide="mic" id="mic-icon"></i>
-        </button>
-      </footer>
+      </div>
     </section>
 
   </div>
