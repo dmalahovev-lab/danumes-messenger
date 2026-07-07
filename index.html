@@ -5,26 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DanuChat</title>
   
-  <!-- Подключение шрифта Inter -->
+  <!-- Шрифт Inter -->
   <link rel="preconnect" href="https://googleapis.com">
   <link rel="preconnect" href="https://gstatic.com" crossorigin>
   <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Подключение иконок Lucide -->
+  <!-- Иконки Lucide -->
   <script src="https://unpkg.com"></script>
   
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="glass-mode">
 
-  <div class="app-container">
+  <!-- Главный двухпанельный контейнер мессенджера -->
+  <div class="app-layout">
     
     <!-- ============================================= -->
-    <!-- ЭКРАН 1: СПИСОК ЧАТОВ -->
+    <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ -->
     <!-- ============================================= -->
-    <div id="screen-chats" class="messenger-screen">
-      
-      <!-- Верхняя панель (Header) -->
+    <aside id="panel-chats" class="messenger-panel">
+      <!-- Верхняя шапка списка чатов -->
       <header class="ios-header">
         <button class="btn-circle avatar-main">t</button>
         <div class="header-island">Чаты</div>
@@ -33,9 +33,9 @@
         </button>
       </header>
 
-      <!-- Список диалогов -->
+      <!-- Список доступных диалогов -->
       <main class="chats-list">
-        <div class="chat-item" onclick="switchScreen('screen-dialog')">
+        <div class="chat-item active" onclick="selectChat('test-id')">
           <div class="chat-avatar blue-gradient">t</div>
           <div class="chat-details">
             <div class="chat-row">
@@ -50,7 +50,7 @@
         </div>
       </main>
 
-      <!-- Нижняя навигация (Tab Bar) -->
+      <!-- Нижний Таб-бар списка чатов -->
       <nav class="ios-tabbar">
         <div class="tabbar-main-island">
           <button class="tab-item">
@@ -70,17 +70,16 @@
           <i data-lucide="search"></i>
         </button>
       </nav>
-      
-    </div>
+    </aside>
 
     <!-- ============================================= -->
-    <!-- ЭКРАН 2: ОКНО ПЕРЕПИСКИ (ДИАЛОГ) -->
+    <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ПЕРЕПИСКИ (ДИАЛОГ) -->
     <!-- ============================================= -->
-    <div id="screen-dialog" class="messenger-screen hidden">
-      
-      <!-- Верхний статус-бар -->
+    <section id="panel-dialog" class="messenger-panel mobile-hidden">
+      <!-- Верхняя шапка открытого чата -->
       <header class="ios-header">
-        <button class="btn-circle btn-back" onclick="switchScreen('screen-chats')">
+        <!-- Кнопка Назад нужна ТОЛЬКО на смартфонах, на ПК она скрыта -->
+        <button class="btn-circle btn-back" onclick="closeChatMobile()">
           <i data-lucide="chevron-left"></i>
         </button>
         <div class="header-island dialog-status-island">
@@ -90,9 +89,8 @@
         <div class="btn-circle chat-avatar blue-gradient">t</div>
       </header>
 
-      <!-- Сообщения -->
+      <!-- Окно вывода сообщений чата -->
       <main class="messages-container" id="messages-view">
-        
         <div class="message msg-incoming">
           <div class="msg-bubble">
             Тестовое сообщение
@@ -109,10 +107,9 @@
             </div>
           </div>
         </div>
-
       </main>
 
-      <!-- Панель ввода текста -->
+      <!-- Нижняя панель отправки сообщений -->
       <footer class="ios-footer">
         <button class="btn-circle btn-plus">
           <i data-lucide="plus"></i>
@@ -126,8 +123,7 @@
           <i data-lucide="mic" id="mic-icon"></i>
         </button>
       </footer>
-
-    </div>
+    </section>
 
   </div>
 
