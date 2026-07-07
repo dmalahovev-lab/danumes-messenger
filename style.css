@@ -2,8 +2,8 @@
    1. ИСТИННАЯ ТЕМНАЯ ТЕМА И ОГРАНИЧЕНИЕ ДЕСКТОП СЕТКИ
    ========================================================================== */
 :root {
-  --bg-main: #060708; /* Глубокий темный фон вокруг приложения на ПК */
-  --app-bg: #0c0d0e;  /* Собственный фон мессенджера */
+  --bg-main: #060708;
+  --app-bg: #0c0d0e;
   --text-primary: #ffffff;
   --text-secondary: #98989f;
   --accent-blue: #007aff;
@@ -44,14 +44,13 @@ body {
   overflow: hidden;
 }
 
-/* ФИКС РАСПЛЮЩЕННОСТИ: Ограничиваем пропорции приложения на ПК */
 .window-wrapper {
   width: 100%;
-  max-width: 1100px; /* Идеальная аккуратная ширина для ПК версий */
+  max-width: 1100px;
   height: 100vh;
-  max-height: 820px;  /* Идеальная высота, чтобы блоки не вытягивались по вертикали */
+  max-height: 820px;
   background: var(--app-bg);
-  border-radius: 24px; /* Красивые скругленные края самого приложения на десктопе */
+  border-radius: 24px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.7);
   overflow: hidden;
   position: relative;
@@ -110,18 +109,8 @@ body {
   box-shadow: 0 6px 20px rgba(255, 94, 58, 0.3);
 }
 
-.auth-island h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 24px;
-}
-
-.auth-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.auth-island h2 { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+.auth-form { width: 100%; display: flex; flex-direction: column; gap: 12px; }
 
 .auth-input-wrapper {
   width: 100%;
@@ -134,45 +123,11 @@ body {
   align-items: center;
 }
 
-.auth-input-wrapper input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 15px;
-}
-
-.hidden-auth-field {
-  display: none !important;
-}
-
-.btn-auth-submit {
-  width: 100%;
-  height: 48px;
-  background: var(--accent-blue);
-  color: white;
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
-.auth-toggle-text {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-#btn-auth-toggle {
-  background: transparent;
-  border: none;
-  color: var(--accent-blue);
-  font-weight: 600;
-  cursor: pointer;
-}
+.auth-input-wrapper input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; }
+.hidden-auth-field { display: none !important; }
+.btn-auth-submit { width: 100%; height: 48px; background: var(--accent-blue); color: white; border: none; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.auth-toggle-text { margin-top: 20px; font-size: 13px; color: var(--text-secondary); }
+#btn-auth-toggle { background: transparent; border: none; color: var(--accent-blue); font-weight: 600; cursor: pointer; }
 
 /* ==========================================================================
    3. ИНТЕРФЕЙС ПАНЕЛЕЙ
@@ -184,15 +139,14 @@ body {
   background: transparent;
 }
 
-.auth-hidden {
-  display: none !important;
-}
+.auth-hidden { display: none !important; }
 
 .messenger-panel {
   height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px;
+  position: relative;
 }
 
 #panel-chats {
@@ -201,24 +155,12 @@ body {
   border-right: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-#panel-dialog {
-  flex-grow: 1;
-}
+#panel-dialog { flex-grow: 1; }
+.dialog-content-wrapper { display: flex; flex-direction: column; height: 100%; width: 100%; }
+.hidden-content { display: none !important; }
 
-.dialog-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
-.hidden-content {
-  display: none !important;
-}
-
-/* Кнопки управления */
 .btn-circle {
-  width: 40px; /* Уменьшили высоту, чтобы убрать эффект расплющенности */
+  width: 40px;
   height: 40px;
   min-width: 40px;
   border-radius: 50%;
@@ -235,22 +177,10 @@ body {
   transition: transform 0.2s ease;
 }
 
-.btn-circle svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-
+.btn-circle svg { width: 16px; height: 16px; display: block; }
 .btn-circle:active { transform: scale(0.9); }
 
-.ios-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  height: 40px;
-  margin-bottom: 20px;
-}
+.ios-header { display: flex; justify-content: space-between; align-items: center; width: 100%; height: 40px; margin-bottom: 20px; }
 
 .header-island {
   flex-grow: 1;
@@ -269,21 +199,10 @@ body {
   font-size: 14px;
 }
 
-.profile-island {
-  justify-content: flex-start;
-  padding: 0 14px;
-  gap: 10px;
-}
-
+.profile-island { justify-content: flex-start; padding: 0 14px; gap: 10px; cursor: pointer; }
 .mini-avatar { font-size: 18px; }
-
-.profile-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.profile-meta .user-name { font-size: 13px; font-weight: 600; line-height: 1.2;}
+.profile-meta { display: flex; flex-direction: column; align-items: flex-start; }
+.profile-meta .user-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .profile-meta .user-status { font-size: 10px; color: var(--text-secondary); }
 .icon-arrow-profile { margin-left: auto; width: 12px; height: 12px; color: var(--text-secondary); }
 
@@ -301,28 +220,12 @@ body {
   gap: 2px;
 }
 
-.icon-control-btn {
-  background: transparent;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  color: var(--text-primary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.icon-control-btn svg {
-  width: 15px;
-  height: 15px;
-}
-
+.icon-control-btn { background: transparent; border: none; width: 32px; height: 32px; border-radius: 50%; color: var(--text-primary); display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.icon-control-btn svg { width: 15px; height: 15px; }
 .btn-back { display: none; }
 
 /* ==========================================================================
-   4. СПИСОК ЧАТОВ И НИЖНИЙ ТАББАР
+   4. СПИСОК ЧАТОВ И ВНУТРЕННИЙ ТАББАР (ФИКС ПОЛОЖЕНИЯ)
    ========================================================================== */
 .chats-list {
   flex-grow: 1;
@@ -330,42 +233,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-bottom: 60px; /* Оставили место снизу для таббара чатов */
 }
 
 .chats-list::-webkit-scrollbar,
-.messages-container::-webkit-scrollbar {
-  width: 0px;
-}
+.messages-container::-webkit-scrollbar { width: 0px; }
 
-.chat-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  border-radius: 16px;
-  cursor: pointer;
-}
-
-.chat-item.active {
-  background: var(--island-bg);
-  border: var(--island-border);
-  box-shadow: var(--island-shadow);
-}
-
-.chat-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-}
-
-.chat-avatar svg {
-  width: 16px;
-  height: 16px;
-}
-
+.chat-item { display: flex; align-items: center; padding: 12px; border-radius: 16px; cursor: pointer; }
+.chat-item.active { background: var(--island-bg); border: var(--island-border); box-shadow: var(--island-shadow); }
+.chat-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; }
+.chat-avatar svg { width: 16px; height: 16px; }
 .blue-gradient { background: linear-gradient(135deg, #007aff, #00c6ff); }
 .chat-details { flex-grow: 1; margin-left: 12px; overflow: hidden; }
 .chat-row { display: flex; justify-content: space-between; }
@@ -375,18 +252,20 @@ body {
 .badge-unread { background: var(--accent-blue); color: white; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; }
 .badge-unread.hidden-badge { display: none; }
 
+/* Таб-бар теперь закреплен СНИЗУ ЛЕВОЙ ПАНЕЛИ чатов на ПК */
 .ios-tabbar {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
   display: flex;
   height: 48px;
+  z-index: 20;
 }
 
 .tabbar-main-island {
   flex-grow: 1;
-  margin-right: 8px;
+  margin-right: 6px;
   height: 48px;
   background: var(--island-bg);
   border: var(--island-border);
@@ -412,23 +291,12 @@ body {
   width: 50px;
 }
 
-.tab-item svg { 
-  width: 15px; 
-  height: 15px; 
-  display: block;
-}
-
-.tab-item span { 
-  font-size: 9px; 
-  margin-top: 2px; 
-  display: block;
-  font-weight: 500;
-}
-
+.tab-item svg { width: 15px; height: 15px; display: block; }
+.tab-item span { font-size: 9px; margin-top: 2px; display: block; font-weight: 500; }
 .tab-item.active { color: var(--text-primary); }
 
 /* ==========================================================================
-   5. СООБЩЕНИЯ
+   5. СООБЩЕНИЯ И ВСВЫВАЮЩИЙ EMOJI-PICKER
    ========================================================================== */
 .messages-container {
   flex-grow: 1;
@@ -437,13 +305,10 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 10px;
+  position: relative;
 }
 
-.message {
-  display: flex;
-  width: 100%;
-}
-
+.message { display: flex; width: 100%; }
 .msg-incoming { justify-content: flex-start; }
 .msg-outgoing { justify-content: flex-end; }
 
@@ -451,4 +316,12 @@ body {
   max-width: 60%;
   padding: 10px 14px;
   border-radius: 16px;
-Use code with caution.font-size: 14px;line-height: 1.4;word-break: break-word;position: relative;}.msg-incoming .msg-bubble {background: var(--island-bg);color: var(--text-primary);border: var(--island-border);border-bottom-left-radius: 4px;}.msg-outgoing .msg-bubble {background: var(--accent-blue);color: white;border-bottom-right-radius: 4px;}.msg-meta {display: flex;align-items: center;justify-content: flex-end;gap: 4px;margin-top: 3px;}.msg-time {font-size: 9px;opacity: 0.65;}.msg-meta svg {width: 11px;height: 11px;}/* СТИКЕРЫ */.item-sticker { justify-content: flex-end; }.sticker-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-end; }.mock-sticker { font-size: 80px; line-height: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3)); user-select: none; }.sticker-wrapper .msg-meta {background: rgba(0, 0, 0, 0.4);padding: 1px 5px;border-radius: 8px;backdrop-filter: blur(5px);margin-top: -6px;margin-right: 6px;}.sticker-wrapper .msg-time { color: #ffffff; font-weight: 500; }.sticker-wrapper svg { color: #ffffff; }/* НИЖНЯЯ ПАНЕЛЬ */.ios-footer { display: flex; align-items: center; width: 100%; height: 40px; margin-top: auto; }.input-island {flex-grow: 1;margin: 0 10px;height: 40px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 20px;padding: 0 14px 0 16px;display: flex;align-items: center;}.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 14px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 6px; }.btn-inside-smile svg { width: 18px; height: 18px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 40px; height: 40px; opacity: 0.3; }/* ==========================================================================6. ПРАВИЛА ДЛЯ МОБИЛОК (Убираем ограничения ПК версии)========================================================================== */@media (max-width: 768px) {.window-wrapper {max-width: 100%;height: 100vh;max-height: 100vh;border-radius: 0px;border: none;}.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--app-bg); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }}
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+  position: relative;
+}
+
+.msg-incoming .msg-bubble { background: var(--island-bg); color: var(--text-primary); border: var(--island-border); border-bottom-left-radius: 4px; }
+.msg-outgoing .msg-bubble { background: var(--accent-blue); color: white; border-bottom-right-radius: 4px; }
+.msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 3px; }.msg-time { font-size: 9px; opacity: 0.65; }.msg-meta svg { width: 11px; height: 11px; }/* Стикерная логика */.item-sticker { justify-content: flex-end; }.sticker-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-end; }.mock-sticker { font-size: 80px; line-height: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3)); user-select: none; }.sticker-wrapper .msg-meta { background: rgba(0, 0, 0, 0.4); padding: 1px 5px; border-radius: 8px; backdrop-filter: blur(5px); margin-top: -6px; margin-right: 6px; }.sticker-wrapper .msg-time { color: #ffffff; font-weight: 500; }.sticker-wrapper svg { color: #ffffff; }/* ОЖИВЛЕННАЯ СТИЛЬНАЯ ПАНЕЛЬ СМАЙЛИКОВ */.emoji-picker-card {position: absolute;bottom: 10px;left: 10px;background: var(--island-bg);border: var(--island-border);box-shadow: var(--island-shadow);backdrop-filter: var(--blur-value);-webkit-backdrop-filter: var(--blur-value);border-radius: 16px;padding: 10px;display: flex;gap: 12px;z-index: 50;transition: opacity 0.2s ease, transform 0.2s ease;}.hidden-emoji {opacity: 0;transform: translateY(10px);pointer-events: none;}.emoji-opt {font-size: 24px;cursor: pointer;transition: transform 0.1s ease;}.emoji-opt:hover { transform: scale(1.2); }/* Нижнее поле ввода */.ios-footer { display: flex; align-items: center; width: 100%; height: 40px; margin-top: auto; }.input-island { flex-grow: 1; margin: 0 10px; height: 40px; background: var(--island-bg); border: var(--island-border); box-shadow: var(--island-shadow); backdrop-filter: var(--blur-value); -webkit-backdrop-filter: var(--blur-value); border-radius: 20px; padding: 0 14px 0 16px; display: flex; align-items: center; }.input-island input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 14px; }.btn-inside-smile { background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding-left: 6px; }.btn-inside-smile svg { width: 18px; height: 18px; }.dialog-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); gap: 12px; }.dialog-empty-state svg { width: 40px; height: 40px; opacity: 0.3; }/* ==========================================================================6. ПРАВИЛА ДЛЯ МОБИЛОК========================================================================== */@media (max-width: 768px) {.window-wrapper { max-width: 100%; height: 100vh; max-height: 100vh; border-radius: 0px; border: none; }.messenger-panel { width: 100% !important; position: absolute; top: 0; left: 0; background: var(--app-bg); transition: transform 0.3s ease, opacity 0.3s ease; }.mobile-hidden { transform: translateX(100%); opacity: 0; }#panel-chats.mobile-left { transform: translateX(-100%); opacity: 0; }.btn-back { display: flex; }#dialog-placeholder { display: none; }.hidden-content { display: flex !important; }/* На смартфонах прижимаем таббар к самому низу экрана мобилки */.ios-tabbar { bottom: 12px; left: 12px; right: 12px; }}
