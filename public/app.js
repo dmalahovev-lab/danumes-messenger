@@ -1,6 +1,6 @@
 const socket = io();
 
-// DOM-элементы
+// ========== DOM-элементы ==========
 const $ = (id) => document.getElementById(id);
 
 const loginModal = $('login-modal');
@@ -47,7 +47,7 @@ let currentUser = '';
 let isLogin = true;
 let activeRoom = null;
 let activeContact = null;
-let activeType = null;
+let activeType = null; // 'user', 'group', 'channel'
 let typingTimer;
 let selectedMembers = new Set();
 let creatingMode = 'group';
@@ -83,7 +83,7 @@ function doAuth() {
       appDiv.style.display = 'flex';
       $('my-avatar').textContent = currentUser[0].toUpperCase();
       $('my-name').textContent = currentUser;
-      init();
+      initApp();
     } else {
       loginError.textContent = res.message;
     }
@@ -96,7 +96,7 @@ loginBtn.addEventListener('click', doAuth);
 });
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
-function init() {
+function initApp() {
   socket.emit('request online users');
   
   socket.on('online users', users => {
@@ -130,10 +130,11 @@ function init() {
   if (window.innerWidth <= 768) sidebar.classList.add('hidden');
 }
 
-// ===== РЕНДЕР =====
+// ===== РЕНДЕР СПИСКА ЧАТОВ =====
 function renderAll() {
   chatList.innerHTML = '';
   
+  // Каналы
   allChannels.forEach(ch => {
     const div = document.createElement('div');
     div.className = 'chat-item';
@@ -142,6 +143,7 @@ function renderAll() {
     chatList.appendChild(div);
   });
   
+  // Группы
   allGroups.forEach(g => {
     if (!g.members.includes(currentUser)) return;
     const online = g.members.filter(m => onlineUsers.includes(m)).length;
@@ -152,6 +154,7 @@ function renderAll() {
     chatList.appendChild(div);
   });
   
+  // Пользователи
   onlineUsers.filter(u => u !== currentUser).forEach(u => {
     const div = document.createElement('div');
     div.className = 'chat-item';
@@ -233,15 +236,27 @@ function addMsg(user, text, time) {
 function sendMsg() {
   const text = msgInput.value.trim();
   if (!text || !activeRoom) return;
+  
+  // Отправляем сообщение с указанием комнаты
   socket.emit('chat message', { room: activeRoom, text });
+  
+  // Очищаем поле
   msgInput.value = '';
+  
+  // Останавливаем индикатор печати
   socket.emit('stop typing', { room: activeRoom });
   clearTimeout(typingTimer);
+  
+  // Фокус обратно на поле ввода
+  msgInput.focus();
 }
 
 $('send-btn').addEventListener('click', sendMsg);
 msgInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMsg();
+  }
 });
 
 msgInput.addEventListener('input', () => {
@@ -251,15 +266,27 @@ msgInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-// ===== ПЛЮСИК =====
-$('plus-btn').addEventListener('click', e => {
+// ===== ПЛЮСИК (исправлено) =====
+$('plus-btn').addEventListener('click', (e) => {
   e.stopPropagation();
-  plusMenu.style.display = plusMenu.style.display === 'block' ? 'none' : 'block';
+  e.preventDefault();
+  
+  // Переключаем видимость меню
+  if (plusMenu.style.display === 'block') {
+    plusMenu.style.display = 'none';
+  } else {
+    plusMenu.style.display = 'block';
+  }
 });
 
-document.addEventListener('click', () => { plusMenu.style.display = 'none'; });
+// Закрываем меню при клике в любом месте, кроме самого меню и кнопки
+document.addEventListener('click', (e) => {
+  if (!plusMenu.contains(e.target) && e.target !== $('plus-btn')) {
+    plusMenu.style.display = 'none';
+  }
+});
 
-$('menu-group').addEventListener('click', e => {
+$('menu-group').addEventListener('click', (e) => {
   e.stopPropagation();
   plusMenu.style.display = 'none';
   creatingMode = 'group';
@@ -272,7 +299,7 @@ $('menu-group').addEventListener('click', e => {
   createModal.style.display = 'flex';
 });
 
-$('menu-channel').addEventListener('click', e => {
+$('menu-channel').addEventListener('click', (e) => {
   e.stopPropagation();
   plusMenu.style.display = 'none';
   creatingMode = 'channel';
@@ -293,8 +320,13 @@ function renderMembers() {
     if (selectedMembers.has(u)) div.classList.add('selected');
     div.innerHTML = `<div class="avatar-sm">${u[0].toUpperCase()}</div><span class="member-name">${u}</span><span class="check">✓</span>`;
     div.addEventListener('click', () => {
-      if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); }
-      else { selectedMembers.add(u); div.classList.add('selected'); }
+      if (selectedMembers.has(u)) {
+        selectedMembers.delete(u);
+        div.classList.remove('selected');
+      } else {
+        selectedMembers.add(u);
+        div.classList.add('selected');
+      }
     });
     membersList.appendChild(div);
   });
@@ -307,13 +339,20 @@ $('create-btn').addEventListener('click', () => {
   if (creatingMode === 'group') {
     if (selectedMembers.size === 0) return alert('Выберите участников');
     socket.emit('create group', { name, members: Array.from(selectedMembers) }, res => {
-      if (res.success) { createModal.style.display = 'none'; selectedMembers.clear(); }
-      else alert(res.message);
+      if (res.success) {
+        createModal.style.display = 'none';
+        selectedMembers.clear();
+      } else {
+        alert(res.message);
+      }
     });
   } else {
     socket.emit('create channel', { name }, res => {
-      if (res.success) createModal.style.display = 'none';
-      else alert(res.message);
+      if (res.success) {
+        createModal.style.display = 'none';
+      } else {
+        alert(res.message);
+      }
     });
   }
 });
