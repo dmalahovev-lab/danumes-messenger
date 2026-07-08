@@ -15,7 +15,7 @@
   --glass-blur: blur(40px) saturate(180%);
   --accent: #4a9eff;
   --accent-light: #6db3ff;
-  --text-primary: #ffffff;
+  --text: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.55);
   --text-tertiary: rgba(255, 255, 255, 0.35);
   --radius-lg: 24px;
@@ -23,7 +23,6 @@
   --radius-sm: 14px;
   --radius-bubble: 18px;
   --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 20px rgba(74, 158, 255, 0.3);
   --transition-fast: 0.15s ease;
   --transition-smooth: 0.25s cubic-bezier(0.2, 0.0, 0.0, 1.0);
 }
@@ -31,12 +30,11 @@
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
-  color: var(--text-primary);
+  color: var(--text);
   overflow: hidden;
   height: 100vh;
   width: 100vw;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 .app-bg {
@@ -88,6 +86,7 @@ body {
 .icon-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
 .icon-btn:active { transform: scale(0.92); }
 
+/* Модальные окна */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -149,6 +148,7 @@ body {
 .toggle-text a { color: var(--accent); text-decoration: none; font-weight: 600; margin-left: 4px; }
 .toggle-text a:hover { text-decoration: underline; }
 
+/* Профиль */
 .profile-card { position: relative; padding-top: 50px; }
 .modal-close { position: absolute; top: 16px; right: 16px; font-size: 1.2rem; }
 .big-avatar {
@@ -182,8 +182,10 @@ body {
 .btn-secondary:hover { background: rgba(255,255,255,0.12); }
 .btn-danger:hover { background: rgba(255,80,80,0.15); }
 
+/* Главный контейнер */
 .app-container { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
 
+/* Сайдбар */
 .sidebar {
   width: 340px;
   display: flex;
@@ -211,15 +213,16 @@ body {
 .user-info:hover { background: rgba(255,255,255,0.05); }
 .user-info span { font-weight: 600; font-size: 1rem; color: white; }
 
+/* Плюсик */
 .plus-btn {
   background: rgba(74, 158, 255, 0.15);
   border: 1px solid rgba(74, 158, 255, 0.3);
   border-radius: 14px;
   width: 38px; height: 38px;
   color: var(--accent);
-  transition: var(--transition-smooth);
   font-size: 1.4rem;
   font-weight: 700;
+  transition: var(--transition-smooth);
 }
 .plus-btn:hover {
   background: rgba(74, 158, 255, 0.3);
@@ -228,6 +231,7 @@ body {
   transform: scale(1.08);
 }
 
+/* Выпадающее меню */
 .plus-dropdown {
   position: absolute;
   top: 100%; right: 0;
@@ -258,10 +262,12 @@ body {
 .plus-dropdown-item:hover { background: rgba(255, 255, 255, 0.1); }
 .plus-dropdown-item span { font-size: 1.3rem; }
 
+/* Поиск */
 .search-wrap { position: relative; padding: 0 18px 16px; }
 .search-icon { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); pointer-events: none; }
 .search-input { padding-left: 42px; }
 
+/* Список чатов */
 .chat-list {
   flex: 1;
   overflow-y: auto;
@@ -321,6 +327,7 @@ body {
   margin-top: 3px;
 }
 
+/* Чат */
 .chat { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.15); }
 .chat-head {
   display: flex;
@@ -402,6 +409,7 @@ body {
 }
 .send-btn:hover { background: var(--accent-light); transform: scale(1.06); }
 
+/* Модалка создания */
 .group-modal-card { max-width: 420px; max-height: 80vh; overflow-y: auto; }
 .members-list {
   display: flex;
@@ -443,6 +451,7 @@ body {
 .check { color: var(--accent); font-weight: 700; font-size: 1.2rem; opacity: 0; transition: opacity 0.2s; }
 .member-item.selected .check { opacity: 1; }
 
+/* Адаптив */
 @media (max-width: 768px) {
   .sidebar {
     position: absolute;
