@@ -43,6 +43,7 @@ const contextMenu = $('context-menu');
 const contextCopy = $('context-copy');
 const contextDelete = $('context-delete');
 const contextReply = $('context-reply');
+const contextReactions = $('context-reactions');
 
 const appDiv = $('app');
 const sidebar = $('sidebar');
@@ -86,6 +87,7 @@ let recordingInterval = null;
 
 const notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA==');
 
+// ===== ТЕМЫ =====
 const themes = {
   'blue-dark': {
     name: 'Синяя', bg: '#0a0a0f', accent: '#4a9eff', accentLight: '#6db3ff',
@@ -213,8 +215,17 @@ function initApp() {
   socket.on('user joined', () => socket.emit('request online users'));
   socket.on('user left', () => socket.emit('request online users'));
   
+  // ИСПРАВЛЕНО: принимаем сообщения и для текущей комнаты тоже
   socket.on('chat message', data => {
-    addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+    if (activeRoom) {
+      // Проверяем, относится ли сообщение к текущей комнате
+      const roomUsers = activeRoom.split(':');
+      if (roomUsers.includes(data.user) || activeRoom === data.room || !data.room || data.room === activeRoom) {
+        addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+        // Сохраняем в кеш
+        msgCache[activeRoom] = messagesDiv.innerHTML;
+      }
+    }
     if (data.user !== currentUser && document.hidden) {
       notificationSound.play().catch(() => {});
     }
@@ -254,9 +265,6 @@ function initApp() {
         span.textContent = data.emoji + ' 1';
         span.dataset.emoji = data.emoji;
         span.dataset.count = '1';
-        span.addEventListener('click', () => {
-          socket.emit('reaction', { room: activeRoom, id: data.id, emoji: data.emoji });
-        });
         reactionsDiv.appendChild(span);
       }
     }
@@ -296,17 +304,21 @@ function renderAll() {
   });
 }
 
-// ===== ОТКРЫТИЕ ЧАТА =====
+// ===== ОТКРЫТИЕ ЧАТА (ИСПРАВЛЕНО) =====
 function openChat(name, room, type) {
   if (activeRoom) {
     socket.emit('leave room', { room: activeRoom });
     if (messagesDiv.children.length) msgCache[activeRoom] = messagesDiv.innerHTML;
   }
+  
   activeContact = name;
   activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
+  
   chatTitle.textContent = name;
+  // ИСПРАВЛЕНО: показываем сохранённые сообщения
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
+  
   if (type === 'channel') {
     chatAvatar.innerHTML = '📢';
     chatAvatar.style.background = 'linear-gradient(135deg,#f093fb,#f5576c)';
@@ -324,10 +336,13 @@ function openChat(name, room, type) {
     updateStatus();
     composer.style.display = 'flex';
   }
+  
   socket.emit('join room', { room: activeRoom });
+  
   document.querySelectorAll('.chat-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.name')?.textContent === name);
   });
+  
   if (window.innerWidth <= 768) sidebar.classList.add('hidden');
   setTimeout(() => { messagesBox.scrollTop = messagesBox.scrollHeight; }, 100);
 }
@@ -343,59 +358,43 @@ function updateStatus() {
   }
 }
 
-// ===== СООБЩЕНИЯ =====
+// ===== СООБЩЕНИЯ (ИСПРАВЛЕНО) =====
 function addMsg(user, text, time, id, replyToData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
   div.dataset.user = user;
   div.dataset.id = id || ('msg_' + Date.now() + '_' + Math.random());
-  const safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  // Подсветка упоминаний
-  const highlighted = safe.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+  
+  // Проверяем, есть ли аудио
+  let content = '';
+  if (text.startsWith('[Голосовое сообщение:')) {
+    const audioSrc = replyToData; // audio data передаётся в replyTo
+    content = `<div class="voice-msg" onclick="this.querySelector('audio').play()">🎤 ${text} <audio src="${audioSrc || ''}" preload="auto"></audio></div>`;
+  } else {
+    const safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const highlighted = safe.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+    content = highlighted;
+  }
   
   let replyHTML = '';
-  if (replyToData) {
-    replyHTML = `<div class="reply-preview">↩ ${replyToData.user}: ${replyToData.text.substring(0, 50)}</div>`;
+  if (replyToData && replyToData.user) {
+    replyHTML = `<div class="reply-preview">↩ ${replyToData.user}: ${(replyToData.text || '').substring(0, 50)}</div>`;
   }
   
   if (activeType === 'group' || activeType === 'channel') {
-    div.innerHTML = `${replyHTML}<div class="sender">${user}</div>${highlighted}<div class="time">${time}</div>`;
+    div.innerHTML = `${replyHTML}<div class="sender">${user}</div>${content}<div class="time">${time}</div>`;
   } else {
-    div.innerHTML = `${replyHTML}${highlighted}<div class="time">${time}</div>`;
+    div.innerHTML = `${replyHTML}${content}<div class="time">${time}</div>`;
   }
-  
-  // Кнопка ответа при наведении
-  div.addEventListener('mouseenter', () => {
-    if (!div.querySelector('.reply-btn')) {
-      const btn = document.createElement('button');
-      btn.className = 'reply-btn';
-      btn.innerHTML = '↩';
-      btn.title = 'Ответить';
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        startReply(div);
-      });
-      div.appendChild(btn);
-    }
-  });
-  div.addEventListener('mouseleave', () => {
-    const btn = div.querySelector('.reply-btn');
-    if (btn) btn.remove();
-  });
   
   // Контекстное меню
   div.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     contextTarget = div;
+    // Позиционируем меню
     contextMenu.style.display = 'block';
-    contextMenu.style.left = e.pageX + 'px';
-    contextMenu.style.top = e.pageY + 'px';
-  });
-  
-  // Двойной клик для реакций
-  div.addEventListener('dblclick', (e) => {
-    if (e.target.classList.contains('reaction-badge')) return;
-    showReactionPicker(e.pageX, e.pageY, div.dataset.id);
+    contextMenu.style.left = Math.min(e.pageX, window.innerWidth - 200) + 'px';
+    contextMenu.style.top = Math.min(e.pageY, window.innerHeight - 150) + 'px';
   });
   
   messagesDiv.appendChild(div);
@@ -403,14 +402,18 @@ function addMsg(user, text, time, id, replyToData) {
   if (activeRoom) msgCache[activeRoom] = messagesDiv.innerHTML;
 }
 
-// ===== ОТВЕТ НА СООБЩЕНИЕ =====
+// ===== ОТВЕТ НА СООБЩЕНИЕ (ИСПРАВЛЕНО) =====
 function startReply(msgEl) {
+  const textEl = msgEl.querySelector('.voice-msg') || msgEl;
+  let text = textEl.textContent.replace('🎤 ', '').trim();
+  if (text.length > 50) text = text.substring(0, 50) + '...';
+  
   replyTo = {
     id: msgEl.dataset.id,
     user: msgEl.dataset.user,
-    text: msgEl.querySelector('.bubble')?.textContent || msgEl.textContent.replace(/↩.*/, '').trim()
+    text: text
   };
-  replyText.textContent = `${replyTo.user}: ${replyTo.text.substring(0, 50)}`;
+  replyText.textContent = `${replyTo.user}: ${text}`;
   replyBar.style.display = 'flex';
   msgInput.focus();
 }
@@ -433,6 +436,7 @@ function sendMsg() {
     id: msgId,
     replyTo: replyTo
   });
+  
   msgInput.value = '';
   replyTo = null;
   replyBar.style.display = 'none';
@@ -456,14 +460,19 @@ msgInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-// ===== КОНТЕКСТНОЕ МЕНЮ =====
+// ===== КОНТЕКСТНОЕ МЕНЮ (ИСПРАВЛЕНО) =====
 document.addEventListener('click', () => { contextMenu.style.display = 'none'; });
 
 contextCopy.addEventListener('click', () => {
   if (contextTarget) {
-    const text = contextTarget.textContent.replace(/↩.*/, '').replace('Ответить', '').trim();
+    const text = contextTarget.textContent.replace(/↩.*\n?/g, '').replace(/🎤.*/g, '').trim();
     navigator.clipboard.writeText(text);
   }
+  contextMenu.style.display = 'none';
+});
+
+contextReply.addEventListener('click', () => {
+  if (contextTarget) startReply(contextTarget);
   contextMenu.style.display = 'none';
 });
 
@@ -478,9 +487,10 @@ contextDelete.addEventListener('click', () => {
   contextMenu.style.display = 'none';
 });
 
-contextReply.addEventListener('click', () => {
-  if (contextTarget) startReply(contextTarget);
-  contextMenu.style.display = 'none';
+contextReactions.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const rect = contextMenu.getBoundingClientRect();
+  showReactionPicker(rect.left, rect.top - 60);
 });
 
 // ===== РЕАКЦИИ =====
@@ -488,19 +498,24 @@ const emojis = ['❤️', '👍', '😢', '😂', '🔥', '😮', '👏', '🎉'
 
 function showReactionPicker(x, y, msgId) {
   reactionsPicker.innerHTML = '';
+  const targetId = msgId || (contextTarget ? contextTarget.dataset.id : null);
+  if (!targetId) return;
+  
   emojis.forEach(emoji => {
     const span = document.createElement('span');
     span.className = 'reaction-emoji';
     span.textContent = emoji;
-    span.addEventListener('click', () => {
-      socket.emit('reaction', { room: activeRoom, id: msgId, emoji });
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      socket.emit('reaction', { room: activeRoom, id: targetId, emoji });
       reactionsPicker.style.display = 'none';
+      contextMenu.style.display = 'none';
     });
     reactionsPicker.appendChild(span);
   });
   reactionsPicker.style.display = 'flex';
   reactionsPicker.style.left = x + 'px';
-  reactionsPicker.style.top = (y - 50) + 'px';
+  reactionsPicker.style.top = y + 'px';
 }
 
 document.addEventListener('click', (e) => {
@@ -509,7 +524,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ===== ГОЛОСОВЫЕ СООБЩЕНИЯ =====
+// ===== ГОЛОСОВЫЕ (ИСПРАВЛЕНО) =====
 voiceBtn.addEventListener('mousedown', startRecording);
 voiceBtn.addEventListener('mouseup', stopRecording);
 voiceBtn.addEventListener('mouseleave', stopRecording);
@@ -530,11 +545,12 @@ async function startRecording() {
       const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
       const reader = new FileReader();
       reader.onload = () => {
+        const duration = Math.round((Date.now() - recordingStart) / 1000);
         socket.emit('chat message', {
           room: activeRoom,
-          text: `[Голосовое сообщение: ${Math.round((Date.now() - recordingStart) / 1000)}с]`,
+          text: `[Голосовое сообщение: ${duration}с]`,
           id: 'msg_' + Date.now(),
-          audio: reader.result
+          replyTo: { audio: reader.result }
         });
       };
       reader.readAsDataURL(audioBlob);
