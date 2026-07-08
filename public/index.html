@@ -2,104 +2,114 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Danumes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Danumes – Liquid Glass</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="bg"></div>
+  <div class="app-bg"></div>
 
-  <!-- Логин -->
-  <div id="login-modal" class="modal">
+  <!-- Модальное окно входа / регистрации -->
+  <div id="login-modal" class="modal-overlay">
     <div class="modal-card">
       <h2 id="modal-title">Вход</h2>
-      <p id="modal-sub" class="modal-sub">Войдите в аккаунт</p>
-      <input type="text" id="login-username" class="input" placeholder="Логин" autocomplete="username">
-      <input type="password" id="login-password" class="input" placeholder="Пароль" autocomplete="current-password">
-      <div id="login-error" class="error"></div>
-      <button id="login-btn" class="btn">Войти</button>
-      <p class="toggle-text" id="toggle-text">Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a></p>
+      <p class="modal-sub" id="modal-sub">Войдите в аккаунт</p>
+      <input type="text" id="login-username" class="glass-input" placeholder="Логин" autocomplete="username">
+      <input type="password" id="login-password" class="glass-input" placeholder="Пароль" autocomplete="current-password">
+      <div id="login-error" class="error-msg"></div>
+      <button id="login-btn" class="btn-primary">Войти</button>
+      <p class="toggle-text" id="toggle-text">
+        Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a>
+      </p>
     </div>
   </div>
 
-  <!-- Профиль -->
-  <div id="profile-modal" class="modal" style="display:none;">
-    <div class="modal-card">
-      <button class="close-btn" id="close-profile">✕</button>
+  <!-- Модальное окно профиля -->
+  <div id="profile-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card profile-card">
+      <button class="modal-close icon-btn" id="close-profile">✕</button>
       <div class="big-avatar" id="profile-avatar">?</div>
-      <h2 id="profile-name">User</h2>
-      <p style="color:var(--text2);">В сети</p>
+      <h2 id="profile-name">username</h2>
+      <p class="profile-status">В сети</p>
       <div id="self-actions" class="profile-actions">
-        <button id="change-pass-btn" class="btn-outline">Сменить пароль</button>
-        <button id="logout-btn" class="btn-outline btn-danger">Выйти</button>
+        <button id="change-pass-btn" class="btn-secondary">Сменить пароль</button>
+        <button id="logout-btn" class="btn-danger">Выйти</button>
       </div>
-      <div id="pass-form" style="display:none;">
-        <input type="password" id="old-pass" class="input" placeholder="Старый пароль">
-        <input type="password" id="new-pass" class="input" placeholder="Новый пароль">
-        <div id="pass-error" class="error"></div>
-        <button id="save-pass-btn" class="btn">Сохранить</button>
+      <div id="pass-form" style="display: none;">
+        <input type="password" id="old-pass" class="glass-input" placeholder="Старый пароль">
+        <input type="password" id="new-pass" class="glass-input" placeholder="Новый пароль">
+        <div id="pass-error" class="error-msg"></div>
+        <button id="save-pass-btn" class="btn-primary">Сохранить</button>
       </div>
-      <div id="contact-actions" class="profile-actions" style="display:none;">
-        <button id="back-btn-profile" class="btn-outline">← Назад</button>
+      <div id="contact-actions" style="display: none;">
+        <button id="back-btn-profile" class="btn-secondary">← Назад к чату</button>
       </div>
     </div>
   </div>
 
-  <!-- Создание -->
-  <div id="create-modal" class="modal" style="display:none;">
-    <div class="modal-card">
-      <button class="close-btn" id="close-create">✕</button>
+  <!-- Модальное окно создания группы/канала -->
+  <div id="create-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card group-modal-card">
+      <button class="modal-close icon-btn" id="close-create">✕</button>
       <h2 id="create-title">Новая группа</h2>
-      <input type="text" id="entity-name" class="input" placeholder="Название">
-      <p id="members-label" style="color:var(--text2);margin-top:12px;">Выберите участников</p>
+      <input type="text" id="entity-name" class="glass-input" placeholder="Название" maxlength="30">
+      <p id="members-label" class="modal-sub" style="margin-top: 12px;">Выберите участников</p>
       <div id="members-list" class="members-list"></div>
-      <button id="create-btn" class="btn">Создать</button>
+      <button id="create-btn" class="btn-primary" style="margin-top: 16px;">Создать</button>
     </div>
   </div>
 
-  <!-- Меню -->
-  <div id="plus-menu" class="dropdown" style="display:none;">
-    <div class="dropdown-item" id="menu-group">👥 Создать группу</div>
-    <div class="dropdown-item" id="menu-channel">📢 Создать канал</div>
+  <!-- Выпадающее меню плюсика -->
+  <div id="plus-menu" class="plus-dropdown" style="display: none;">
+    <div class="plus-dropdown-item" id="menu-group">
+      <span>👥</span> Создать группу
+    </div>
+    <div class="plus-dropdown-item" id="menu-channel">
+      <span>📢</span> Создать канал
+    </div>
   </div>
 
-  <!-- Интерфейс -->
-  <div id="app" class="app" style="display:none;">
-    <div id="sidebar" class="sidebar">
+  <!-- Основной интерфейс -->
+  <div id="app" class="app-container" style="display: none;">
+    <!-- Сайдбар -->
+    <aside id="sidebar" class="sidebar">
       <div class="sidebar-head">
         <div class="user-info" id="user-info">
           <div class="avatar" id="my-avatar">?</div>
           <span id="my-name">User</span>
         </div>
-        <div style="position:relative;">
-          <button id="plus-btn" class="plus-btn">+</button>
+        <div style="position: relative;">
+          <button id="plus-btn" class="icon-btn plus-btn" title="Создать">+</button>
         </div>
       </div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="search" class="input" placeholder="Поиск...">
+        <input type="text" id="search" class="glass-input search-input" placeholder="Поиск...">
       </div>
       <div id="chat-list" class="chat-list"></div>
-    </div>
+    </aside>
 
-    <div id="chat" class="chat">
-      <div class="chat-head">
-        <button id="back-btn" class="icon-btn back-btn">←</button>
+    <!-- Область переписки -->
+    <main id="chat" class="chat">
+      <header class="chat-head">
+        <button id="back-btn" class="icon-btn back-btn" aria-label="Назад">←</button>
         <div class="avatar" id="chat-avatar">?</div>
         <div class="chat-info" id="chat-info">
           <h3 id="chat-title">Выберите чат</h3>
-          <div class="status" id="chat-status">офлайн</div>
+          <span id="chat-status" class="status">офлайн</span>
         </div>
-      </div>
+      </header>
+
       <div id="messages-box" class="messages-box">
         <div id="messages" class="messages"></div>
       </div>
+
       <div id="composer" class="composer">
-        <input type="text" id="msg-input" class="input" placeholder="Сообщение...">
+        <input type="text" id="msg-input" class="message-input" placeholder="Сообщение..." autocomplete="off">
         <button id="send-btn" class="send-btn">↑</button>
       </div>
-    </div>
+    </main>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
