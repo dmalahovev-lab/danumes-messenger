@@ -144,12 +144,15 @@ function initApp() {
     renderChats();
   });
 
-  // ВАЖНО: принимаем ВСЕ сообщения без фильтрации (как раньше)
-  socket.on('chat message', (data) => {
-    addMsg(data.user, data.text, data.time, data.id, data.replyTo);
-    // Сохраняем в кеш ТОЛЬКО если activeRoom совпадает
-    if (activeRoom) msgCache[activeRoom] = messagesDiv.innerHTML;
-  });
+ // ВАЖНО: принимаем ВСЕ сообщения без фильтрации (как раньше)
+socket.on('chat message', (data) => {
+  addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+  // Сохраняем в кеш ВСЕГДА для комнаты, к которой относится сообщение
+  if (data.room) {
+    if (!msgCache[data.room]) msgCache[data.room] = '';
+    msgCache[data.room] += messagesDiv.innerHTML; // временно добавим, потом перезапишем при открытии
+  }
+});
 
   socket.on('delete message', (data) => {
     const el = document.querySelector(`[data-id="${data.id}"]`);
