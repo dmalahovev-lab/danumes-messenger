@@ -1,7 +1,7 @@
 const socket = io();
 
-// DOM
-const $ = id => document.getElementById(id);
+// DOM-элементы
+const $ = (id) => document.getElementById(id);
 
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
@@ -11,6 +11,7 @@ const loginBtn = $('login-btn');
 const modalTitle = $('modal-title');
 const modalSub = $('modal-sub');
 const toggleLink = $('toggle-link');
+const toggleText = $('toggle-text');
 
 const profileModal = $('profile-modal');
 const profileAvatar = $('profile-avatar');
@@ -61,7 +62,7 @@ function switchMode() {
   modalTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
   modalSub.textContent = isLogin ? 'Войдите в аккаунт' : 'Создайте новый аккаунт';
   loginBtn.textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
-  $('toggle-text').innerHTML = isLogin 
+  toggleText.innerHTML = isLogin 
     ? 'Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a>'
     : 'Есть аккаунт? <a href="#" id="toggle-link">Войти</a>';
   document.getElementById('toggle-link').addEventListener('click', e => { e.preventDefault(); switchMode(); });
@@ -120,8 +121,11 @@ function init() {
     if (data.user !== currentUser) addMsg(data.user, data.text, data.time);
   });
   
-  socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
-  socket.on('stop typing', () => updateStatus());
+  socket.on('typing', () => { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#4a9eff'; });
+  socket.on('stop typing', () => {
+    updateStatus();
+    chatStatus.style.color = '';
+  });
   
   if (window.innerWidth <= 768) sidebar.classList.add('hidden');
 }
