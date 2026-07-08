@@ -29,6 +29,10 @@ const entityName = $('entity-name');
 const membersLabel = $('members-label');
 const membersList = $('members-list');
 
+const plusModal = $('plus-modal');
+const menuGroupBtn = $('menu-group-btn');
+const menuChannelBtn = $('menu-channel-btn');
+
 const appDiv = $('app');
 const sidebar = $('sidebar');
 const chatList = $('chat-list');
@@ -41,16 +45,11 @@ const chatAvatar = $('chat-avatar');
 const composer = $('composer');
 const searchInput = $('search');
 
-// Модальное окно для выбора «Создать группу / канал»
-const plusModal = $('plus-modal');          // само модальное окно
-const menuGroupBtn = $('menu-group-btn');   // кнопка «Группа»
-const menuChannelBtn = $('menu-channel-btn'); // кнопка «Канал»
-
 let currentUser = '';
 let isLogin = true;
 let activeRoom = null;
 let activeContact = null;
-let activeType = null; // 'user', 'group', 'channel'
+let activeType = null;
 let typingTimer;
 let selectedMembers = new Set();
 let creatingMode = 'group';
@@ -121,7 +120,10 @@ function initApp() {
   socket.on('user left', () => socket.emit('request online users'));
   
   socket.on('chat message', data => {
-    if (data.user !== currentUser) addMsg(data.user, data.text, data.time);
+    console.log('Получено сообщение:', data);
+    if (data.user !== currentUser) {
+      addMsg(data.user, data.text, data.time);
+    }
   });
   
   socket.on('typing', () => { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#4a9eff'; });
@@ -166,6 +168,8 @@ function renderAll() {
 
 // ===== ОТКРЫТИЕ ЧАТА =====
 function openChat(name, room, type) {
+  console.log('Открываем чат:', name, 'Комната:', room, 'Тип:', type);
+  
   if (activeRoom) {
     socket.emit('leave room', { room: activeRoom });
     if (messagesDiv.children.length) msgCache[activeRoom] = messagesDiv.innerHTML;
@@ -174,6 +178,8 @@ function openChat(name, room, type) {
   activeContact = name;
   activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
+  
+  console.log('Активная комната установлена:', activeRoom);
   
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
@@ -236,19 +242,22 @@ function addMsg(user, text, time) {
 
 function sendMsg() {
   const text = msgInput.value.trim();
-  if (!text) return;
+  console.log('Попытка отправки:', text, 'Комната:', activeRoom);
   
-  if (!activeRoom && activeContact) {
-    activeRoom = [currentUser, activeContact].sort().join(':');
-    socket.emit('join room', { room: activeRoom });
+  if (!text) {
+    console.log('Пустое сообщение');
+    return;
   }
   
   if (!activeRoom) {
+    console.log('Нет активной комнаты');
     alert('Сначала выберите чат');
     return;
   }
   
-  socket.emit('chat message', { room: activeRoom, text });
+  console.log('Отправляем сообщение в комнату:', activeRoom);
+  socket.emit('chat message', { room: activeRoom, text: text });
+  
   msgInput.value = '';
   socket.emit('stop typing', { room: activeRoom });
   clearTimeout(typingTimer);
@@ -270,25 +279,19 @@ msgInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-// ===== НОВОЕ МОДАЛЬНОЕ МЕНЮ ПЛЮСА =====
+// ===== ПЛЮС МЕНЮ =====
 function openPlusMenu() {
   plusModal.style.display = 'flex';
 }
 
-function closePlusMenu() {
-  plusModal.style.display = 'none';
-}
-
 $('plus-btn').addEventListener('click', openPlusMenu);
 
-// Закрытие по клику на фон
 plusModal.addEventListener('click', (e) => {
-  if (e.target === plusModal) closePlusMenu();
+  if (e.target === plusModal) plusModal.style.display = 'none';
 });
 
-// Кнопка «Создать группу»
 menuGroupBtn.addEventListener('click', () => {
-  closePlusMenu();
+  plusModal.style.display = 'none';
   creatingMode = 'group';
   createTitle.textContent = 'Новая группа';
   membersLabel.style.display = 'block';
@@ -299,9 +302,8 @@ menuGroupBtn.addEventListener('click', () => {
   createModal.style.display = 'flex';
 });
 
-// Кнопка «Создать канал»
 menuChannelBtn.addEventListener('click', () => {
-  closePlusMenu();
+  plusModal.style.display = 'none';
   creatingMode = 'channel';
   createTitle.textContent = 'Новый канал';
   membersLabel.style.display = 'none';
@@ -310,7 +312,6 @@ menuChannelBtn.addEventListener('click', () => {
   createModal.style.display = 'flex';
 });
 
-// ===== ОСТАЛЬНЫЕ МОДАЛКИ =====
 $('close-create').addEventListener('click', () => { createModal.style.display = 'none'; });
 
 function renderMembers() {
