@@ -432,4 +432,78 @@ menuCreateChannel.addEventListener('click', (e) => {
   creatingMode = 'channel';
   createModalTitle.textContent = 'Новый канал';
   membersLabel.style.display = 'none';
-  entityMembersList.style.display =
+  entityMembersList.style.display = 'none';
+  entityNameInput.value = '';
+  createGroupModal.style.display = 'flex';
+});
+
+closeGroupModal.addEventListener('click', () => createGroupModal.style.display = 'none');
+
+function renderMemberSelection() {
+  entityMembersList.innerHTML = '';
+  allOnlineUsers.filter(u => u !== currentUser).forEach(username => {
+    const div = document.createElement('div');
+    div.className = 'group-member-item';
+    div.dataset.user = username;
+    if (selectedMembers.has(username)) div.classList.add('selected');
+    div.innerHTML = `
+      <div class="avatar">${username.charAt(0).toUpperCase()}</div>
+      <span class="contact-name">${username}</span>
+      <span class="check-mark">✓</span>
+    `;
+    div.addEventListener('click', () => {
+      if (selectedMembers.has(username)) {
+        selectedMembers.delete(username);
+        div.classList.remove('selected');
+      } else {
+        selectedMembers.add(username);
+        div.classList.add('selected');
+      }
+    });
+    entityMembersList.appendChild(div);
+  });
+}
+
+createEntityBtn.addEventListener('click', () => {
+  const name = entityNameInput.value.trim();
+  if (!name) return alert('Введите название');
+
+  if (creatingMode === 'group') {
+    if (selectedMembers.size === 0) return alert('Выберите участников');
+    socket.emit('create group', { name, members: Array.from(selectedMembers) }, (res) => {
+      if (res.success) {
+        createGroupModal.style.display = 'none';
+        selectedMembers.clear();
+      }
+    });
+  } else {
+    socket.emit('create channel', { name }, (res) => {
+      if (res.success) {
+        createGroupModal.style.display = 'none';
+      }
+    });
+  }
+});
+
+// ========== ОСТАЛЬНОЕ ==========
+function checkMobile() {
+  sidebar.classList.toggle('hidden', window.innerWidth <= 768);
+}
+window.addEventListener('resize', checkMobile);
+backBtn.addEventListener('click', () => {
+  if (window.innerWidth <= 768) sidebar.classList.remove('hidden');
+});
+
+searchContacts.addEventListener('input', e => {
+  const term = e.target.value.toLowerCase();
+  document.querySelectorAll('.contact-item').forEach(el => {
+    el.style.display = el.dataset.user.toLowerCase().includes(term) ? 'flex' : 'none';
+  });
+});
+
+document.getElementById('emoji-btn').addEventListener('click', () => {
+  messageInput.value += '😊';
+  messageInput.focus();
+});
+document.getElementById('attach-btn').addEventListener('click', () => alert('Вложения – в разработке'));
+document.getElementById('mic-btn').addEventListener('click', () => alert('Голосовые – в разработке'));
