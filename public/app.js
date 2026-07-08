@@ -1,7 +1,7 @@
 const socket = io();
-
 const $ = (id) => document.getElementById(id);
 
+// Элементы
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
@@ -21,6 +21,8 @@ const contactActions = $('contact-actions');
 const settingsModal = $('settings-modal');
 const settingsNickname = $('settings-nickname');
 const themeGrid = $('theme-grid');
+const settingsOldPass = $('settings-old-pass');
+const settingsNewPass = $('settings-new-pass');
 
 const createModal = $('create-modal');
 const createTitle = $('create-title');
@@ -63,15 +65,34 @@ const msgCache = {};
 let contextTarget = null;
 let replyTo = null;
 
+// Темы
 const themes = {
-  'blue-dark': '#0a0a0f',
-  'green-dark': '#0a0f0a',
-  'purple-dark': '#0f0a15',
-  'sunset': '#1a0a0a',
-  'ocean': '#0a1a1a'
+  'blue-dark':   { bg:'#0a0a0f', accent:'#4a9eff', gradient:'radial-gradient(ellipse at 30% 20%, rgba(74,158,255,0.08) 0%, transparent 60%), #0a0a0f' },
+  'green-dark':  { bg:'#0a0f0a', accent:'#4caf50', gradient:'radial-gradient(ellipse at 30% 20%, rgba(76,175,80,0.08) 0%, transparent 60%), #0a0f0a' },
+  'purple-dark': { bg:'#0f0a15', accent:'#9c27b0', gradient:'radial-gradient(ellipse at 30% 20%, rgba(156,39,176,0.08) 0%, transparent 60%), #0f0a15' },
+  'sunset':      { bg:'#1a0a0a', accent:'#ff6b35', gradient:'radial-gradient(ellipse at 30% 20%, rgba(255,107,53,0.1) 0%, transparent 60%), #1a0a0a' },
+  'ocean':       { bg:'#0a1a1a', accent:'#00bcd4', gradient:'radial-gradient(ellipse at 30% 20%, rgba(0,188,212,0.08) 0%, transparent 60%), #0a1a1a' }
 };
 let currentTheme = localStorage.getItem('theme') || 'blue-dark';
-document.body.style.background = themes[currentTheme];
+applyTheme(currentTheme);
+
+function applyTheme(name) {
+  const t = themes[name];
+  if (!t) return;
+  currentTheme = name;
+  localStorage.setItem('theme', name);
+  const root = document.documentElement;
+  root.style.setProperty('--bg', t.bg);
+  root.style.setProperty('--accent', t.accent);
+  document.querySelector('.app-bg').style.background = t.gradient;
+  // Обновим плюсик
+  const plusBtn = $('plus-btn');
+  if (plusBtn) {
+    plusBtn.style.background = t.accent + '22';
+    plusBtn.style.borderColor = t.accent + '44';
+    plusBtn.style.color = t.accent;
+  }
+}
 
 // АВТОРИЗАЦИЯ
 toggleLink.onclick = (e) => {
@@ -109,8 +130,11 @@ function initApp() {
   socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
   socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
   socket.on('chat message', (data) => {
-    addMsg(data.user, data.text, data.time, data.id, data.replyTo);
-    msgCache[activeRoom] = messagesDiv.innerHTML;
+    // Принимаем сообщение, только если комната совпадает или не указана
+    if (!activeRoom || data.room === activeRoom) {
+      addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+      msgCache[activeRoom] = messagesDiv.innerHTML;
+    }
   });
   socket.on('delete message', (data) => {
     const el = document.querySelector(`[data-id="${data.id}"]`);
@@ -158,13 +182,22 @@ function renderChats() {
 
 // ОТКРЫТИЕ ЧАТА
 function openChat(name, room, type) {
-  if (activeRoom) { socket.emit('leave room', { room: activeRoom }); msgCache[activeRoom] = messagesDiv.innerHTML; }
+  if (activeRoom) {
+    socket.emit('leave room', { room: activeRoom });
+    msgCache[activeRoom] = messagesDiv.innerHTML;
+  }
   activeContact = name; activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
   chatAvatar.textContent = (type === 'channel') ? '📢' : name[0].toUpperCase();
-  composer.style.display = 'flex';
+  // В каналах поле ввода только для админа
+  if (type === 'channel') {
+    const channel = allChannels.find(c => c.room === room);
+    composer.style.display = (channel && channel.admin === currentUser) ? 'flex' : 'none';
+  } else {
+    composer.style.display = 'flex';
+  }
   socket.emit('join room', { room: activeRoom });
   messagesBox.scrollTop = messagesBox.scrollHeight;
 }
@@ -187,7 +220,12 @@ function addMsg(user, text, time, id, replyData) {
     e.preventDefault();
     contextTarget = div;
     contextMenu.style.display = 'block';
-    contextMenu.style.left = e.pageX + 'px';
+    // Если своё сообщение, показываем меню слева
+    if (div.classList.contains('own')) {
+      contextMenu.style.left = (e.pageX - 200) + 'px';
+    } else {
+      contextMenu.style.left = e.pageX + 'px';
+    }
     contextMenu.style.top = e.pageY + 'px';
   };
   messagesDiv.appendChild(div);
@@ -302,22 +340,19 @@ $('create-btn').onclick = () => {
 $('settings-btn').onclick = () => {
   settingsNickname.value = currentUser;
   renderThemeGrid();
+  settingsOldPass.value = '';
+  settingsNewPass.value = '';
   settingsModal.style.display = 'flex';
 };
 $('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
 
 function renderThemeGrid() {
   themeGrid.innerHTML = '';
-  Object.entries(themes).forEach(([key, color]) => {
+  Object.entries(themes).forEach(([key, t]) => {
     const d = document.createElement('div'); d.className = 'theme-item';
     if (key === currentTheme) d.classList.add('active');
-    d.style.background = color;
-    d.onclick = () => {
-      currentTheme = key;
-      localStorage.setItem('theme', key);
-      document.body.style.background = color;
-      renderThemeGrid();
-    };
+    d.style.background = t.gradient;
+    d.onclick = () => { applyTheme(key); renderThemeGrid(); };
     themeGrid.appendChild(d);
   });
 }
@@ -330,6 +365,14 @@ $('save-settings-btn').onclick = () => {
         $('my-name').textContent = nick;
         $('my-avatar').textContent = nick[0].toUpperCase();
       }
+    });
+  }
+  const oldPass = settingsOldPass.value;
+  const newPass = settingsNewPass.value;
+  if (oldPass && newPass) {
+    socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => {
+      if (res.success) alert('Пароль изменён');
+      else alert(res.message);
     });
   }
   setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
