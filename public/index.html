@@ -25,14 +25,16 @@
     </div>
   </div>
 
-  <!-- Модальное окно профиля -->
+  <!-- Модальное окно профиля (свой / собеседника) -->
   <div id="profile-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card profile-card">
       <button class="modal-close icon-btn" id="close-profile">✕</button>
       <div class="profile-avatar" id="profile-avatar">?</div>
       <h2 id="profile-name">username</h2>
-      <p class="profile-status">В сети</p>
-      <div class="profile-actions">
+      <p class="profile-status" id="profile-status-text">В сети</p>
+
+      <!-- Блок для своего профиля (смена пароля, выход) -->
+      <div id="self-profile-actions" class="profile-actions">
         <button id="change-password-btn" class="btn-secondary">Сменить пароль</button>
         <button id="logout-btn" class="btn-danger">Выйти</button>
       </div>
@@ -41,6 +43,11 @@
         <input type="password" id="new-password" class="glass-input" placeholder="Новый пароль">
         <div id="profile-error" class="error-msg"></div>
         <button id="save-password-btn" class="btn-primary">Сохранить</button>
+      </div>
+
+      <!-- Блок для профиля собеседника (кнопка назад к чату) -->
+      <div id="contact-profile-actions" style="display: none;">
+        <button id="back-to-chat-btn" class="btn-secondary">← Назад к чату</button>
       </div>
     </div>
   </div>
@@ -71,8 +78,8 @@
         <button id="back-btn" class="icon-btn back-btn" aria-label="Назад">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div class="avatar" id="chat-avatar">?</div>
-        <div class="chat-header-text">
+        <div class="avatar chat-avatar-clickable" id="chat-avatar">?</div>
+        <div class="chat-header-text" id="chat-header-info-clickable">
           <h3 id="chat-name">Выберите чат</h3>
           <span id="chat-status" class="status">офлайн</span>
         </div>
