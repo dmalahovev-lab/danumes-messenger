@@ -119,14 +119,16 @@ function initApp() {
   socket.on('user joined', () => socket.emit('request online users'));
   socket.on('user left', () => socket.emit('request online users'));
   
+  // ВАЖНО: показываем ВСЕ сообщения (и свои тоже)
   socket.on('chat message', data => {
-    console.log('Получено сообщение:', data);
-    if (data.user !== currentUser) {
-      addMsg(data.user, data.text, data.time);
-    }
+    addMsg(data.user, data.text, data.time);
   });
   
-  socket.on('typing', () => { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#4a9eff'; });
+  socket.on('typing', () => { 
+    chatStatus.textContent = 'печатает...'; 
+    chatStatus.style.color = '#4a9eff'; 
+  });
+  
   socket.on('stop typing', () => {
     updateStatus();
     chatStatus.style.color = '';
@@ -168,8 +170,6 @@ function renderAll() {
 
 // ===== ОТКРЫТИЕ ЧАТА =====
 function openChat(name, room, type) {
-  console.log('Открываем чат:', name, 'Комната:', room, 'Тип:', type);
-  
   if (activeRoom) {
     socket.emit('leave room', { room: activeRoom });
     if (messagesDiv.children.length) msgCache[activeRoom] = messagesDiv.innerHTML;
@@ -178,8 +178,6 @@ function openChat(name, room, type) {
   activeContact = name;
   activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
-  
-  console.log('Активная комната установлена:', activeRoom);
   
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
@@ -242,25 +240,24 @@ function addMsg(user, text, time) {
 
 function sendMsg() {
   const text = msgInput.value.trim();
-  console.log('Попытка отправки:', text, 'Комната:', activeRoom);
-  
-  if (!text) {
-    console.log('Пустое сообщение');
-    return;
-  }
+  if (!text) return;
   
   if (!activeRoom) {
-    console.log('Нет активной комнаты');
     alert('Сначала выберите чат');
     return;
   }
   
-  console.log('Отправляем сообщение в комнату:', activeRoom);
+  // Отправляем на сервер
   socket.emit('chat message', { room: activeRoom, text: text });
   
+  // Очищаем поле
   msgInput.value = '';
+  
+  // Останавливаем индикатор печати
   socket.emit('stop typing', { room: activeRoom });
   clearTimeout(typingTimer);
+  
+  // Фокус обратно
   msgInput.focus();
 }
 
