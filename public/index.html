@@ -2,134 +2,104 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Danumes – Liquid Glass</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danumes</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="app-bg"></div>
+  <div class="bg"></div>
 
-  <!-- Модальное окно входа -->
-  <div id="login-modal" class="modal-overlay">
+  <!-- Логин -->
+  <div id="login-modal" class="modal">
     <div class="modal-card">
       <h2 id="modal-title">Вход</h2>
-      <p class="modal-subtitle" id="modal-subtitle">Войдите в аккаунт</p>
-      <input type="text" id="username-input" class="glass-input" placeholder="Логин" autocomplete="username">
-      <input type="password" id="password-input" class="glass-input" placeholder="Пароль" autocomplete="current-password">
-      <div id="error-msg" class="error-msg"></div>
-      <button id="submit-btn" class="btn-primary">Войти</button>
-      <p class="toggle-text">
-        <span id="toggle-mode-text">Нет аккаунта?</span> <a href="#" id="toggle-mode-link">Зарегистрироваться</a>
-      </p>
+      <p id="modal-sub" class="modal-sub">Войдите в аккаунт</p>
+      <input type="text" id="login-username" class="input" placeholder="Логин" autocomplete="username">
+      <input type="password" id="login-password" class="input" placeholder="Пароль" autocomplete="current-password">
+      <div id="login-error" class="error"></div>
+      <button id="login-btn" class="btn">Войти</button>
+      <p class="toggle-text" id="toggle-text">Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a></p>
     </div>
   </div>
 
   <!-- Профиль -->
-  <div id="profile-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card profile-card">
-      <button class="modal-close icon-btn" id="close-profile">✕</button>
-      <div class="profile-avatar" id="profile-avatar">?</div>
-      <h2 id="profile-name">username</h2>
-      <p class="profile-status" id="profile-status-text">В сети</p>
-      <div id="self-profile-actions" class="profile-actions">
-        <button id="change-password-btn" class="btn-secondary">Сменить пароль</button>
-        <button id="logout-btn" class="btn-danger">Выйти</button>
+  <div id="profile-modal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <button class="close-btn" id="close-profile">✕</button>
+      <div class="big-avatar" id="profile-avatar">?</div>
+      <h2 id="profile-name">User</h2>
+      <p style="color:var(--text2);">В сети</p>
+      <div id="self-actions" class="profile-actions">
+        <button id="change-pass-btn" class="btn-outline">Сменить пароль</button>
+        <button id="logout-btn" class="btn-outline btn-danger">Выйти</button>
       </div>
-      <div id="change-password-form" style="display: none;">
-        <input type="password" id="old-password" class="glass-input" placeholder="Старый пароль">
-        <input type="password" id="new-password" class="glass-input" placeholder="Новый пароль">
-        <div id="profile-error" class="error-msg"></div>
-        <button id="save-password-btn" class="btn-primary">Сохранить</button>
+      <div id="pass-form" style="display:none;">
+        <input type="password" id="old-pass" class="input" placeholder="Старый пароль">
+        <input type="password" id="new-pass" class="input" placeholder="Новый пароль">
+        <div id="pass-error" class="error"></div>
+        <button id="save-pass-btn" class="btn">Сохранить</button>
       </div>
-      <div id="contact-profile-actions" style="display: none;">
-        <button id="back-to-chat-btn" class="btn-secondary">← Назад к чату</button>
+      <div id="contact-actions" class="profile-actions" style="display:none;">
+        <button id="back-btn-profile" class="btn-outline">← Назад</button>
       </div>
     </div>
   </div>
 
-  <!-- Создание группы / канала -->
-  <div id="create-group-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-card group-modal-card">
-      <button class="modal-close icon-btn" id="close-group-modal">✕</button>
-      <h2 id="create-modal-title">Новая группа</h2>
-      <input type="text" id="entity-name-input" class="glass-input" placeholder="Название" maxlength="30">
-      <p class="modal-subtitle" style="margin-top: 12px;" id="members-label">Выберите участников</p>
-      <div id="entity-members-list" class="group-members-list"></div>
-      <button id="create-entity-btn" class="btn-primary" style="margin-top: 16px;">Создать</button>
+  <!-- Создание -->
+  <div id="create-modal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <button class="close-btn" id="close-create">✕</button>
+      <h2 id="create-title">Новая группа</h2>
+      <input type="text" id="entity-name" class="input" placeholder="Название">
+      <p id="members-label" style="color:var(--text2);margin-top:12px;">Выберите участников</p>
+      <div id="members-list" class="members-list"></div>
+      <button id="create-btn" class="btn">Создать</button>
     </div>
   </div>
 
-  <!-- Выпадающее меню плюсика -->
-  <div id="plus-menu" class="plus-dropdown" style="display: none;">
-    <div class="plus-dropdown-item" id="menu-create-group">
-      <span>👥</span> Создать группу
-    </div>
-    <div class="plus-dropdown-item" id="menu-create-channel">
-      <span>📢</span> Создать канал
-    </div>
+  <!-- Меню -->
+  <div id="plus-menu" class="dropdown" style="display:none;">
+    <div class="dropdown-item" id="menu-group">👥 Создать группу</div>
+    <div class="dropdown-item" id="menu-channel">📢 Создать канал</div>
   </div>
 
-  <!-- Основной интерфейс -->
-  <div id="app" class="app-container" style="display: none;">
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-top">
-        <div class="current-user" id="current-user-area">
-          <div class="avatar" id="sidebar-avatar">?</div>
-          <span class="sidebar-username" id="sidebar-username">User</span>
+  <!-- Интерфейс -->
+  <div id="app" class="app" style="display:none;">
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <div class="user-info" id="user-info">
+          <div class="avatar" id="my-avatar">?</div>
+          <span id="my-name">User</span>
         </div>
-        <div style="position: relative;">
-          <button id="create-group-plus" class="icon-btn plus-btn" title="Создать">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
+        <div style="position:relative;">
+          <button id="plus-btn" class="plus-btn">+</button>
         </div>
       </div>
       <div class="search-wrap">
-        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="search-contacts" class="glass-input search-input" placeholder="Поиск...">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" class="input" placeholder="Поиск...">
       </div>
-      <div id="contacts-list" class="contacts-list"></div>
-    </aside>
+      <div id="chat-list" class="chat-list"></div>
+    </div>
 
-    <main id="chat-area" class="chat-area">
-      <header class="chat-header">
-        <button id="back-btn" class="icon-btn back-btn" aria-label="Назад">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div class="avatar chat-avatar-clickable" id="chat-avatar">?</div>
-        <div class="chat-header-text" id="chat-header-info-clickable">
-          <h3 id="chat-name">Выберите чат</h3>
-          <span id="chat-status" class="status">офлайн</span>
+    <div id="chat" class="chat">
+      <div class="chat-head">
+        <button id="back-btn" class="icon-btn back-btn">←</button>
+        <div class="avatar" id="chat-avatar">?</div>
+        <div class="chat-info" id="chat-info">
+          <h3 id="chat-title">Выберите чат</h3>
+          <div class="status" id="chat-status">офлайн</div>
         </div>
-        <button class="icon-btn" aria-label="Меню">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-        </button>
-      </header>
-
-      <div id="messages-container" class="messages-container">
-        <div id="messages-list" class="messages-list"></div>
-        <button id="scroll-bottom" class="scroll-bottom-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
       </div>
-
-      <div class="composer" id="composer">
-        <button id="emoji-btn" class="icon-btn">😊</button>
-        <button id="attach-btn" class="icon-btn">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </button>
-        <input type="text" id="message-input" class="message-input" placeholder="Сообщение..." autocomplete="off">
-        <button id="mic-btn" class="icon-btn">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        <button id="send-btn" class="send-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
+      <div id="messages-box" class="messages-box">
+        <div id="messages" class="messages"></div>
       </div>
-    </main>
+      <div id="composer" class="composer">
+        <input type="text" id="msg-input" class="input" placeholder="Сообщение...">
+        <button id="send-btn" class="send-btn">↑</button>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
