@@ -1,193 +1,110 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Danumes</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-bg"></div>
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+  <!-- Логин -->
+  <div id="login-modal" class="modal">
+    <div class="modal-card">
+      <h2 id="modal-title">Вход</h2>
+      <p class="modal-sub">Войдите в аккаунт</p>
+      <input type="text" id="login-username" class="input" placeholder="Логин">
+      <input type="password" id="login-password" class="input" placeholder="Пароль">
+      <div id="login-error" class="error"></div>
+      <button id="login-btn" class="btn">Войти</button>
+      <p class="toggle">Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a></p>
+    </div>
+  </div>
 
-app.use(express.static(path.join(__dirname, 'public')));
+  <!-- Профиль -->
+  <div id="profile-modal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <button class="close" id="close-profile">✕</button>
+      <div class="big-avatar" id="profile-avatar">?</div>
+      <h2 id="profile-name">User</h2>
+      <p>В сети</p>
+      <div id="self-actions">
+        <button id="change-pass-btn" class="btn-outline">Сменить пароль</button>
+        <button id="logout-btn" class="btn-outline red">Выйти</button>
+      </div>
+      <div id="pass-form" style="display:none;">
+        <input type="password" id="old-pass" class="input" placeholder="Старый пароль">
+        <input type="password" id="new-pass" class="input" placeholder="Новый пароль">
+        <div id="pass-error" class="error"></div>
+        <button id="save-pass-btn" class="btn">Сохранить</button>
+      </div>
+      <div id="contact-actions" style="display:none;">
+        <button id="back-btn-profile" class="btn-outline">← Назад</button>
+      </div>
+    </div>
+  </div>
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  <!-- Создание группы/канала -->
+  <div id="create-modal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <button class="close" id="close-create">✕</button>
+      <h2 id="create-title">Новая группа</h2>
+      <input type="text" id="entity-name" class="input" placeholder="Название">
+      <p id="members-label" style="margin-top:12px;">Выберите участников</p>
+      <div id="members-list" class="members-list"></div>
+      <button id="create-btn" class="btn">Создать</button>
+    </div>
+  </div>
 
-const usersDB = [];
-const sessions = new Map();
-const onlineUsers = new Set();
+  <!-- Меню плюсика -->
+  <div id="plus-menu" class="dropdown" style="display:none;">
+    <div class="dropdown-item" id="menu-group">👥 Создать группу</div>
+    <div class="dropdown-item" id="menu-channel">📢 Создать канал</div>
+  </div>
 
-// Группы и каналы
-const groups = [];   // { name, room, members: [], type: 'group'|'channel', admin }
-const channels = []; // { name, room, subscribers: [], admin }
+  <!-- Основной интерфейс -->
+  <div id="app" class="app" style="display:none;">
+    <!-- Сайдбар -->
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <div class="user-info" id="user-info">
+          <div class="avatar" id="my-avatar">?</div>
+          <span id="my-name">User</span>
+        </div>
+        <div style="position:relative;">
+          <button id="plus-btn" class="icon-btn plus">+</button>
+        </div>
+      </div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" class="input" placeholder="Поиск...">
+      </div>
+      <div id="chat-list" class="chat-list"></div>
+    </div>
 
-io.on('connection', (socket) => {
-  console.log('Подключение:', socket.id);
+    <!-- Чат -->
+    <div id="chat" class="chat">
+      <div class="chat-head">
+        <button id="back-btn" class="icon-btn back">←</button>
+        <div class="avatar" id="chat-avatar">?</div>
+        <div id="chat-info">
+          <h3 id="chat-title">Выберите чат</h3>
+          <span id="chat-status">офлайн</span>
+        </div>
+      </div>
+      <div id="messages-box" class="messages-box">
+        <div id="messages" class="messages"></div>
+      </div>
+      <div class="composer" id="composer">
+        <input type="text" id="msg-input" class="input msg-input" placeholder="Сообщение...">
+        <button id="send-btn" class="send-btn">↑</button>
+      </div>
+    </div>
+  </div>
 
-  // Регистрация
-  socket.on('register', (data, callback) => {
-    const { username, password } = data;
-    if (!username || !password) return callback({ success: false, message: 'Заполните все поля' });
-    if (usersDB.find(u => u.username === username)) return callback({ success: false, message: 'Пользователь уже существует' });
-    usersDB.push({ username, password });
-    sessions.set(socket.id, username);
-    onlineUsers.add(username);
-    callback({ success: true, username });
-    broadcastOnlineUsers();
-    socket.broadcast.emit('user joined', { username });
-    socket.emit('groups list', groups);
-    socket.emit('channels list', channels);
-  });
-
-  // Вход
-  socket.on('login', (data, callback) => {
-    const { username, password } = data;
-    const user = usersDB.find(u => u.username === username && u.password === password);
-    if (!user) return callback({ success: false, message: 'Неверный логин или пароль' });
-    if (onlineUsers.has(username)) return callback({ success: false, message: 'Уже в сети' });
-    sessions.set(socket.id, username);
-    onlineUsers.add(username);
-    callback({ success: true, username });
-    broadcastOnlineUsers();
-    socket.broadcast.emit('user joined', { username });
-    socket.emit('groups list', groups);
-    socket.emit('channels list', channels);
-  });
-
-  // Создание группы
-  socket.on('create group', (data, callback) => {
-    const admin = sessions.get(socket.id);
-    if (!admin) return callback({ success: false, message: 'Не авторизован' });
-    const { name, members } = data;
-    const allMembers = [admin, ...members];
-    const room = allMembers.sort().join(':');
-    
-    const group = { name, room, members: allMembers, type: 'group', admin };
-    groups.push(group);
-    
-    // Присоединяем создателя к комнате
-    socket.join(room);
-    
-    // Отправляем всем обновлённый список
-    io.emit('groups list', groups);
-    callback({ success: true, group });
-  });
-
-  // Создание канала
-  socket.on('create channel', (data, callback) => {
-    const admin = sessions.get(socket.id);
-    if (!admin) return callback({ success: false, message: 'Не авторизован' });
-    const { name } = data;
-    const room = `channel:${name}:${Date.now()}`;
-    
-    const channel = { name, room, subscribers: [admin], admin, type: 'channel' };
-    channels.push(channel);
-    
-    socket.join(room);
-    io.emit('channels list', channels);
-    callback({ success: true, channel });
-  });
-
-  // Подписка на канал
-  socket.on('subscribe channel', (data, callback) => {
-    const username = sessions.get(socket.id);
-    if (!username) return callback({ success: false });
-    const channel = channels.find(c => c.room === data.room);
-    if (!channel) return callback({ success: false });
-    if (!channel.subscribers.includes(username)) {
-      channel.subscribers.push(username);
-    }
-    socket.join(channel.room);
-    io.emit('channels list', channels);
-    callback({ success: true, channel });
-  });
-
-  // Смена пароля
-  socket.on('change password', (data, callback) => {
-    const username = sessions.get(socket.id);
-    if (!username) return callback({ success: false, message: 'Не авторизован' });
-    const user = usersDB.find(u => u.username === username);
-    if (!user || user.password !== data.oldPassword) return callback({ success: false, message: 'Неверный старый пароль' });
-    user.password = data.newPassword;
-    callback({ success: true });
-  });
-
-  // Выход
-  socket.on('logout', () => {
-    const username = sessions.get(socket.id);
-    if (username) {
-      sessions.delete(socket.id);
-      onlineUsers.delete(username);
-      broadcastOnlineUsers();
-      socket.broadcast.emit('user left', { username });
-    }
-  });
-
-  // Присоединение к комнате
-  socket.on('join room', (data, callback) => {
-    const currentUser = sessions.get(socket.id);
-    const room = data.room;
-    if (!currentUser) return callback && callback({ success: false });
-    
-    // Проверяем доступ к группе
-    const group = groups.find(g => g.room === room);
-    if (group && !group.members.includes(currentUser)) {
-      return callback({ success: false, message: 'Нет доступа' });
-    }
-    
-    socket.join(room);
-    console.log(`${currentUser} joined ${room}`);
-    if (callback) callback({ success: true, room });
-  });
-
-  socket.on('leave room', (data) => {
-    if (data.room) socket.leave(data.room);
-  });
-
-  // Отправка сообщения
-  socket.on('chat message', (data) => {
-    const sender = sessions.get(socket.id);
-    if (!sender || !data.room || !data.text) return;
-    
-    // Для каналов проверяем, что отправитель — админ
-    const channel = channels.find(c => c.room === data.room);
-    if (channel && channel.admin !== sender) return;
-    
-    io.to(data.room).emit('chat message', {
-      user: sender,
-      text: data.text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
-  });
-
-  socket.on('typing', (data) => {
-    const user = sessions.get(socket.id);
-    if (user && data.room) socket.to(data.room).emit('typing', { user });
-  });
-
-  socket.on('stop typing', (data) => {
-    const user = sessions.get(socket.id);
-    if (user && data.room) socket.to(data.room).emit('stop typing', { user });
-  });
-
-  socket.on('disconnect', () => {
-    const username = sessions.get(socket.id);
-    if (username) {
-      sessions.delete(socket.id);
-      onlineUsers.delete(username);
-      broadcastOnlineUsers();
-      socket.broadcast.emit('user left', { username });
-    }
-  });
-
-  function broadcastOnlineUsers() {
-    io.emit('online users', Array.from(onlineUsers));
-  }
-
-  socket.on('request online users', () => {
-    socket.emit('online users', Array.from(onlineUsers));
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Сервер на порту ${PORT}`));
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
