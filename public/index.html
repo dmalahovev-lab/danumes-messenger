@@ -10,11 +10,11 @@
 <body>
   <div class="app-bg"></div>
 
-  <!-- Модальное окно -->
+  <!-- Модальное окно входа / регистрации -->
   <div id="login-modal" class="modal-overlay">
     <div class="modal-card">
       <h2 id="modal-title">Вход</h2>
-      <p id="modal-subtitle" class="modal-subtitle">Войдите в аккаунт</p>
+      <p class="modal-subtitle" id="modal-subtitle">Войдите в аккаунт</p>
       <input type="text" id="username-input" class="glass-input" placeholder="Логин" autocomplete="username">
       <input type="password" id="password-input" class="glass-input" placeholder="Пароль" autocomplete="current-password">
       <div id="error-msg" class="error-msg"></div>
@@ -25,13 +25,37 @@
     </div>
   </div>
 
+  <!-- Модальное окно профиля -->
+  <div id="profile-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card profile-card">
+      <button class="modal-close icon-btn" id="close-profile">✕</button>
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <h2 id="profile-name">username</h2>
+      <p class="profile-status">В сети</p>
+      <div class="profile-actions">
+        <button id="change-password-btn" class="btn-secondary">Сменить пароль</button>
+        <button id="logout-btn" class="btn-danger">Выйти</button>
+      </div>
+      <div id="change-password-form" style="display: none;">
+        <input type="password" id="old-password" class="glass-input" placeholder="Старый пароль">
+        <input type="password" id="new-password" class="glass-input" placeholder="Новый пароль">
+        <div id="profile-error" class="error-msg"></div>
+        <button id="save-password-btn" class="btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Основной интерфейс -->
   <div id="app" class="app-container" style="display: none;">
+    <!-- Сайдбар -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-top">
-        <h1 class="sidebar-title">Danumes</h1>
+        <div class="current-user" id="current-user-area">
+          <div class="avatar" id="sidebar-avatar">?</div>
+          <span class="sidebar-username" id="sidebar-username">User</span>
+        </div>
         <button id="refresh-contacts" class="icon-btn" title="Обновить контакты">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
       </div>
       <div class="search-wrap">
@@ -41,6 +65,7 @@
       <div id="contacts-list" class="contacts-list"></div>
     </aside>
 
+    <!-- Область переписки -->
     <main id="chat-area" class="chat-area">
       <header class="chat-header">
         <button id="back-btn" class="icon-btn back-btn" aria-label="Назад">
