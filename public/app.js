@@ -173,14 +173,20 @@ function openChat(name, room, type) {
   
   activeContact = name;
   activeType = type;
-  activeRoom = room || [currentUser, name].sort().join(':');
+  // Для личного чата генерируем комнату, иначе используем готовый room
+  if (!room) {
+    activeRoom = [currentUser, name].sort().join(':');
+  } else {
+    activeRoom = room;
+  }
+  
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
   
   if (type === 'channel') {
     chatAvatar.innerHTML = '📢';
     chatAvatar.style.background = 'linear-gradient(135deg,#f093fb,#f5576c)';
-    const ch = allChannels.find(c => c.room === room);
+    const ch = allChannels.find(c => c.room === activeRoom);
     composer.style.display = (ch && ch.admin === currentUser) ? 'flex' : 'none';
     chatStatus.textContent = 'канал';
   } else if (type === 'group') {
@@ -235,19 +241,23 @@ function addMsg(user, text, time) {
 
 function sendMsg() {
   const text = msgInput.value.trim();
-  if (!text || !activeRoom) return;
+  if (!text) return;
   
-  // Отправляем сообщение с указанием комнаты
+  // Если комната не установлена (ни один чат не выбран), пытаемся создать комнату по активному контакту
+  if (!activeRoom && activeContact) {
+    activeRoom = [currentUser, activeContact].sort().join(':');
+    socket.emit('join room', { room: activeRoom });
+  }
+  
+  if (!activeRoom) {
+    alert('Сначала выберите чат');
+    return;
+  }
+  
   socket.emit('chat message', { room: activeRoom, text });
-  
-  // Очищаем поле
   msgInput.value = '';
-  
-  // Останавливаем индикатор печати
   socket.emit('stop typing', { room: activeRoom });
   clearTimeout(typingTimer);
-  
-  // Фокус обратно на поле ввода
   msgInput.focus();
 }
 
@@ -266,27 +276,33 @@ msgInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-// ===== ПЛЮСИК (исправлено) =====
-$('plus-btn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  
-  // Переключаем видимость меню
-  if (plusMenu.style.display === 'block') {
+// ===== ПЛЮСИК (ИСПРАВЛЕНО) =====
+// Убедимся, что кнопка получается корректно
+const plusBtn = $('plus-btn');
+if (plusBtn) {
+  plusBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Переключаем видимость меню
+    if (plusMenu.style.display === 'block') {
+      plusMenu.style.display = 'none';
+    } else {
+      plusMenu.style.display = 'block';
+    }
+  });
+} else {
+  console.error('Кнопка плюса не найдена!');
+}
+
+// Закрываем меню при клике вне
+document.addEventListener('click', function(e) {
+  if (!plusMenu.contains(e.target) && e.target !== plusBtn) {
     plusMenu.style.display = 'none';
-  } else {
-    plusMenu.style.display = 'block';
   }
 });
 
-// Закрываем меню при клике в любом месте, кроме самого меню и кнопки
-document.addEventListener('click', (e) => {
-  if (!plusMenu.contains(e.target) && e.target !== $('plus-btn')) {
-    plusMenu.style.display = 'none';
-  }
-});
-
-$('menu-group').addEventListener('click', (e) => {
+$('menu-group').addEventListener('click', function(e) {
   e.stopPropagation();
   plusMenu.style.display = 'none';
   creatingMode = 'group';
@@ -299,7 +315,7 @@ $('menu-group').addEventListener('click', (e) => {
   createModal.style.display = 'flex';
 });
 
-$('menu-channel').addEventListener('click', (e) => {
+$('menu-channel').addEventListener('click', function(e) {
   e.stopPropagation();
   plusMenu.style.display = 'none';
   creatingMode = 'channel';
@@ -310,7 +326,9 @@ $('menu-channel').addEventListener('click', (e) => {
   createModal.style.display = 'flex';
 });
 
-$('close-create').addEventListener('click', () => { createModal.style.display = 'none'; });
+$('close-create').addEventListener('click', function() {
+  createModal.style.display = 'none';
+});
 
 function renderMembers() {
   membersList.innerHTML = '';
@@ -319,7 +337,7 @@ function renderMembers() {
     div.className = 'member-item';
     if (selectedMembers.has(u)) div.classList.add('selected');
     div.innerHTML = `<div class="avatar-sm">${u[0].toUpperCase()}</div><span class="member-name">${u}</span><span class="check">✓</span>`;
-    div.addEventListener('click', () => {
+    div.addEventListener('click', function() {
       if (selectedMembers.has(u)) {
         selectedMembers.delete(u);
         div.classList.remove('selected');
@@ -332,7 +350,7 @@ function renderMembers() {
   });
 }
 
-$('create-btn').addEventListener('click', () => {
+$('create-btn').addEventListener('click', function() {
   const name = entityName.value.trim();
   if (!name) return alert('Введите название');
   
