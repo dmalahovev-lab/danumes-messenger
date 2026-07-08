@@ -60,13 +60,19 @@
     </div>
   </div>
 
-  <!-- Выпадающее меню плюсика -->
-  <div id="plus-menu" class="plus-dropdown" style="display: none;">
-    <div class="plus-dropdown-item" id="menu-group">
-      <span>👥</span> Создать группу
-    </div>
-    <div class="plus-dropdown-item" id="menu-channel">
-      <span>📢</span> Создать канал
+  <!-- Модальное меню плюса (новое) -->
+  <div id="plus-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card plus-menu-modal">
+      <button class="modal-close icon-btn" onclick="document.getElementById('plus-modal').style.display='none'">✕</button>
+      <h2>Создать</h2>
+      <div class="plus-menu-options">
+        <button id="menu-group-btn" class="plus-option-btn">
+          <span>👥</span> Группу
+        </button>
+        <button id="menu-channel-btn" class="plus-option-btn">
+          <span>📢</span> Канал
+        </button>
+      </div>
     </div>
   </div>
 
