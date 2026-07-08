@@ -1,62 +1,54 @@
 const socket = io();
 
-// Получение элементов
-function g(id) { return document.getElementById(id); }
+const $ = (id) => document.getElementById(id);
 
-// Логин
-const loginModal = g('login-modal');
-const loginUsername = g('login-username');
-const loginPassword = g('login-password');
-const loginBtn = g('login-btn');
-const loginError = g('login-error');
-const modalTitle = g('modal-title');
-const modalSub = g('modal-sub');
-const toggleLink = g('toggle-link');
-const toggleText = g('toggle-text');
+const loginModal = $('login-modal');
+const loginUsername = $('login-username');
+const loginPassword = $('login-password');
+const loginBtn = $('login-btn');
+const loginError = $('login-error');
+const modalTitle = $('modal-title');
+const modalSub = $('modal-sub');
+const toggleLink = $('toggle-link');
+const toggleText = $('toggle-text');
 
-// Профиль
-const profileModal = g('profile-modal');
-const profileAvatar = g('profile-avatar');
-const profileName = g('profile-name');
-const selfActions = g('self-actions');
-const contactActions = g('contact-actions');
+const profileModal = $('profile-modal');
+const profileAvatar = $('profile-avatar');
+const profileName = $('profile-name');
+const selfActions = $('self-actions');
+const contactActions = $('contact-actions');
 
-// Настройки
-const settingsModal = g('settings-modal');
-const settingsNickname = g('settings-nickname');
-const themeGrid = g('theme-grid');
+const settingsModal = $('settings-modal');
+const settingsNickname = $('settings-nickname');
+const themeGrid = $('theme-grid');
 
-// Создание
-const createModal = g('create-modal');
-const createTitle = g('create-title');
-const entityName = g('entity-name');
-const membersLabel = g('members-label');
-const membersList = g('members-list');
+const createModal = $('create-modal');
+const createTitle = $('create-title');
+const entityName = $('entity-name');
+const membersLabel = $('members-label');
+const membersList = $('members-list');
 
-// Плюс
-const plusModal = g('plus-modal');
-const menuGroupBtn = g('menu-group-btn');
-const menuChannelBtn = g('menu-channel-btn');
+const plusModal = $('plus-modal');
+const menuGroupBtn = $('menu-group-btn');
+const menuChannelBtn = $('menu-channel-btn');
 
-// Контекстное меню
-const contextMenu = g('context-menu');
+const contextMenu = $('context-menu');
 
-// Основное
-const appDiv = g('app');
-const sidebar = g('sidebar');
-const chatList = g('chat-list');
-const messagesDiv = g('messages');
-const messagesBox = g('messages-box');
-const msgInput = g('msg-input');
-const chatTitle = g('chat-title');
-const chatStatus = g('chat-status');
-const chatAvatar = g('chat-avatar');
-const composer = g('composer');
-const searchInput = g('search');
+const appDiv = $('app');
+const sidebar = $('sidebar');
+const chatList = $('chat-list');
+const messagesDiv = $('messages');
+const messagesBox = $('messages-box');
+const msgInput = $('msg-input');
+const chatTitle = $('chat-title');
+const chatStatus = $('chat-status');
+const chatAvatar = $('chat-avatar');
+const composer = $('composer');
+const searchInput = $('search');
 
-const replyBar = g('reply-bar');
-const replyText = g('reply-text');
-const replyCancel = g('reply-cancel');
+const replyBar = $('reply-bar');
+const replyText = $('reply-text');
+const replyCancel = $('reply-cancel');
 
 let currentUser = '';
 let isLogin = true;
@@ -71,7 +63,6 @@ const msgCache = {};
 let contextTarget = null;
 let replyTo = null;
 
-// Темы
 const themes = {
   'blue-dark': '#0a0a0f',
   'green-dark': '#0a0f0a',
@@ -79,33 +70,32 @@ const themes = {
   'sunset': '#1a0a0a',
   'ocean': '#0a1a1a'
 };
-
 let currentTheme = localStorage.getItem('theme') || 'blue-dark';
 document.body.style.background = themes[currentTheme];
 
 // АВТОРИЗАЦИЯ
-toggleLink.onclick = function(e) {
+toggleLink.onclick = (e) => {
   e.preventDefault();
   isLogin = !isLogin;
   modalTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
   modalSub.textContent = isLogin ? 'Войдите в аккаунт' : 'Создайте аккаунт';
   loginBtn.textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
   toggleText.innerHTML = isLogin ? 'Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a>' : 'Есть аккаунт? <a href="#" id="toggle-link">Войти</a>';
-  g('toggle-link').onclick = toggleLink.onclick;
+  $('toggle-link').onclick = toggleLink.onclick;
 };
 
-loginBtn.onclick = function() {
+loginBtn.onclick = () => {
   const u = loginUsername.value.trim();
   const p = loginPassword.value.trim();
   if (!u || !p) { loginError.textContent = 'Заполните поля'; return; }
-  socket.emit(isLogin ? 'login' : 'register', { username: u, password: p }, function(res) {
+  socket.emit(isLogin ? 'login' : 'register', { username: u, password: p }, (res) => {
     if (res.success) {
       currentUser = res.username;
       loginModal.style.display = 'none';
       appDiv.style.display = 'flex';
-      g('my-avatar').textContent = currentUser[0].toUpperCase();
-      g('my-name').textContent = currentUser;
-      init();
+      $('my-avatar').textContent = currentUser[0].toUpperCase();
+      $('my-name').textContent = currentUser;
+      initApp();
     } else {
       loginError.textContent = res.message;
     }
@@ -113,127 +103,93 @@ loginBtn.onclick = function() {
 };
 
 // ИНИЦИАЛИЗАЦИЯ
-function init() {
+function initApp() {
   socket.emit('request online users');
-  
-  socket.on('online users', function(users) {
-    onlineUsers = users;
-    renderChats();
-  });
-  
-  socket.on('groups list', function(groups) {
-    allGroups = groups;
-    renderChats();
-  });
-  
-  socket.on('channels list', function(channels) {
-    allChannels = channels;
-    renderChats();
-  });
-  
-  socket.on('chat message', function(data) {
-    addMessage(data.user, data.text, data.time, data.id, data.replyTo);
+  socket.on('online users', (users) => { onlineUsers = users; renderChats(); });
+  socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
+  socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
+  socket.on('chat message', (data) => {
+    addMsg(data.user, data.text, data.time, data.id, data.replyTo);
     msgCache[activeRoom] = messagesDiv.innerHTML;
   });
-  
-  socket.on('delete message', function(data) {
-    const el = document.querySelector('[data-id="' + data.id + '"]');
+  socket.on('delete message', (data) => {
+    const el = document.querySelector(`[data-id="${data.id}"]`);
     if (el) { el.innerHTML = '<em style="color:gray">Удалено</em>'; }
   });
-  
-  socket.on('reaction', function(data) {
-    const el = document.querySelector('[data-id="' + data.id + '"]');
+  socket.on('reaction', (data) => {
+    const el = document.querySelector(`[data-id="${data.id}"]`);
     if (el) {
       let r = el.querySelector('.reactions');
       if (!r) { r = document.createElement('div'); r.className = 'reactions'; el.appendChild(r); }
-      const ex = r.querySelector('[data-emoji="' + data.emoji + '"]');
+      const ex = r.querySelector(`[data-emoji="${data.emoji}"]`);
       if (ex) { ex.textContent = data.emoji + ' ' + (parseInt(ex.dataset.count)+1); ex.dataset.count = parseInt(ex.dataset.count)+1; }
       else { const s = document.createElement('span'); s.className = 'reaction-badge'; s.textContent = data.emoji + ' 1'; s.dataset.emoji = data.emoji; s.dataset.count = '1'; r.appendChild(s); }
     }
   });
-  
-  socket.on('typing', function() { chatStatus.textContent = 'печатает...'; });
-  socket.on('stop typing', function() {
-    if (activeType === 'channel') chatStatus.textContent = 'канал';
-    else if (activeType === 'group') chatStatus.textContent = 'группа';
-    else chatStatus.textContent = onlineUsers.includes(activeContact) ? 'онлайн' : 'офлайн';
+  socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
+  socket.on('stop typing', () => {
+    chatStatus.textContent = (activeType === 'channel') ? 'канал' : (activeType === 'group') ? 'группа' : (onlineUsers.includes(activeContact) ? 'онлайн' : 'офлайн');
   });
 }
 
-// РЕНДЕР ЧАТОВ
+// РЕНДЕР
 function renderChats() {
   chatList.innerHTML = '';
-  
-  allChannels.forEach(function(ch) {
-    const div = document.createElement('div');
-    div.className = 'chat-item';
-    div.innerHTML = '<div class="avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">📢</div><div class="info"><div class="name">'+ch.name+'</div><div class="last">Канал</div></div>';
-    div.onclick = function() { openChat(ch.name, ch.room, 'channel'); };
-    chatList.appendChild(div);
+  allChannels.forEach((ch) => {
+    const d = document.createElement('div'); d.className = 'chat-item';
+    d.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">📢</div><div class="info"><div class="name">${ch.name}</div><div class="last">Канал</div></div>`;
+    d.onclick = () => openChat(ch.name, ch.room, 'channel');
+    chatList.appendChild(d);
   });
-  
-  allGroups.forEach(function(g) {
+  allGroups.forEach((g) => {
     if (!g.members.includes(currentUser)) return;
-    const div = document.createElement('div');
-    div.className = 'chat-item';
-    div.innerHTML = '<div class="avatar" style="background:linear-gradient(135deg,#4ecdc4,#44a08d)">'+g.name[0]+'</div><div class="info"><div class="name">'+g.name+'</div><div class="last">Группа</div></div>';
-    div.onclick = function() { openChat(g.name, g.room, 'group'); };
-    chatList.appendChild(div);
+    const d = document.createElement('div'); d.className = 'chat-item';
+    d.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#4ecdc4,#44a08d)">${g.name[0]}</div><div class="info"><div class="name">${g.name}</div><div class="last">Группа</div></div>`;
+    d.onclick = () => openChat(g.name, g.room, 'group');
+    chatList.appendChild(d);
   });
-  
-  onlineUsers.filter(function(u) { return u !== currentUser; }).forEach(function(u) {
-    const div = document.createElement('div');
-    div.className = 'chat-item';
-    div.innerHTML = '<div class="avatar">'+u[0].toUpperCase()+'</div><div class="info"><div class="name">'+u+'</div><div class="last">В сети</div></div>';
-    div.onclick = function() { openChat(u, null, 'user'); };
-    chatList.appendChild(div);
+  onlineUsers.filter(u => u !== currentUser).forEach((u) => {
+    const d = document.createElement('div'); d.className = 'chat-item';
+    d.innerHTML = `<div class="avatar">${u[0].toUpperCase()}</div><div class="info"><div class="name">${u}</div><div class="last">В сети</div></div>`;
+    d.onclick = () => openChat(u, null, 'user');
+    chatList.appendChild(d);
   });
 }
 
 // ОТКРЫТИЕ ЧАТА
 function openChat(name, room, type) {
-  if (activeRoom) {
-    socket.emit('leave room', { room: activeRoom });
-    msgCache[activeRoom] = messagesDiv.innerHTML;
-  }
-  activeContact = name;
-  activeType = type;
+  if (activeRoom) { socket.emit('leave room', { room: activeRoom }); msgCache[activeRoom] = messagesDiv.innerHTML; }
+  activeContact = name; activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
-  chatAvatar.textContent = type === 'channel' ? '📢' : name[0].toUpperCase();
+  chatAvatar.textContent = (type === 'channel') ? '📢' : name[0].toUpperCase();
   composer.style.display = 'flex';
   socket.emit('join room', { room: activeRoom });
   messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
-// ДОБАВЛЕНИЕ СООБЩЕНИЯ
-function addMessage(user, text, time, id, replyData) {
+// СООБЩЕНИЯ
+function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
-  div.className = 'msg ' + (user === currentUser ? 'own' : 'other');
+  div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
   div.dataset.user = user;
   div.dataset.id = id || Date.now().toString();
-  
   const safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let replyHTML = '';
   if (replyData && replyData.user) {
-    replyHTML = '<div class="reply-preview">↩ ' + replyData.user + ': ' + (replyData.text||'').substring(0,30) + '</div>';
+    replyHTML = `<div class="reply-preview">↩ ${replyData.user}: ${(replyData.text||'').substring(0,30)}</div>`;
   }
-  
-  if (activeType === 'group' || activeType === 'channel') {
-    div.innerHTML = replyHTML + '<div class="sender">' + user + '</div>' + safe + '<div class="time">' + time + '</div>';
-  } else {
-    div.innerHTML = replyHTML + safe + '<div class="time">' + time + '</div>';
-  }
-  
-  div.oncontextmenu = function(e) {
+  div.innerHTML = (activeType === 'group' || activeType === 'channel')
+    ? `${replyHTML}<div class="sender">${user}</div>${safe}<div class="time">${time}</div>`
+    : `${replyHTML}${safe}<div class="time">${time}</div>`;
+  div.oncontextmenu = (e) => {
     e.preventDefault();
     contextTarget = div;
     contextMenu.style.display = 'block';
     contextMenu.style.left = e.pageX + 'px';
     contextMenu.style.top = e.pageY + 'px';
   };
-  
   messagesDiv.appendChild(div);
   messagesBox.scrollTop = messagesBox.scrollHeight;
 }
@@ -242,71 +198,45 @@ function addMessage(user, text, time, id, replyData) {
 function sendMsg() {
   const text = msgInput.value.trim();
   if (!text || !activeRoom) return;
-  socket.emit('chat message', {
-    room: activeRoom,
-    text: text,
-    id: Date.now().toString(),
-    replyTo: replyTo
-  });
+  socket.emit('chat message', { room: activeRoom, text, id: Date.now().toString(), replyTo });
   msgInput.value = '';
   replyTo = null;
   replyBar.style.display = 'none';
 }
-
-g('send-btn').onclick = sendMsg;
-msgInput.onkeydown = function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    sendMsg();
-  }
-};
+$('send-btn').onclick = sendMsg;
+msgInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMsg(); } };
 
 // КОНТЕКСТНОЕ МЕНЮ
-document.onclick = function(e) {
-  if (!contextMenu.contains(e.target)) {
-    contextMenu.style.display = 'none';
-  }
-};
-
-g('context-copy').onclick = function() {
-  if (contextTarget) {
-    const text = contextTarget.textContent.replace(/↩.*\n?/, '').trim();
-    navigator.clipboard.writeText(text);
-  }
+document.onclick = (e) => { if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none'; };
+$('context-copy').onclick = () => {
+  if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent.replace(/↩.*\n?/, '').trim());
   contextMenu.style.display = 'none';
 };
-
-g('context-reply').onclick = function() {
+$('context-reply').onclick = () => {
   if (contextTarget) {
-    replyTo = {
-      id: contextTarget.dataset.id,
-      user: contextTarget.dataset.user,
-      text: contextTarget.textContent.substring(0, 30)
-    };
-    replyText.textContent = replyTo.user + ': ' + replyTo.text;
+    replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0,30) };
+    replyText.textContent = `${replyTo.user}: ${replyTo.text}`;
     replyBar.style.display = 'flex';
     msgInput.focus();
   }
   contextMenu.style.display = 'none';
 };
-
-g('context-delete').onclick = function() {
+$('context-delete').onclick = () => {
   if (contextTarget && contextTarget.dataset.user === currentUser) {
     socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
   }
   contextMenu.style.display = 'none';
 };
-
-g('context-reactions').onclick = function() {
+$('context-reactions').onclick = () => {
   if (contextTarget) {
-    const picker = g('reactions-picker');
+    const picker = $('reactions-picker');
     picker.innerHTML = '';
-    ['❤️','👍','😢','😂','🔥','😮','👏','🎉'].forEach(function(emoji) {
+    ['❤️','👍','😢','😂','🔥','😮','👏','🎉'].forEach((emoji) => {
       const span = document.createElement('span');
       span.className = 'reaction-emoji';
       span.textContent = emoji;
-      span.onclick = function() {
-        socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji: emoji });
+      span.onclick = () => {
+        socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji });
         picker.style.display = 'none';
         contextMenu.style.display = 'none';
       };
@@ -318,17 +248,13 @@ g('context-reactions').onclick = function() {
     picker.style.top = (rect.top - 60) + 'px';
   }
 };
-
-replyCancel.onclick = function() {
-  replyTo = null;
-  replyBar.style.display = 'none';
-};
+replyCancel.onclick = () => { replyTo = null; replyBar.style.display = 'none'; };
 
 // ПЛЮС
-g('plus-btn').onclick = function() { plusModal.style.display = 'flex'; };
-plusModal.onclick = function(e) { if (e.target === plusModal) plusModal.style.display = 'none'; };
-
-menuGroupBtn.onclick = function() {
+$('plus-btn').onclick = () => { plusModal.style.display = 'flex'; };
+$('close-plus').onclick = () => { plusModal.style.display = 'none'; };
+plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
+menuGroupBtn.onclick = () => {
   plusModal.style.display = 'none';
   createTitle.textContent = 'Новая группа';
   membersLabel.style.display = 'block';
@@ -338,8 +264,7 @@ menuGroupBtn.onclick = function() {
   renderMembers();
   createModal.style.display = 'flex';
 };
-
-menuChannelBtn.onclick = function() {
+menuChannelBtn.onclick = () => {
   plusModal.style.display = 'none';
   createTitle.textContent = 'Новый канал';
   membersLabel.style.display = 'none';
@@ -347,86 +272,73 @@ menuChannelBtn.onclick = function() {
   entityName.value = '';
   createModal.style.display = 'flex';
 };
-
-g('close-create').onclick = function() { createModal.style.display = 'none'; };
+$('close-create').onclick = () => { createModal.style.display = 'none'; };
 
 function renderMembers() {
   membersList.innerHTML = '';
-  onlineUsers.filter(function(u) { return u !== currentUser; }).forEach(function(u) {
-    const div = document.createElement('div');
-    div.className = 'member-item';
-    if (selectedMembers.has(u)) div.classList.add('selected');
-    div.innerHTML = '<div class="avatar-sm">'+u[0]+'</div><span>'+u+'</span><span class="check">✓</span>';
-    div.onclick = function() {
-      if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); }
-      else { selectedMembers.add(u); div.classList.add('selected'); }
+  onlineUsers.filter(u => u !== currentUser).forEach((u) => {
+    const d = document.createElement('div'); d.className = 'member-item';
+    if (selectedMembers.has(u)) d.classList.add('selected');
+    d.innerHTML = `<div class="avatar-sm">${u[0]}</div><span>${u}</span><span class="check">✓</span>`;
+    d.onclick = () => {
+      if (selectedMembers.has(u)) { selectedMembers.delete(u); d.classList.remove('selected'); }
+      else { selectedMembers.add(u); d.classList.add('selected'); }
     };
-    membersList.appendChild(div);
+    membersList.appendChild(d);
   });
 }
-
-g('create-btn').onclick = function() {
+$('create-btn').onclick = () => {
   const name = entityName.value.trim();
   if (!name) return;
   if (createTitle.textContent.includes('группа')) {
     if (selectedMembers.size === 0) return;
-    socket.emit('create group', { name: name, members: Array.from(selectedMembers) }, function() {
-      createModal.style.display = 'none';
-    });
+    socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; });
   } else {
-    socket.emit('create channel', { name: name }, function() {
-      createModal.style.display = 'none';
-    });
+    socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; });
   }
 };
 
 // НАСТРОЙКИ
-g('settings-btn').onclick = function() {
+$('settings-btn').onclick = () => {
   settingsNickname.value = currentUser;
   renderThemeGrid();
   settingsModal.style.display = 'flex';
 };
-
-g('close-settings').onclick = function() { settingsModal.style.display = 'none'; };
+$('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
 
 function renderThemeGrid() {
   themeGrid.innerHTML = '';
-  Object.entries(themes).forEach(function(arr) {
-    const key = arr[0];
-    const color = arr[1];
-    const div = document.createElement('div');
-    div.className = 'theme-item';
-    if (key === currentTheme) div.classList.add('active');
-    div.style.background = color;
-    div.onclick = function() {
+  Object.entries(themes).forEach(([key, color]) => {
+    const d = document.createElement('div'); d.className = 'theme-item';
+    if (key === currentTheme) d.classList.add('active');
+    d.style.background = color;
+    d.onclick = () => {
       currentTheme = key;
       localStorage.setItem('theme', key);
       document.body.style.background = color;
       renderThemeGrid();
     };
-    themeGrid.appendChild(div);
+    themeGrid.appendChild(d);
   });
 }
-
-g('save-settings-btn').onclick = function() {
+$('save-settings-btn').onclick = () => {
   const nick = settingsNickname.value.trim();
   if (nick && nick !== currentUser) {
-    socket.emit('change username', { oldUsername: currentUser, newUsername: nick }, function(res) {
+    socket.emit('change username', { oldUsername: currentUser, newUsername: nick }, (res) => {
       if (res.success) {
         currentUser = nick;
-        g('my-name').textContent = nick;
-        g('my-avatar').textContent = nick[0].toUpperCase();
+        $('my-name').textContent = nick;
+        $('my-avatar').textContent = nick[0].toUpperCase();
       }
     });
   }
-  setTimeout(function() { settingsModal.style.display = 'none'; }, 300);
+  setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
 };
 
 // ПРОФИЛЬ
-g('user-info').onclick = function() { showProfile(true); };
-chatAvatar.onclick = function() { if (activeType === 'user') showProfile(false); };
-g('chat-info').onclick = function() { if (activeType === 'user') showProfile(false); };
-
+$('user-info').onclick = () => showProfile(true);
+chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
+$('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
 function showProfile(isSelf) {
   profileAvatar.textContent = (isSelf ? currentUser : activeContact)[0].toUpperCase();
   profileName.textContent = isSelf ? currentUser : activeContact;
@@ -434,19 +346,18 @@ function showProfile(isSelf) {
   contactActions.style.display = isSelf ? 'none' : 'block';
   profileModal.style.display = 'flex';
 }
-
-g('close-profile').onclick = function() { profileModal.style.display = 'none'; };
-g('back-btn-profile').onclick = function() { profileModal.style.display = 'none'; };
-g('logout-btn').onclick = function() { socket.emit('logout'); location.reload(); };
+$('close-profile').onclick = () => { profileModal.style.display = 'none'; };
+$('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
+$('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
 
 // ПОИСК
-searchInput.oninput = function() {
+searchInput.oninput = () => {
   const q = searchInput.value.toLowerCase();
-  document.querySelectorAll('.chat-item').forEach(function(el) {
+  document.querySelectorAll('.chat-item').forEach((el) => {
     const name = el.querySelector('.name');
     el.style.display = name && name.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
   });
 };
 
 // АДАПТИВ
-g('back-btn').onclick = function() { sidebar.classList.remove('hidden'); };
+$('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
