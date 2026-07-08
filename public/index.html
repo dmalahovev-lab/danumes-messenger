@@ -99,7 +99,22 @@
   <!-- Контекстное меню -->
   <div id="context-menu" class="context-menu" style="display: none;">
     <div class="context-item" id="context-copy">📋 Копировать</div>
+    <div class="context-item" id="context-reply">↩️ Ответить</div>
     <div class="context-item" id="context-delete">🗑️ Удалить</div>
+  </div>
+
+  <!-- Панель ответа -->
+  <div id="reply-bar" class="reply-bar" style="display: none;">
+    <span id="reply-text"></span>
+    <button id="reply-cancel" class="icon-btn">✕</button>
+  </div>
+
+  <!-- Пикер реакций -->
+  <div id="reactions-picker" class="reactions-picker" style="display: none;"></div>
+
+  <!-- Индикатор записи -->
+  <div id="recording-indicator" class="recording-indicator" style="display: none;">
+    🔴 Запись... <span id="voice-timer">0с</span>
   </div>
 
   <!-- Основной интерфейс -->
@@ -139,6 +154,8 @@
       </div>
 
       <div id="composer" class="composer">
+        <button id="emoji-btn" class="icon-btn">😊</button>
+        <button id="voice-btn" class="icon-btn" title="Голосовое (зажать)">🎤</button>
         <input type="text" id="msg-input" class="message-input" placeholder="Сообщение..." autocomplete="off">
         <button id="send-btn" class="send-btn">↑</button>
       </div>
