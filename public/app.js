@@ -14,6 +14,9 @@ const toggleText = document.getElementById('toggle-mode-text');
 const profileModal = document.getElementById('profile-modal');
 const profileAvatar = document.getElementById('profile-avatar');
 const profileName = document.getElementById('profile-name');
+const profileStatus = document.getElementById('profile-status-text');
+const selfActions = document.getElementById('self-profile-actions');
+const contactActions = document.getElementById('contact-profile-actions');
 const changePasswordBtn = document.getElementById('change-password-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const changePasswordForm = document.getElementById('change-password-form');
@@ -22,6 +25,7 @@ const newPasswordInp = document.getElementById('new-password');
 const profileError = document.getElementById('profile-error');
 const savePasswordBtn = document.getElementById('save-password-btn');
 const closeProfile = document.getElementById('close-profile');
+const backToChatBtn = document.getElementById('back-to-chat-btn');
 
 const appContainer = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
@@ -132,26 +136,44 @@ function renderContacts(users) {
   });
 }
 
-// ========== ОТКРЫТИЕ ЧАТА ==========
+// ========== ОТКРЫТИЕ ЧАТА (исправлено) ==========
 function openChat(username) {
   if (activeContact === username) return;
+
+  // Если уже есть комната, выходим и кешируем сообщения
   if (activeRoom) {
     socket.emit('leave room', { room: activeRoom });
-    if (messagesList.children.length) messagesCache[activeRoom] = messagesList.innerHTML;
+    if (messagesList.children.length) {
+      messagesCache[activeRoom] = messagesList.innerHTML;
+    }
   }
+
+  // Очищаем и подготавливаем интерфейс
   activeContact = username;
   chatName.textContent = username;
   chatAvatar.textContent = username.charAt(0).toUpperCase();
   chatStatus.textContent = 'онлайн';
+  messagesList.innerHTML = '';
+
+  // Вычисляем имя комнаты и отправляем запрос на сервер
   const room = [currentUser, username].sort().join(':');
   socket.emit('join room', { with: username }, (res) => {
     if (res && res.success) {
       activeRoom = room;
-      messagesList.innerHTML = messagesCache[activeRoom] || '';
+      // Восстанавливаем кеш, если есть
+      if (messagesCache[room]) {
+        messagesList.innerHTML = messagesCache[room];
+      }
       scrollToBottom();
+    } else {
+      console.error('Не удалось присоединиться к комнате');
     }
   });
-  if (window.innerWidth <= 768) sidebar.classList.add('hidden');
+
+  // На мобильных скрываем сайдбар
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('hidden');
+  }
 }
 
 // ========== СООБЩЕНИЯ ==========
@@ -175,14 +197,19 @@ scrollBottom.addEventListener('click', scrollToBottom);
 function sendMessage() {
   const text = messageInput.value.trim();
   if (!text || !activeRoom) return;
+  // Отправляем сообщение на сервер
   socket.emit('chat message', { room: activeRoom, text });
   messageInput.value = '';
+  // Останавливаем индикатор печати
   socket.emit('stop typing', { room: activeRoom });
   clearTimeout(typingTimer);
 }
 sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+messageInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter') sendMessage();
+});
 
+// Индикатор печати
 messageInput.addEventListener('input', () => {
   if (!activeRoom) return;
   socket.emit('typing', { room: activeRoom });
@@ -190,28 +217,67 @@ messageInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-socket.on('chat message', data => {
-  if (data.user !== currentUser) addMessage(data.user, data.text, data.time);
+// Приём сообщений
+socket.on('chat message', (data) => {
+  if (data.user !== currentUser) {
+    addMessage(data.user, data.text, data.time);
+  }
 });
 socket.on('typing', data => {
-  if (data.user !== currentUser) { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#4a9eff'; }
+  if (data.user !== currentUser && activeContact === data.user) {
+    chatStatus.textContent = 'печатает...';
+    chatStatus.style.color = '#4a9eff';
+  }
 });
 socket.on('stop typing', data => {
-  if (data.user !== currentUser) { chatStatus.textContent = 'онлайн'; chatStatus.style.color = ''; }
+  if (data.user !== currentUser && activeContact === data.user) {
+    chatStatus.textContent = 'онлайн';
+    chatStatus.style.color = '';
+  }
 });
 
-// ========== ПРОФИЛЬ ==========
+// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
+// Открытие своего профиля (сайдбар)
 currentUserArea.addEventListener('click', () => {
-  profileAvatar.textContent = currentUser.charAt(0).toUpperCase();
-  profileName.textContent = currentUser;
-  profileModal.style.display = 'flex';
-  changePasswordForm.style.display = 'none';
+  showProfile(currentUser, true);
 });
 
+// Клик по аватарке или имени в шапке чата → профиль собеседника
+chatAvatar.addEventListener('click', () => {
+  if (activeContact) showProfile(activeContact, false);
+});
+document.getElementById('chat-header-info-clickable').addEventListener('click', () => {
+  if (activeContact) showProfile(activeContact, false);
+});
+
+function showProfile(username, isSelf) {
+  profileAvatar.textContent = username.charAt(0).toUpperCase();
+  profileName.textContent = username;
+  profileStatus.textContent = 'онлайн';
+
+  if (isSelf) {
+    selfActions.style.display = 'flex';
+    contactActions.style.display = 'none';
+    changePasswordForm.style.display = 'none';
+    profileError.textContent = '';
+  } else {
+    selfActions.style.display = 'none';
+    contactActions.style.display = 'block';
+  }
+  profileModal.style.display = 'flex';
+}
+
+// Закрытие профиля
 closeProfile.addEventListener('click', () => {
   profileModal.style.display = 'none';
 });
 
+// Кнопка "Назад к чату" в профиле собеседника
+backToChatBtn.addEventListener('click', () => {
+  profileModal.style.display = 'none';
+});
+
+// Смена пароля (только для своего профиля)
 changePasswordBtn.addEventListener('click', () => {
   changePasswordForm.style.display = 'block';
   profileError.textContent = '';
@@ -237,6 +303,7 @@ savePasswordBtn.addEventListener('click', () => {
   });
 });
 
+// Выход из аккаунта
 logoutBtn.addEventListener('click', () => {
   socket.emit('logout');
   currentUser = '';
@@ -246,18 +313,23 @@ logoutBtn.addEventListener('click', () => {
   profileModal.style.display = 'none';
   loginModal.style.display = 'flex';
   setMode(true);
+  usernameInp.value = '';
+  passwordInp.value = '';
 });
-
-// На сервере нужно добавить обработку 'change password' и 'logout'. Сейчас добавим в server.js (см. ниже).
 
 // ========== ОСТАЛЬНОЕ ==========
 function checkMobile() {
-  if (window.innerWidth <= 768) sidebar.classList.add('hidden');
-  else sidebar.classList.remove('hidden');
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('hidden');
+  } else {
+    sidebar.classList.remove('hidden');
+  }
 }
 window.addEventListener('resize', checkMobile);
 backBtn.addEventListener('click', () => {
-  if (window.innerWidth <= 768) sidebar.classList.remove('hidden');
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove('hidden');
+  }
 });
 
 searchContacts.addEventListener('input', e => {
@@ -267,6 +339,7 @@ searchContacts.addEventListener('input', e => {
   });
 });
 
+// Кнопки-заглушки
 document.getElementById('emoji-btn').addEventListener('click', () => messageInput.value += '😊');
 document.getElementById('attach-btn').addEventListener('click', () => alert('Вложения – в разработке'));
 document.getElementById('mic-btn').addEventListener('click', () => alert('Голосовые – в разработке'));
