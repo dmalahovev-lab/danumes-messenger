@@ -1,6 +1,6 @@
 const socket = io();
 
-// DOM
+// DOM элементы
 const loginModal = document.getElementById('login-modal');
 const usernameInp = document.getElementById('username-input');
 const passwordInp = document.getElementById('password-input');
@@ -10,6 +10,19 @@ const modalTitle = document.getElementById('modal-title');
 const modalSub = document.getElementById('modal-subtitle');
 const toggleLink = document.getElementById('toggle-mode-link');
 const toggleText = document.getElementById('toggle-mode-text');
+
+const profileModal = document.getElementById('profile-modal');
+const profileAvatar = document.getElementById('profile-avatar');
+const profileName = document.getElementById('profile-name');
+const changePasswordBtn = document.getElementById('change-password-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const changePasswordForm = document.getElementById('change-password-form');
+const oldPasswordInp = document.getElementById('old-password');
+const newPasswordInp = document.getElementById('new-password');
+const profileError = document.getElementById('profile-error');
+const savePasswordBtn = document.getElementById('save-password-btn');
+const closeProfile = document.getElementById('close-profile');
+
 const appContainer = document.getElementById('app');
 const sidebar = document.getElementById('sidebar');
 const contactsList = document.getElementById('contacts-list');
@@ -25,6 +38,10 @@ const chatAvatar = document.getElementById('chat-avatar');
 const searchContacts = document.getElementById('search-contacts');
 const refreshBtn = document.getElementById('refresh-contacts');
 
+const sidebarAvatar = document.getElementById('sidebar-avatar');
+const sidebarUsername = document.getElementById('sidebar-username');
+const currentUserArea = document.getElementById('current-user-area');
+
 let currentUser = '';
 let isLoginMode = true;
 let typingTimer;
@@ -32,7 +49,7 @@ let activeRoom = null;
 let activeContact = null;
 const messagesCache = {};
 
-// Переключение режимов
+// ========== АВТОРИЗАЦИЯ ==========
 function setMode(mode) {
   isLoginMode = mode;
   if (mode) {
@@ -68,6 +85,7 @@ function submitAuth() {
       currentUser = res.username;
       loginModal.style.display = 'none';
       appContainer.style.display = 'flex';
+      updateSidebarUser();
       initApp();
     } else {
       errorMsg.textContent = res.message;
@@ -79,6 +97,7 @@ submitBtn.addEventListener('click', submitAuth);
   if (e.key === 'Enter') submitAuth();
 }));
 
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
 function initApp() {
   socket.emit('request online users');
   socket.on('online users', users => {
@@ -89,6 +108,12 @@ function initApp() {
   checkMobile();
 }
 
+function updateSidebarUser() {
+  sidebarAvatar.textContent = currentUser.charAt(0).toUpperCase();
+  sidebarUsername.textContent = currentUser;
+}
+
+// ========== РЕНДЕР КОНТАКТОВ ==========
 function renderContacts(users) {
   contactsList.innerHTML = '';
   users.forEach(name => {
@@ -107,6 +132,7 @@ function renderContacts(users) {
   });
 }
 
+// ========== ОТКРЫТИЕ ЧАТА ==========
 function openChat(username) {
   if (activeContact === username) return;
   if (activeRoom) {
@@ -128,6 +154,7 @@ function openChat(username) {
   if (window.innerWidth <= 768) sidebar.classList.add('hidden');
 }
 
+// ========== СООБЩЕНИЯ ==========
 function addMessage(user, text, time) {
   const row = document.createElement('div');
   row.className = `message-row ${user === currentUser ? 'own' : 'other'}`;
@@ -167,12 +194,63 @@ socket.on('chat message', data => {
   if (data.user !== currentUser) addMessage(data.user, data.text, data.time);
 });
 socket.on('typing', data => {
-  if (data.user !== currentUser) { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#5e9eff'; }
+  if (data.user !== currentUser) { chatStatus.textContent = 'печатает...'; chatStatus.style.color = '#4a9eff'; }
 });
 socket.on('stop typing', data => {
   if (data.user !== currentUser) { chatStatus.textContent = 'онлайн'; chatStatus.style.color = ''; }
 });
 
+// ========== ПРОФИЛЬ ==========
+currentUserArea.addEventListener('click', () => {
+  profileAvatar.textContent = currentUser.charAt(0).toUpperCase();
+  profileName.textContent = currentUser;
+  profileModal.style.display = 'flex';
+  changePasswordForm.style.display = 'none';
+});
+
+closeProfile.addEventListener('click', () => {
+  profileModal.style.display = 'none';
+});
+
+changePasswordBtn.addEventListener('click', () => {
+  changePasswordForm.style.display = 'block';
+  profileError.textContent = '';
+});
+
+savePasswordBtn.addEventListener('click', () => {
+  const oldPass = oldPasswordInp.value;
+  const newPass = newPasswordInp.value;
+  if (!oldPass || !newPass) {
+    profileError.textContent = 'Заполните поля';
+    return;
+  }
+  socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => {
+    if (res.success) {
+      profileError.textContent = 'Пароль изменён';
+      profileError.style.color = '#4caf50';
+      oldPasswordInp.value = '';
+      newPasswordInp.value = '';
+    } else {
+      profileError.textContent = res.message;
+      profileError.style.color = '#ff6b6b';
+    }
+  });
+});
+
+logoutBtn.addEventListener('click', () => {
+  socket.emit('logout');
+  currentUser = '';
+  activeRoom = null;
+  activeContact = null;
+  appContainer.style.display = 'none';
+  profileModal.style.display = 'none';
+  loginModal.style.display = 'flex';
+  setMode(true);
+});
+
+// На сервере нужно добавить обработку 'change password' и 'logout'. Сейчас добавим в server.js (см. ниже).
+
+// ========== ОСТАЛЬНОЕ ==========
 function checkMobile() {
   if (window.innerWidth <= 768) sidebar.classList.add('hidden');
   else sidebar.classList.remove('hidden');
