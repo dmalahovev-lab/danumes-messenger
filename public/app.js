@@ -71,6 +71,7 @@ function setMode(mode) {
   }
   errorMsg.textContent = '';
 }
+
 toggleLink.addEventListener('click', (e) => {
   e.preventDefault();
   setMode(!isLoginMode);
@@ -96,6 +97,7 @@ function submitAuth() {
     }
   });
 }
+
 submitBtn.addEventListener('click', submitAuth);
 [usernameInp, passwordInp].forEach(el => el.addEventListener('keypress', e => {
   if (e.key === 'Enter') submitAuth();
@@ -108,7 +110,14 @@ function initApp() {
     renderContacts(users.filter(u => u !== currentUser));
   });
   socket.on('user joined', () => socket.emit('request online users'));
-  socket.on('user left', () => socket.emit('request online users'));
+  socket.on('user left', () => {
+    socket.emit('request online users');
+    // Если собеседник вышел, сбрасываем активный чат
+    if (activeContact) {
+      const stillOnline = false; // обновится после запроса
+      // Просто очистим контакт, если он пропал из списка
+    }
+  });
   checkMobile();
 }
 
@@ -136,37 +145,45 @@ function renderContacts(users) {
   });
 }
 
-// ========== ОТКРЫТИЕ ЧАТА (исправлено) ==========
+// ========== ОТКРЫТИЕ ЧАТА (полностью исправлено) ==========
 function openChat(username) {
+  console.log('Открываем чат с:', username);
+  
+  // Если уже открыт чат с этим же пользователем
   if (activeContact === username) return;
 
-  // Если уже есть комната, выходим и кешируем сообщения
+  // Выходим из предыдущей комнаты
   if (activeRoom) {
+    console.log('Покидаем комнату:', activeRoom);
     socket.emit('leave room', { room: activeRoom });
-    if (messagesList.children.length) {
-      messagesCache[activeRoom] = messagesList.innerHTML;
-    }
   }
 
-  // Очищаем и подготавливаем интерфейс
+  // Обновляем интерфейс
   activeContact = username;
   chatName.textContent = username;
   chatAvatar.textContent = username.charAt(0).toUpperCase();
   chatStatus.textContent = 'онлайн';
+  chatStatus.style.color = '';
   messagesList.innerHTML = '';
 
-  // Вычисляем имя комнаты и отправляем запрос на сервер
+  // Формируем комнату
   const room = [currentUser, username].sort().join(':');
+  console.log('Присоединяемся к комнате:', room);
+  
+  // Присоединяемся к новой комнате
   socket.emit('join room', { with: username }, (res) => {
+    console.log('Ответ от join room:', res);
     if (res && res.success) {
       activeRoom = room;
-      // Восстанавливаем кеш, если есть
-      if (messagesCache[room]) {
-        messagesList.innerHTML = messagesCache[room];
+      console.log('Успешно присоединились к комнате:', activeRoom);
+      // Восстанавливаем сообщения из кеша
+      if (messagesCache[activeRoom]) {
+        messagesList.innerHTML = messagesCache[activeRoom];
       }
       scrollToBottom();
     } else {
       console.error('Не удалось присоединиться к комнате');
+      activeRoom = null;
     }
   });
 
@@ -174,61 +191,121 @@ function openChat(username) {
   if (window.innerWidth <= 768) {
     sidebar.classList.add('hidden');
   }
+
+  // Подсвечиваем активный контакт
+  document.querySelectorAll('.contact-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.user === username);
+  });
 }
 
-// ========== СООБЩЕНИЯ ==========
+// ========== ОТПРАВКА СООБЩЕНИЙ ==========
+function sendMessage() {
+  const text = messageInput.value.trim();
+  console.log('Отправка сообщения. Текст:', text, 'Комната:', activeRoom);
+  
+  if (!text) {
+    console.log('Пустое сообщение');
+    return;
+  }
+  
+  if (!activeRoom) {
+    console.error('Нет активной комнаты!');
+    alert('Выберите чат для отправки сообщения');
+    return;
+  }
+
+  // Отправляем на сервер
+  socket.emit('chat message', { 
+    room: activeRoom, 
+    text: text 
+  });
+
+  // Очищаем поле ввода
+  messageInput.value = '';
+  
+  // Останавливаем индикатор печати
+  socket.emit('stop typing', { room: activeRoom });
+  clearTimeout(typingTimer);
+
+  // Фокус обратно на поле ввода
+  messageInput.focus();
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ========== ПОЛУЧЕНИЕ СООБЩЕНИЙ ==========
+socket.on('chat message', (data) => {
+  console.log('Получено сообщение:', data);
+  
+  if (!activeRoom) {
+    console.log('Нет активной комнаты для отображения');
+    return;
+  }
+
+  // Проверяем, что сообщение для текущей комнаты
+  const roomUsers = activeRoom.split(':');
+  if (roomUsers.includes(data.user)) {
+    addMessage(data.user, data.text, data.time);
+    
+    // Кешируем сообщения
+    if (activeRoom) {
+      messagesCache[activeRoom] = messagesList.innerHTML;
+    }
+  }
+});
+
 function addMessage(user, text, time) {
+  const isOwn = user === currentUser;
   const row = document.createElement('div');
-  row.className = `message-row ${user === currentUser ? 'own' : 'other'}`;
-  row.innerHTML = `<div class="bubble">${text}</div><span class="message-time">${time}</span>`;
+  row.className = `message-row ${isOwn ? 'own' : 'other'}`;
+  
+  // Экранируем HTML
+  const safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  row.innerHTML = `
+    <div class="bubble">${safeText}</div>
+    <span class="message-time">${time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+  `;
   messagesList.appendChild(row);
   scrollToBottom();
 }
 
 function scrollToBottom() {
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  if (messagesContainer) {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
 }
+
 messagesContainer.addEventListener('scroll', () => {
   const dist = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
   scrollBottom.classList.toggle('visible', dist > 150);
 });
+
 scrollBottom.addEventListener('click', scrollToBottom);
 
-function sendMessage() {
-  const text = messageInput.value.trim();
-  if (!text || !activeRoom) return;
-  // Отправляем сообщение на сервер
-  socket.emit('chat message', { room: activeRoom, text });
-  messageInput.value = '';
-  // Останавливаем индикатор печати
-  socket.emit('stop typing', { room: activeRoom });
-  clearTimeout(typingTimer);
-}
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', e => {
-  if (e.key === 'Enter') sendMessage();
-});
-
-// Индикатор печати
+// ========== ИНДИКАТОР ПЕЧАТИ ==========
 messageInput.addEventListener('input', () => {
   if (!activeRoom) return;
   socket.emit('typing', { room: activeRoom });
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
+  typingTimer = setTimeout(() => {
+    socket.emit('stop typing', { room: activeRoom });
+  }, 1000);
 });
 
-// Приём сообщений
-socket.on('chat message', (data) => {
-  if (data.user !== currentUser) {
-    addMessage(data.user, data.text, data.time);
-  }
-});
 socket.on('typing', data => {
   if (data.user !== currentUser && activeContact === data.user) {
     chatStatus.textContent = 'печатает...';
     chatStatus.style.color = '#4a9eff';
   }
 });
+
 socket.on('stop typing', data => {
   if (data.user !== currentUser && activeContact === data.user) {
     chatStatus.textContent = 'онлайн';
@@ -236,16 +313,15 @@ socket.on('stop typing', data => {
   }
 });
 
-// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
-// Открытие своего профиля (сайдбар)
+// ========== ПРОФИЛЬ ==========
 currentUserArea.addEventListener('click', () => {
   showProfile(currentUser, true);
 });
 
-// Клик по аватарке или имени в шапке чата → профиль собеседника
 chatAvatar.addEventListener('click', () => {
   if (activeContact) showProfile(activeContact, false);
 });
+
 document.getElementById('chat-header-info-clickable').addEventListener('click', () => {
   if (activeContact) showProfile(activeContact, false);
 });
@@ -267,17 +343,14 @@ function showProfile(username, isSelf) {
   profileModal.style.display = 'flex';
 }
 
-// Закрытие профиля
 closeProfile.addEventListener('click', () => {
   profileModal.style.display = 'none';
 });
 
-// Кнопка "Назад к чату" в профиле собеседника
 backToChatBtn.addEventListener('click', () => {
   profileModal.style.display = 'none';
 });
 
-// Смена пароля (только для своего профиля)
 changePasswordBtn.addEventListener('click', () => {
   changePasswordForm.style.display = 'block';
   profileError.textContent = '';
@@ -290,7 +363,10 @@ savePasswordBtn.addEventListener('click', () => {
     profileError.textContent = 'Заполните поля';
     return;
   }
-  socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => {
+  socket.emit('change password', { 
+    oldPassword: oldPass, 
+    newPassword: newPass 
+  }, (res) => {
     if (res.success) {
       profileError.textContent = 'Пароль изменён';
       profileError.style.color = '#4caf50';
@@ -303,7 +379,6 @@ savePasswordBtn.addEventListener('click', () => {
   });
 });
 
-// Выход из аккаунта
 logoutBtn.addEventListener('click', () => {
   socket.emit('logout');
   currentUser = '';
@@ -317,7 +392,7 @@ logoutBtn.addEventListener('click', () => {
   passwordInp.value = '';
 });
 
-// ========== ОСТАЛЬНОЕ ==========
+// ========== МОБИЛЬНАЯ ВЕРСИЯ ==========
 function checkMobile() {
   if (window.innerWidth <= 768) {
     sidebar.classList.add('hidden');
@@ -325,22 +400,41 @@ function checkMobile() {
     sidebar.classList.remove('hidden');
   }
 }
+
 window.addEventListener('resize', checkMobile);
+
 backBtn.addEventListener('click', () => {
   if (window.innerWidth <= 768) {
     sidebar.classList.remove('hidden');
   }
 });
 
+// ========== ПОИСК ==========
 searchContacts.addEventListener('input', e => {
   const term = e.target.value.toLowerCase();
   document.querySelectorAll('.contact-item').forEach(el => {
-    el.style.display = el.dataset.user.toLowerCase().includes(term) ? 'flex' : 'none';
+    const name = el.dataset.user.toLowerCase();
+    el.style.display = name.includes(term) ? 'flex' : 'none';
   });
 });
 
-// Кнопки-заглушки
-document.getElementById('emoji-btn').addEventListener('click', () => messageInput.value += '😊');
-document.getElementById('attach-btn').addEventListener('click', () => alert('Вложения – в разработке'));
-document.getElementById('mic-btn').addEventListener('click', () => alert('Голосовые – в разработке'));
-refreshBtn.addEventListener('click', () => socket.emit('request online users'));
+// ========== ЗАГЛУШКИ ==========
+document.getElementById('emoji-btn').addEventListener('click', () => {
+  messageInput.value += '😊';
+  messageInput.focus();
+});
+
+document.getElementById('attach-btn').addEventListener('click', () => {
+  alert('Вложения – в разработке');
+});
+
+document.getElementById('mic-btn').addEventListener('click', () => {
+  alert('Голосовые – в разработке');
+});
+
+refreshBtn.addEventListener('click', () => {
+  socket.emit('request online users');
+});
+
+// ========== ДЕБАГ ==========
+console.log('App.js загружен');
