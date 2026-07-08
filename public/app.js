@@ -29,8 +29,6 @@ const entityName = $('entity-name');
 const membersLabel = $('members-label');
 const membersList = $('members-list');
 
-const plusMenu = $('plus-menu');
-
 const appDiv = $('app');
 const sidebar = $('sidebar');
 const chatList = $('chat-list');
@@ -42,6 +40,11 @@ const chatStatus = $('chat-status');
 const chatAvatar = $('chat-avatar');
 const composer = $('composer');
 const searchInput = $('search');
+
+// Модальное окно для выбора «Создать группу / канал»
+const plusModal = $('plus-modal');          // само модальное окно
+const menuGroupBtn = $('menu-group-btn');   // кнопка «Группа»
+const menuChannelBtn = $('menu-channel-btn'); // кнопка «Канал»
 
 let currentUser = '';
 let isLogin = true;
@@ -134,7 +137,6 @@ function initApp() {
 function renderAll() {
   chatList.innerHTML = '';
   
-  // Каналы
   allChannels.forEach(ch => {
     const div = document.createElement('div');
     div.className = 'chat-item';
@@ -143,7 +145,6 @@ function renderAll() {
     chatList.appendChild(div);
   });
   
-  // Группы
   allGroups.forEach(g => {
     if (!g.members.includes(currentUser)) return;
     const online = g.members.filter(m => onlineUsers.includes(m)).length;
@@ -154,7 +155,6 @@ function renderAll() {
     chatList.appendChild(div);
   });
   
-  // Пользователи
   onlineUsers.filter(u => u !== currentUser).forEach(u => {
     const div = document.createElement('div');
     div.className = 'chat-item';
@@ -173,12 +173,7 @@ function openChat(name, room, type) {
   
   activeContact = name;
   activeType = type;
-  // Для личного чата генерируем комнату, иначе используем готовый room
-  if (!room) {
-    activeRoom = [currentUser, name].sort().join(':');
-  } else {
-    activeRoom = room;
-  }
+  activeRoom = room || [currentUser, name].sort().join(':');
   
   chatTitle.textContent = name;
   messagesDiv.innerHTML = msgCache[activeRoom] || '';
@@ -243,7 +238,6 @@ function sendMsg() {
   const text = msgInput.value.trim();
   if (!text) return;
   
-  // Если комната не установлена (ни один чат не выбран), пытаемся создать комнату по активному контакту
   if (!activeRoom && activeContact) {
     activeRoom = [currentUser, activeContact].sort().join(':');
     socket.emit('join room', { room: activeRoom });
@@ -276,35 +270,25 @@ msgInput.addEventListener('input', () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 });
 
-// ===== ПЛЮСИК (ИСПРАВЛЕНО) =====
-// Убедимся, что кнопка получается корректно
-const plusBtn = $('plus-btn');
-if (plusBtn) {
-  plusBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    
-    // Переключаем видимость меню
-    if (plusMenu.style.display === 'block') {
-      plusMenu.style.display = 'none';
-    } else {
-      plusMenu.style.display = 'block';
-    }
-  });
-} else {
-  console.error('Кнопка плюса не найдена!');
+// ===== НОВОЕ МОДАЛЬНОЕ МЕНЮ ПЛЮСА =====
+function openPlusMenu() {
+  plusModal.style.display = 'flex';
 }
 
-// Закрываем меню при клике вне
-document.addEventListener('click', function(e) {
-  if (!plusMenu.contains(e.target) && e.target !== plusBtn) {
-    plusMenu.style.display = 'none';
-  }
+function closePlusMenu() {
+  plusModal.style.display = 'none';
+}
+
+$('plus-btn').addEventListener('click', openPlusMenu);
+
+// Закрытие по клику на фон
+plusModal.addEventListener('click', (e) => {
+  if (e.target === plusModal) closePlusMenu();
 });
 
-$('menu-group').addEventListener('click', function(e) {
-  e.stopPropagation();
-  plusMenu.style.display = 'none';
+// Кнопка «Создать группу»
+menuGroupBtn.addEventListener('click', () => {
+  closePlusMenu();
   creatingMode = 'group';
   createTitle.textContent = 'Новая группа';
   membersLabel.style.display = 'block';
@@ -315,9 +299,9 @@ $('menu-group').addEventListener('click', function(e) {
   createModal.style.display = 'flex';
 });
 
-$('menu-channel').addEventListener('click', function(e) {
-  e.stopPropagation();
-  plusMenu.style.display = 'none';
+// Кнопка «Создать канал»
+menuChannelBtn.addEventListener('click', () => {
+  closePlusMenu();
   creatingMode = 'channel';
   createTitle.textContent = 'Новый канал';
   membersLabel.style.display = 'none';
@@ -326,9 +310,8 @@ $('menu-channel').addEventListener('click', function(e) {
   createModal.style.display = 'flex';
 });
 
-$('close-create').addEventListener('click', function() {
-  createModal.style.display = 'none';
-});
+// ===== ОСТАЛЬНЫЕ МОДАЛКИ =====
+$('close-create').addEventListener('click', () => { createModal.style.display = 'none'; });
 
 function renderMembers() {
   membersList.innerHTML = '';
@@ -337,7 +320,7 @@ function renderMembers() {
     div.className = 'member-item';
     if (selectedMembers.has(u)) div.classList.add('selected');
     div.innerHTML = `<div class="avatar-sm">${u[0].toUpperCase()}</div><span class="member-name">${u}</span><span class="check">✓</span>`;
-    div.addEventListener('click', function() {
+    div.addEventListener('click', () => {
       if (selectedMembers.has(u)) {
         selectedMembers.delete(u);
         div.classList.remove('selected');
@@ -350,7 +333,7 @@ function renderMembers() {
   });
 }
 
-$('create-btn').addEventListener('click', function() {
+$('create-btn').addEventListener('click', () => {
   const name = entityName.value.trim();
   if (!name) return alert('Введите название');
   
@@ -366,11 +349,8 @@ $('create-btn').addEventListener('click', function() {
     });
   } else {
     socket.emit('create channel', { name }, res => {
-      if (res.success) {
-        createModal.style.display = 'none';
-      } else {
-        alert(res.message);
-      }
+      if (res.success) createModal.style.display = 'none';
+      else alert(res.message);
     });
   }
 });
