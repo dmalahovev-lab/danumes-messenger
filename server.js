@@ -7,23 +7,19 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Статика из папки public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Все остальные запросы отправляют index.html (для SPA, если нужно)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Хранилище
 const usersDB = [];               // { username, password }
 const sessions = new Map();       // socket.id -> username
-const onlineUsers = new Set();    // username
+const onlineUsers = new Set();
 
 io.on('connection', (socket) => {
-  console.log('Новое подключение:', socket.id);
+  console.log('Подключение:', socket.id);
 
-  // Регистрация
   socket.on('register', (data, callback) => {
     const { username, password } = data;
     if (!username || !password) return callback({ success: false, message: 'Заполните все поля' });
@@ -36,7 +32,6 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user joined', { username });
   });
 
-  // Вход
   socket.on('login', (data, callback) => {
     const { username, password } = data;
     const user = usersDB.find(u => u.username === username && u.password === password);
@@ -49,7 +44,27 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user joined', { username });
   });
 
-  // Присоединение к комнате
+  socket.on('change password', (data, callback) => {
+    const username = sessions.get(socket.id);
+    if (!username) return callback({ success: false, message: 'Не авторизован' });
+    const user = usersDB.find(u => u.username === username);
+    if (!user || user.password !== data.oldPassword) {
+      return callback({ success: false, message: 'Неверный старый пароль' });
+    }
+    user.password = data.newPassword;
+    callback({ success: true });
+  });
+
+  socket.on('logout', () => {
+    const username = sessions.get(socket.id);
+    if (username) {
+      sessions.delete(socket.id);
+      onlineUsers.delete(username);
+      broadcastOnlineUsers();
+      socket.broadcast.emit('user left', { username });
+    }
+  });
+
   socket.on('join room', (data, callback) => {
     const currentUser = sessions.get(socket.id);
     const withUser = data.with;
@@ -58,29 +73,23 @@ io.on('connection', (socket) => {
     }
     const room = [currentUser, withUser].sort().join(':');
     socket.join(room);
-    console.log(`${currentUser} joined room ${room}`);
     if (callback) callback({ success: true, room });
   });
 
   socket.on('leave room', (data) => {
-    const currentUser = sessions.get(socket.id);
-    if (!currentUser || !data.room) return;
-    socket.leave(data.room);
+    if (data.room) socket.leave(data.room);
   });
 
-  // Отправка сообщения
   socket.on('chat message', (data) => {
     const sender = sessions.get(socket.id);
     if (!sender || !data.room || !data.text) return;
-    const msg = {
+    io.to(data.room).emit('chat message', {
       user: sender,
       text: data.text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    io.to(data.room).emit('chat message', msg);
+    });
   });
 
-  // Индикатор печати
   socket.on('typing', (data) => {
     const user = sessions.get(socket.id);
     if (user && data.room) socket.to(data.room).emit('typing', { user });
