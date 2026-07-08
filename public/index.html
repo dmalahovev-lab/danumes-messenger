@@ -60,7 +60,7 @@
     </div>
   </div>
 
-  <!-- Модальное меню плюса (новое) -->
+  <!-- Модальное меню плюса -->
   <div id="plus-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card plus-menu-modal">
       <button class="modal-close icon-btn" onclick="document.getElementById('plus-modal').style.display='none'">✕</button>
@@ -76,6 +76,32 @@
     </div>
   </div>
 
+  <!-- Модальное окно настроек -->
+  <div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card settings-card">
+      <button class="modal-close icon-btn" id="close-settings">✕</button>
+      <h2>Настройки</h2>
+      
+      <label class="settings-label">Никнейм</label>
+      <input type="text" id="settings-nickname" class="glass-input" placeholder="Новый никнейм">
+      
+      <label class="settings-label">Тема</label>
+      <div id="theme-grid" class="theme-grid"></div>
+      
+      <label class="settings-label">Сменить пароль</label>
+      <input type="password" id="settings-old-pass" class="glass-input" placeholder="Старый пароль">
+      <input type="password" id="settings-new-pass" class="glass-input" placeholder="Новый пароль">
+      <div id="settings-pass-error" class="error-msg"></div>
+      <button id="save-settings-btn" class="btn-primary">Сохранить</button>
+    </div>
+  </div>
+
+  <!-- Контекстное меню -->
+  <div id="context-menu" class="context-menu" style="display: none;">
+    <div class="context-item" id="context-copy">📋 Копировать</div>
+    <div class="context-item" id="context-delete">🗑️ Удалить</div>
+  </div>
+
   <!-- Основной интерфейс -->
   <div id="app" class="app-container" style="display: none;">
     <!-- Сайдбар -->
@@ -85,7 +111,8 @@
           <div class="avatar" id="my-avatar">?</div>
           <span id="my-name">User</span>
         </div>
-        <div style="position: relative;">
+        <div style="display: flex; gap: 4px;">
+          <button id="settings-btn" class="icon-btn" title="Настройки">⚙️</button>
           <button id="plus-btn" class="icon-btn plus-btn" title="Создать">+</button>
         </div>
       </div>
