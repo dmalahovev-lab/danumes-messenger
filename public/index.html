@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Danumes</title>
+  <title>Danumes – Liquid Glass</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -86,6 +86,7 @@
   <div id="context-menu" class="context-menu" style="display:none">
     <div class="context-item" id="context-copy">📋 Копировать</div>
     <div class="context-item" id="context-reply">↩️ Ответить</div>
+    <div class="context-item" id="context-edit">✏️ Редактировать</div>
     <div class="context-item" id="context-delete">🗑️ Удалить</div>
     <div class="context-item" id="context-reactions">😀 Реакции</div>
   </div>
@@ -108,13 +109,14 @@
           <span id="my-name">User</span>
         </div>
         <div style="display:flex;gap:4px">
+          <button id="search-msg-btn" class="icon-btn" title="Поиск по сообщениям">🔍</button>
           <button id="settings-btn" class="icon-btn" title="Настройки">⚙️</button>
           <button id="plus-btn" class="icon-btn plus-btn" title="Создать">+</button>
         </div>
       </div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input id="search" class="glass-input search-input" placeholder="Поиск...">
+        <input id="search" class="glass-input search-input" placeholder="Поиск контактов...">
       </div>
       <div id="chat-list" class="chat-list"></div>
     </aside>
@@ -132,6 +134,8 @@
         <div id="messages" class="messages"></div>
       </div>
       <div id="composer" class="composer">
+        <input type="file" id="file-input" accept="image/*" style="display:none">
+        <button id="attach-btn" class="icon-btn" title="Прикрепить файл">📎</button>
         <input id="msg-input" class="message-input" placeholder="Сообщение...">
         <button id="send-btn" class="send-btn">↑</button>
       </div>
