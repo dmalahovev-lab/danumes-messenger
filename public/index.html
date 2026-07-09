@@ -78,6 +78,7 @@
       <label class="settings-label">Сменить пароль</label>
       <input id="settings-old-pass" type="password" class="glass-input" placeholder="Старый пароль">
       <input id="settings-new-pass" type="password" class="glass-input" placeholder="Новый пароль">
+      <div id="settings-pass-error" class="error-msg"></div>
       <button id="save-settings-btn" class="btn-primary">Сохранить</button>
     </div>
   </div>
@@ -109,7 +110,6 @@
           <span id="my-name">User</span>
         </div>
         <div style="display:flex;gap:4px">
-          <button id="search-msg-btn" class="icon-btn" title="Поиск по сообщениям">🔍</button>
           <button id="settings-btn" class="icon-btn" title="Настройки">⚙️</button>
           <button id="plus-btn" class="icon-btn plus-btn" title="Создать">+</button>
         </div>
@@ -129,11 +129,9 @@
           <h3 id="chat-title">Выберите чат</h3>
           <span id="chat-status" class="status">офлайн</span>
         </div>
-        <!-- Кнопка меню чата -->
-        <button id="chat-menu-btn" class="icon-btn" title="Меню" style="margin-left:auto;">⋯</button>
+        <button id="chat-menu-btn" class="icon-btn" title="Меню">⋯</button>
       </header>
 
-      <!-- Выпадающее меню чата -->
       <div id="chat-menu" class="chat-menu" style="display:none">
         <div class="context-item" id="chat-menu-search">🔍 Поиск по сообщениям</div>
       </div>
