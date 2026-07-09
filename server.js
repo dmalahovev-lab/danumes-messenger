@@ -20,6 +20,18 @@ const onlineUsers = new Set();
 const groups = [];
 const channels = [];
 
+// Загрузка групп и каналов из БД при старте
+async function loadGroups() {
+  const { data } = await supabase.from('groups_table').select('*');
+  if (data) groups.push(...data);
+}
+async function loadChannels() {
+  const { data } = await supabase.from('channels_table').select('*');
+  if (data) channels.push(...data);
+}
+loadGroups();
+loadChannels();
+
 function broadcastOnlineUsers() {
   io.emit('online users', Array.from(onlineUsers));
 }
@@ -31,6 +43,7 @@ io.on('connection', (socket) => {
     try {
       const { username, password } = data;
       if (!username || !password) return cb({ success: false, message: 'Fill fields' });
+      if (username.length > 15) return cb({ success: false, message: 'Max 15 symbols' });
       const { data: existing } = await supabase.from('users').select('username').eq('username', username).single();
       if (existing) return cb({ success: false, message: 'User exists' });
       const { error } = await supabase.from('users').insert({ username, password_hash: password });
@@ -63,22 +76,42 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('create group', (data, cb) => {
+  socket.on('create group', async (data, cb) => {
     const admin = sessions.get(socket.id);
     if (!admin) return cb({ success: false });
     const members = [admin, ...data.members];
     const room = 'group_' + Date.now();
-    groups.push({ name: data.name, room, members, admin, type: 'group' });
+    const group = { name: data.name, room, members, admin, type: 'group' };
+    
+    await supabase.from('groups_table').insert({
+      name: data.name,
+      room,
+      members,
+      admin,
+      type: 'group'
+    });
+    
+    groups.push(group);
     socket.join(room);
     io.emit('groups list', groups);
     cb({ success: true });
   });
 
-  socket.on('create channel', (data, cb) => {
+  socket.on('create channel', async (data, cb) => {
     const admin = sessions.get(socket.id);
     if (!admin) return cb({ success: false });
     const room = 'channel_' + Date.now();
-    channels.push({ name: data.name, room, subscribers: [admin], admin, type: 'channel' });
+    const channel = { name: data.name, room, subscribers: [admin], admin, type: 'channel' };
+    
+    await supabase.from('channels_table').insert({
+      name: data.name,
+      room,
+      subscribers: [admin],
+      admin,
+      type: 'channel'
+    });
+    
+    channels.push(channel);
     socket.join(room);
     io.emit('channels list', channels);
     cb({ success: true });
@@ -108,7 +141,7 @@ io.on('connection', (socket) => {
   socket.on('edit message', async (data) => {
     if (!data.room || !data.id || !data.text) return;
     try { await supabase.from('messages').update({ text: data.text }).eq('id', data.id); } catch (err) {}
-    socket.to(data.room).emit('edit message', { id: data.id, text: data.text });
+    socket.to(data.room).emit('edit message', { id: data.id, text: data.text, user: sessions.get(socket.id) });
   });
 
   socket.on('delete message', (data) => {
@@ -116,13 +149,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('reaction', (data) => {
-    if (data.room) socket.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
+    if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
   });
 
   socket.on('change username', async (data, cb) => {
     const username = sessions.get(socket.id);
     if (!username || username !== data.oldUsername) return cb({ success: false, message: 'Not authorized' });
     if (!data.newUsername || data.oldUsername === data.newUsername) return cb({ success: false, message: 'Enter new nick' });
+    if (data.newUsername.length > 15) return cb({ success: false, message: 'Max 15 symbols' });
     const { data: existing } = await supabase.from('users').select('username').eq('username', data.newUsername).single();
     if (existing) return cb({ success: false, message: 'Nick taken' });
     const { error } = await supabase.from('users').update({ username: data.newUsername }).eq('username', data.oldUsername);
