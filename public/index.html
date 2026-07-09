@@ -129,7 +129,15 @@
           <h3 id="chat-title">Выберите чат</h3>
           <span id="chat-status" class="status">офлайн</span>
         </div>
+        <!-- Кнопка меню чата -->
+        <button id="chat-menu-btn" class="icon-btn" title="Меню" style="margin-left:auto;">⋯</button>
       </header>
+
+      <!-- Выпадающее меню чата -->
+      <div id="chat-menu" class="chat-menu" style="display:none">
+        <div class="context-item" id="chat-menu-search">🔍 Поиск по сообщениям</div>
+      </div>
+
       <div id="messages-box" class="messages-box">
         <div id="messages" class="messages"></div>
       </div>
