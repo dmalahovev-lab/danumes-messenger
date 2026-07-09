@@ -145,7 +145,7 @@ function initApp() {
   socket.emit('request online users');
   socket.emit('request all users');
 
-  socket.on('online users', (users) => { onlineUsers = users; renderChats(); });
+  socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
   socket.on('all users', (users) => { allUsers = users; renderChats(); });
   socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
   socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
@@ -206,9 +206,19 @@ function initApp() {
   });
 
   socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
-  socket.on('stop typing', () => {
-    chatStatus.textContent = (activeType === 'channel') ? 'канал' : (activeType === 'group') ? 'группа' : (onlineUsers.includes(activeContact) ? 'онлайн' : 'офлайн');
-  });
+  socket.on('stop typing', () => { updateStatus(); });
+}
+
+// ОБНОВЛЕНИЕ СТАТУСА
+function updateStatus() {
+  if (activeType === 'channel') chatStatus.textContent = 'канал';
+  else if (activeType === 'group') {
+    const g = allGroups.find(gr => gr.room === activeRoom);
+    const online = g ? g.members.filter(m => onlineUsers.includes(m)).length : 0;
+    chatStatus.textContent = `${g?.members.length || 0} участников · ${online} онлайн`;
+  } else if (activeContact) {
+    chatStatus.textContent = onlineUsers.includes(activeContact) ? 'онлайн' : 'офлайн';
+  }
 }
 
 // РЕНДЕР
@@ -251,6 +261,7 @@ function openChat(name, room, type) {
   chatAvatar.style.background = (type === 'channel') ? 'linear-gradient(135deg,#f093fb,#f5576c)' : (type === 'group') ? 'linear-gradient(135deg,#4ecdc4,#44a08d)' : 'linear-gradient(135deg, var(--accent), #6c5ce7)';
   composer.style.display = (type === 'channel' && allChannels.find(c => c.room === room)?.admin !== currentUser) ? 'none' : 'flex';
   socket.emit('join room', { room: activeRoom });
+  updateStatus();
 }
 
 // СООБЩЕНИЯ
