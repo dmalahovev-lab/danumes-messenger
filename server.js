@@ -138,15 +138,28 @@ io.on('connection', (socket) => {
     io.to(data.room).emit('chat message', { user: sender, text: data.text, time, id: data.id, replyTo: data.replyTo });
   });
 
-  socket.on('edit message', async (data) => {
-    if (!data.room || !data.id || !data.text) return;
-    try { await supabase.from('messages').update({ text: data.text }).eq('id', data.id); } catch (err) {}
-    socket.to(data.room).emit('edit message', { id: data.id, text: data.text, user: sessions.get(socket.id) });
+ socket.on('edit message', async (data) => {
+  if (!data.room || !data.id || !data.text) return;
+  
+  // Обновляем в БД
+  try { 
+    await supabase.from('messages').update({ text: data.text }).eq('id', data.id); 
+  } catch (err) {}
+  
+  // Рассылаем ВСЕМ в комнате, включая отправителя
+  io.to(data.room).emit('edit message', { 
+    id: data.id, 
+    text: data.text, 
+    user: sessions.get(socket.id) 
   });
+});
 
   socket.on('delete message', (data) => {
-    if (data.room) socket.to(data.room).emit('delete message', { id: data.id });
-  });
+  if (!data.room || !data.id) return;
+  
+  // Рассылаем ВСЕМ в комнате
+  io.to(data.room).emit('delete message', { id: data.id });
+});
 
   socket.on('reaction', (data) => {
     if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
