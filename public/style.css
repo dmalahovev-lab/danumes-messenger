@@ -98,6 +98,26 @@ body {
 .check { color:var(--accent); font-weight:700; opacity:0; }
 .member-item.selected .check { opacity:1; }
 .back-btn { display:none; }
+/* Кнопка меню чата (три точки) */
+.chat-menu-btn {
+  margin-left: auto;
+  font-size: 1.2rem;
+}
+
+/* Выпадающее меню чата */
+.chat-menu {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background: rgba(20,20,30,0.97);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  padding: 6px;
+  min-width: 200px;
+  z-index: 200;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
 @media (max-width:768px) {
   .sidebar { position:absolute; width:100%; height:100%; z-index:20; background:rgba(10,10,15,0.96); transition:transform 0.3s; }
   .sidebar.hidden { transform:translateX(-100%); }
