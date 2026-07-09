@@ -6,14 +6,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// Твои ключи Supabase
 const supabaseUrl = 'https://pecfhqthefjxfeokyzza.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -23,32 +20,21 @@ const onlineUsers = new Set();
 const groups = [];
 const channels = [];
 
+function broadcastOnlineUsers() {
+  io.emit('online users', Array.from(onlineUsers));
+}
+
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
-  // Регистрация
   socket.on('register', async (data, cb) => {
     try {
       const { username, password } = data;
       if (!username || !password) return cb({ success: false, message: 'Fill fields' });
-
-      const { data: existing } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', username)
-        .single();
-
+      const { data: existing } = await supabase.from('users').select('username').eq('username', username).single();
       if (existing) return cb({ success: false, message: 'User exists' });
-
-      const { error } = await supabase
-        .from('users')
-        .insert({ username, password_hash: password });
-
-      if (error) {
-        console.error('Register error:', error);
-        return cb({ success: false, message: 'DB error' });
-      }
-
+      const { error } = await supabase.from('users').insert({ username, password_hash: password });
+      if (error) return cb({ success: false, message: 'DB error' });
       sessions.set(socket.id, username);
       onlineUsers.add(username);
       cb({ success: true, username });
@@ -56,30 +42,16 @@ io.on('connection', (socket) => {
       socket.emit('groups list', groups);
       socket.emit('channels list', channels);
     } catch (err) {
-      console.error('Register exception:', err);
       cb({ success: false, message: 'Server error' });
     }
   });
 
-  // Вход
   socket.on('login', async (data, cb) => {
     try {
       const { username, password } = data;
-
-      const { data: user } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('username', username)
-        .single();
-
-      if (!user || user.password_hash !== password) {
-        return cb({ success: false, message: 'Wrong credentials' });
-      }
-
-      if (onlineUsers.has(username)) {
-        return cb({ success: false, message: 'Already online' });
-      }
-
+      const { data: user } = await supabase.from('users').select('password_hash').eq('username', username).single();
+      if (!user || user.password_hash !== password) return cb({ success: false, message: 'Wrong credentials' });
+      if (onlineUsers.has(username)) return cb({ success: false, message: 'Already online' });
       sessions.set(socket.id, username);
       onlineUsers.add(username);
       cb({ success: true, username });
@@ -87,12 +59,10 @@ io.on('connection', (socket) => {
       socket.emit('groups list', groups);
       socket.emit('channels list', channels);
     } catch (err) {
-      console.error('Login exception:', err);
       cb({ success: false, message: 'Server error' });
     }
   });
 
-  // Остальные обработчики (без изменений)
   socket.on('create group', (data, cb) => {
     const admin = sessions.get(socket.id);
     if (!admin) return cb({ success: false });
@@ -117,50 +87,28 @@ io.on('connection', (socket) => {
   socket.on('join room', async (data) => {
     if (!data.room) return;
     socket.join(data.room);
-
     try {
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('room', data.room)
-        .order('id', { ascending: false })
-        .limit(50);
-
+      const { data: messages } = await supabase.from('messages').select('*').eq('room', data.room).order('id', { ascending: false }).limit(50);
       socket.emit('chat history', (messages || []).reverse());
-    } catch (err) {
-      console.error('History error:', err);
-    }
+    } catch (err) {}
   });
 
-  socket.on('leave room', (data) => {
-    if (data.room) socket.leave(data.room);
-  });
+  socket.on('leave room', (data) => { if (data.room) socket.leave(data.room); });
 
   socket.on('chat message', async (data) => {
     const sender = sessions.get(socket.id);
     if (!sender || !data.room || !data.text) return;
-
+    const channel = channels.find(c => c.room === data.room);
+    if (channel && channel.admin !== sender) return;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    try {
-      await supabase.from('messages').insert({
-        room: data.room,
-        username: sender,
-        text: data.text,
-        time,
-        reply_to: data.replyTo || null
-      });
-    } catch (err) {
-      console.error('Message save error:', err);
-    }
+    try { await supabase.from('messages').insert({ room: data.room, username: sender, text: data.text, time, reply_to: data.replyTo || null }); } catch (err) {}
+    io.to(data.room).emit('chat message', { user: sender, text: data.text, time, id: data.id, replyTo: data.replyTo });
+  });
 
-    io.to(data.room).emit('chat message', {
-      user: sender,
-      text: data.text,
-      time,
-      id: data.id,
-      replyTo: data.replyTo
-    });
+  socket.on('edit message', async (data) => {
+    if (!data.room || !data.id || !data.text) return;
+    try { await supabase.from('messages').update({ text: data.text }).eq('id', data.id); } catch (err) {}
+    socket.to(data.room).emit('edit message', { id: data.id, text: data.text });
   });
 
   socket.on('delete message', (data) => {
@@ -172,87 +120,43 @@ io.on('connection', (socket) => {
   });
 
   socket.on('change username', async (data, cb) => {
-    try {
-      const { oldUsername, newUsername } = data;
-      if (!oldUsername || !newUsername) return cb({ success: false });
-
-      const { data: existing } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', newUsername)
-        .single();
-
-      if (existing) return cb({ success: false, message: 'Username taken' });
-
-      await supabase
-        .from('users')
-        .update({ username: newUsername })
-        .eq('username', oldUsername);
-
-      for (let [sid, user] of sessions) {
-        if (user === oldUsername) sessions.set(sid, newUsername);
-      }
-      onlineUsers.delete(oldUsername);
-      onlineUsers.add(newUsername);
-      broadcastOnlineUsers();
-      cb({ success: true });
-    } catch (err) {
-      console.error('Change username error:', err);
-      cb({ success: false, message: 'Server error' });
-    }
+    const username = sessions.get(socket.id);
+    if (!username || username !== data.oldUsername) return cb({ success: false, message: 'Not authorized' });
+    if (!data.newUsername || data.oldUsername === data.newUsername) return cb({ success: false, message: 'Enter new nick' });
+    const { data: existing } = await supabase.from('users').select('username').eq('username', data.newUsername).single();
+    if (existing) return cb({ success: false, message: 'Nick taken' });
+    const { error } = await supabase.from('users').update({ username: data.newUsername }).eq('username', data.oldUsername);
+    if (error) return cb({ success: false, message: 'DB error' });
+    sessions.set(socket.id, data.newUsername);
+    onlineUsers.delete(data.oldUsername);
+    onlineUsers.add(data.newUsername);
+    broadcastOnlineUsers();
+    cb({ success: true });
   });
 
   socket.on('change password', async (data, cb) => {
-    try {
-      const username = sessions.get(socket.id);
-      if (!username) return cb({ success: false });
-
-      const { data: user } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('username', username)
-        .single();
-
-      if (user.password_hash !== data.oldPassword) {
-        return cb({ success: false, message: 'Wrong password' });
-      }
-
-      await supabase
-        .from('users')
-        .update({ password_hash: data.newPassword })
-        .eq('username', username);
-
-      cb({ success: true });
-    } catch (err) {
-      console.error('Change password error:', err);
-      cb({ success: false, message: 'Server error' });
-    }
+    const username = sessions.get(socket.id);
+    if (!username) return cb({ success: false });
+    const { data: user } = await supabase.from('users').select('password_hash').eq('username', username).single();
+    if (user.password_hash !== data.oldPassword) return cb({ success: false, message: 'Wrong password' });
+    await supabase.from('users').update({ password_hash: data.newPassword }).eq('username', username);
+    cb({ success: true });
   });
 
   socket.on('logout', () => {
     const username = sessions.get(socket.id);
-    if (username) {
-      sessions.delete(socket.id);
-      onlineUsers.delete(username);
-      broadcastOnlineUsers();
-    }
+    if (username) { sessions.delete(socket.id); onlineUsers.delete(username); broadcastOnlineUsers(); }
   });
 
   socket.on('disconnect', () => {
     const username = sessions.get(socket.id);
-    if (username) {
-      sessions.delete(socket.id);
-      onlineUsers.delete(username);
-      broadcastOnlineUsers();
-    }
+    if (username) { sessions.delete(socket.id); onlineUsers.delete(username); broadcastOnlineUsers(); }
   });
 
-  function broadcastOnlineUsers() {
-    io.emit('online users', Array.from(onlineUsers));
-  }
-
-  socket.on('request online users', () => {
-    socket.emit('online users', Array.from(onlineUsers));
+  socket.on('request online users', () => socket.emit('online users', Array.from(onlineUsers)));
+  socket.on('request all users', async () => {
+    const { data } = await supabase.from('users').select('username');
+    socket.emit('all users', (data || []).map(u => u.username));
   });
 });
 
