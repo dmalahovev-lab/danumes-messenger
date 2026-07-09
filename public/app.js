@@ -1,13 +1,11 @@
 const socket = io();
-
-// ========== DOM-элементы ==========
 const $ = (id) => document.getElementById(id);
 
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
-const loginError = $('login-error');
 const loginBtn = $('login-btn');
+const loginError = $('login-error');
 const modalTitle = $('modal-title');
 const modalSub = $('modal-sub');
 const toggleLink = $('toggle-link');
@@ -64,11 +62,9 @@ let creatingMode = 'group';
 let onlineUsers = [];
 let allGroups = [];
 let allChannels = [];
-const msgCache = {};
 let contextTarget = null;
 let replyTo = null;
 
-// ========== ТЕМЫ ==========
 const themes = {
   'blue-dark':   { bg:'#0a0a0f', accent:'#4a9eff', gradient:'radial-gradient(ellipse at 30% 20%, rgba(74,158,255,0.08) 0%, transparent 60%), #0a0a0f' },
   'green-dark':  { bg:'#0a0f0a', accent:'#4caf50', gradient:'radial-gradient(ellipse at 30% 20%, rgba(76,175,80,0.08) 0%, transparent 60%), #0a0f0a' },
@@ -95,7 +91,7 @@ function applyTheme(name) {
   }
 }
 
-// ========== АВТОРИЗАЦИЯ ==========
+// АВТОРИЗАЦИЯ
 function switchMode() {
   isLogin = !isLogin;
   modalTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
@@ -125,7 +121,7 @@ loginBtn.onclick = () => {
   });
 };
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// ИНИЦИАЛИЗАЦИЯ
 function initApp() {
   socket.emit('request online users');
 
@@ -144,20 +140,21 @@ function initApp() {
     renderChats();
   });
 
- // ВАЖНО: принимаем ВСЕ сообщения без фильтрации (как раньше)
-socket.on('chat message', (data) => {
-  addMsg(data.user, data.text, data.time, data.id, data.replyTo);
-  // Сохраняем в кеш ВСЕГДА для комнаты, к которой относится сообщение
-  if (data.room) {
-    if (!msgCache[data.room]) msgCache[data.room] = '';
-    msgCache[data.room] += messagesDiv.innerHTML; // временно добавим, потом перезапишем при открытии
-  }
-});
+  // История чата
+  socket.on('chat history', (messages) => {
+    messagesDiv.innerHTML = '';
+    messages.forEach(msg => addMsg(msg.username, msg.text, msg.time, msg.id, msg.reply_to));
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  });
+
+  // Обычные сообщения (в реальном времени)
+  socket.on('chat message', (data) => {
+    addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+  });
 
   socket.on('delete message', (data) => {
     const el = document.querySelector(`[data-id="${data.id}"]`);
     if (el) { el.innerHTML = '<em style="color:gray">Удалено</em>'; }
-    if (activeRoom) msgCache[activeRoom] = messagesDiv.innerHTML;
   });
 
   socket.on('reaction', (data) => {
@@ -177,7 +174,7 @@ socket.on('chat message', (data) => {
   });
 }
 
-// ========== РЕНДЕР ==========
+// РЕНДЕР
 function renderChats() {
   chatList.innerHTML = '';
   allChannels.forEach((ch) => {
@@ -201,12 +198,10 @@ function renderChats() {
   });
 }
 
-// ========== ОТКРЫТИЕ ЧАТА ==========
+// ОТКРЫТИЕ ЧАТА
 function openChat(name, room, type) {
-  // Сохраняем текущий чат
   if (activeRoom) {
     socket.emit('leave room', { room: activeRoom });
-    msgCache[activeRoom] = messagesDiv.innerHTML;
   }
 
   activeContact = name;
@@ -214,10 +209,9 @@ function openChat(name, room, type) {
   activeRoom = room || [currentUser, name].sort().join(':');
 
   chatTitle.textContent = name;
-  messagesDiv.innerHTML = msgCache[activeRoom] || '';
+  messagesDiv.innerHTML = ''; // будет заполнено через chat history
   chatAvatar.textContent = (type === 'channel') ? '📢' : name[0].toUpperCase();
 
-  // Показываем поле ввода только если админ в канале, иначе скрываем
   if (type === 'channel') {
     const channel = allChannels.find(c => c.room === room);
     composer.style.display = (channel && channel.admin === currentUser) ? 'flex' : 'none';
@@ -226,10 +220,9 @@ function openChat(name, room, type) {
   }
 
   socket.emit('join room', { room: activeRoom });
-  messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
-// ========== СООБЩЕНИЯ ==========
+// СООБЩЕНИЯ
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
@@ -244,7 +237,6 @@ function addMsg(user, text, time, id, replyData) {
     ? `${replyHTML}<div class="sender">${user}</div>${safe}<div class="time">${time}</div>`
     : `${replyHTML}${safe}<div class="time">${time}</div>`;
 
-  // Контекстное меню (ПКМ)
   div.oncontextmenu = (e) => {
     e.preventDefault();
     contextTarget = div;
@@ -286,7 +278,6 @@ msgInput.onkeydown = (e) => {
   }
 };
 
-// Индикатор печати
 msgInput.oninput = () => {
   if (!activeRoom) return;
   socket.emit('typing', { room: activeRoom });
@@ -294,7 +285,7 @@ msgInput.oninput = () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 };
 
-// ========== КОНТЕКСТНОЕ МЕНЮ ==========
+// КОНТЕКСТНОЕ МЕНЮ
 document.onclick = (e) => {
   if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
 };
@@ -352,7 +343,7 @@ replyCancel.onclick = () => {
   replyBar.style.display = 'none';
 };
 
-// ========== ПЛЮС ==========
+// ПЛЮС
 $('plus-btn').onclick = () => { plusModal.style.display = 'flex'; };
 $('close-plus').onclick = () => { plusModal.style.display = 'none'; };
 plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
@@ -406,7 +397,7 @@ $('create-btn').onclick = () => {
   }
 };
 
-// ========== НАСТРОЙКИ ==========
+// НАСТРОЙКИ
 $('settings-btn').onclick = () => {
   settingsNickname.value = currentUser;
   settingsOldPass.value = '';
@@ -449,7 +440,7 @@ $('save-settings-btn').onclick = () => {
   setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
 };
 
-// ========== ПРОФИЛЬ ==========
+// ПРОФИЛЬ
 $('user-info').onclick = () => showProfile(true);
 chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
 $('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
@@ -466,7 +457,7 @@ $('close-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
 
-// ========== ПОИСК ==========
+// ПОИСК
 searchInput.oninput = () => {
   const q = searchInput.value.toLowerCase();
   document.querySelectorAll('.chat-item').forEach((el) => {
@@ -475,7 +466,7 @@ searchInput.oninput = () => {
   });
 };
 
-// ========== АДАПТИВ ==========
+// АДАПТИВ
 $('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
 window.onresize = () => {
   if (window.innerWidth > 768) sidebar.classList.remove('hidden');
