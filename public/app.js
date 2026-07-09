@@ -1,6 +1,7 @@
 const socket = io();
 const $ = (id) => document.getElementById(id);
 
+// ========== DOM-элементы ==========
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
@@ -51,6 +52,10 @@ const replyBar = $('reply-bar');
 const replyText = $('reply-text');
 const replyCancel = $('reply-cancel');
 
+const fileInput = $('file-input');
+const attachBtn = $('attach-btn');
+const searchMsgBtn = $('search-msg-btn');
+
 let currentUser = '';
 let isLogin = true;
 let activeRoom = null;
@@ -65,12 +70,19 @@ let allChannels = [];
 let contextTarget = null;
 let replyTo = null;
 
+// ========== ЗВУКИ ==========
+const sounds = {
+  message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
+};
+
+// ========== ТЕМЫ ==========
 const themes = {
-  'blue-dark':   { bg:'#0a0a0f', accent:'#4a9eff', gradient:'radial-gradient(ellipse at 30% 20%, rgba(74,158,255,0.08) 0%, transparent 60%), #0a0a0f' },
-  'green-dark':  { bg:'#0a0f0a', accent:'#4caf50', gradient:'radial-gradient(ellipse at 30% 20%, rgba(76,175,80,0.08) 0%, transparent 60%), #0a0f0a' },
-  'purple-dark': { bg:'#0f0a15', accent:'#9c27b0', gradient:'radial-gradient(ellipse at 30% 20%, rgba(156,39,176,0.08) 0%, transparent 60%), #0f0a15' },
-  'sunset':      { bg:'#1a0a0a', accent:'#ff6b35', gradient:'radial-gradient(ellipse at 30% 20%, rgba(255,107,53,0.1) 0%, transparent 60%), #1a0a0a' },
-  'ocean':       { bg:'#0a1a1a', accent:'#00bcd4', gradient:'radial-gradient(ellipse at 30% 20%, rgba(0,188,212,0.08) 0%, transparent 60%), #0a1a1a' }
+  'blue-dark': { bg:'#0a0a0f', accent:'#4a9eff', gradient:'radial-gradient(ellipse at 30% 20%, rgba(74,158,255,0.08) 0%, transparent 60%), #0a0a0f', isLight: false },
+  'green-dark': { bg:'#0a0f0a', accent:'#4caf50', gradient:'radial-gradient(ellipse at 30% 20%, rgba(76,175,80,0.08) 0%, transparent 60%), #0a0f0a', isLight: false },
+  'purple-dark': { bg:'#0f0a15', accent:'#9c27b0', gradient:'radial-gradient(ellipse at 30% 20%, rgba(156,39,176,0.08) 0%, transparent 60%), #0f0a15', isLight: false },
+  'sunset': { bg:'#1a0a0a', accent:'#ff6b35', gradient:'radial-gradient(ellipse at 30% 20%, rgba(255,107,53,0.1) 0%, transparent 60%), #1a0a0a', isLight: false },
+  'ocean': { bg:'#0a1a1a', accent:'#00bcd4', gradient:'radial-gradient(ellipse at 30% 20%, rgba(0,188,212,0.08) 0%, transparent 60%), #0a1a1a', isLight: false },
+  'light': { bg:'#f5f5f7', accent:'#4a9eff', gradient:'#f5f5f7', isLight: true },
 };
 let currentTheme = localStorage.getItem('theme') || 'blue-dark';
 applyTheme(currentTheme);
@@ -83,6 +95,19 @@ function applyTheme(name) {
   document.documentElement.style.setProperty('--bg', t.bg);
   document.documentElement.style.setProperty('--accent', t.accent);
   document.querySelector('.app-bg').style.background = t.gradient;
+  
+  if (t.isLight) {
+    document.documentElement.style.setProperty('--text', '#1a1a1a');
+    document.documentElement.style.setProperty('--text-secondary', 'rgba(0,0,0,0.6)');
+    document.documentElement.style.setProperty('--glass-bg', 'rgba(0,0,0,0.04)');
+    document.documentElement.style.setProperty('--glass-border', 'rgba(0,0,0,0.08)');
+  } else {
+    document.documentElement.style.setProperty('--text', '#fff');
+    document.documentElement.style.setProperty('--text-secondary', 'rgba(255,255,255,0.6)');
+    document.documentElement.style.setProperty('--glass-bg', 'rgba(255,255,255,0.04)');
+    document.documentElement.style.setProperty('--glass-border', 'rgba(255,255,255,0.06)');
+  }
+  
   const plusBtn = $('plus-btn');
   if (plusBtn) {
     plusBtn.style.background = t.accent + '22';
@@ -91,7 +116,7 @@ function applyTheme(name) {
   }
 }
 
-// АВТОРИЗАЦИЯ
+// ========== АВТОРИЗАЦИЯ ==========
 function switchMode() {
   isLogin = !isLogin;
   modalTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
@@ -121,35 +146,47 @@ loginBtn.onclick = () => {
   });
 };
 
-// ИНИЦИАЛИЗАЦИЯ
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
 function initApp() {
+  if ('Notification' in window) Notification.requestPermission();
+  
   socket.emit('request online users');
 
-  socket.on('online users', (users) => {
-    onlineUsers = users;
-    renderChats();
-  });
+  socket.on('online users', (users) => { onlineUsers = users; renderChats(); });
+  socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
+  socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
 
-  socket.on('groups list', (groups) => {
-    allGroups = groups;
-    renderChats();
-  });
-
-  socket.on('channels list', (channels) => {
-    allChannels = channels;
-    renderChats();
-  });
-
-  // История чата
   socket.on('chat history', (messages) => {
     messagesDiv.innerHTML = '';
     messages.forEach(msg => addMsg(msg.username, msg.text, msg.time, msg.id, msg.reply_to));
     messagesBox.scrollTop = messagesBox.scrollHeight;
   });
 
-  // Обычные сообщения (в реальном времени)
   socket.on('chat message', (data) => {
     addMsg(data.user, data.text, data.time, data.id, data.replyTo);
+    if (data.user !== currentUser) {
+      sounds.message.play().catch(() => {});
+      if (document.hidden && Notification.permission === 'granted') {
+        new Notification(`Новое сообщение от ${data.user}`, {
+          body: data.text.substring(0, 100),
+          icon: '/favicon.ico'
+        });
+      }
+    }
+  });
+
+  socket.on('edit message', (data) => {
+    const el = document.querySelector(`[data-id="${data.id}"]`);
+    if (el) {
+      const timeEl = el.querySelector('.time');
+      const senderEl = el.querySelector('.sender');
+      const safe = data.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (senderEl) {
+        el.innerHTML = `<div class="sender">${senderEl.textContent}</div>${safe} <span style="color:gray;font-size:0.7rem;">(ред.)</span><div class="time">${timeEl?.textContent || ''}</div>`;
+      } else {
+        el.innerHTML = `${safe} <span style="color:gray;font-size:0.7rem;">(ред.)</span><div class="time">${timeEl?.textContent || ''}</div>`;
+      }
+    }
   });
 
   socket.on('delete message', (data) => {
@@ -168,19 +205,26 @@ function initApp() {
     }
   });
 
+  socket.on('friend request', (data) => {
+    if (confirm(`${data.from} хочет добавить вас в друзья. Принять?`)) {
+      socket.emit('accept friend', { friend: data.from });
+    }
+  });
+
   socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
   socket.on('stop typing', () => {
     chatStatus.textContent = (activeType === 'channel') ? 'канал' : (activeType === 'group') ? 'группа' : (onlineUsers.includes(activeContact) ? 'онлайн' : 'офлайн');
   });
 }
 
-// РЕНДЕР
+// ========== РЕНДЕР ==========
 function renderChats() {
   chatList.innerHTML = '';
   allChannels.forEach((ch) => {
     const div = document.createElement('div'); div.className = 'chat-item';
     div.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">📢</div><div class="info"><div class="name">${ch.name}</div><div class="last">Канал</div></div>`;
     div.onclick = () => openChat(ch.name, ch.room, 'channel');
+    div.oncontextmenu = (e) => { e.preventDefault(); showUserContext(ch.name); };
     chatList.appendChild(div);
   });
   allGroups.forEach((g) => {
@@ -192,24 +236,30 @@ function renderChats() {
   });
   onlineUsers.filter(u => u !== currentUser).forEach((u) => {
     const div = document.createElement('div'); div.className = 'chat-item';
+    div.dataset.user = u;
     div.innerHTML = `<div class="avatar">${u[0].toUpperCase()}</div><div class="info"><div class="name">${u}</div><div class="last">В сети</div></div>`;
     div.onclick = () => openChat(u, null, 'user');
+    div.oncontextmenu = (e) => { e.preventDefault(); showUserContext(u); };
     chatList.appendChild(div);
   });
 }
 
-// ОТКРЫТИЕ ЧАТА
-function openChat(name, room, type) {
-  if (activeRoom) {
-    socket.emit('leave room', { room: activeRoom });
+function showUserContext(username) {
+  if (confirm(`Добавить ${username} в друзья?`)) {
+    socket.emit('add friend', { friend: username });
   }
+}
+
+// ========== ОТКРЫТИЕ ЧАТА ==========
+function openChat(name, room, type) {
+  if (activeRoom) socket.emit('leave room', { room: activeRoom });
 
   activeContact = name;
   activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
 
   chatTitle.textContent = name;
-  messagesDiv.innerHTML = ''; // будет заполнено через chat history
+  messagesDiv.innerHTML = '';
   chatAvatar.textContent = (type === 'channel') ? '📢' : name[0].toUpperCase();
 
   if (type === 'channel') {
@@ -222,20 +272,29 @@ function openChat(name, room, type) {
   socket.emit('join room', { room: activeRoom });
 }
 
-// СООБЩЕНИЯ
+// ========== СООБЩЕНИЯ ==========
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
   div.dataset.user = user;
   div.dataset.id = id || Date.now().toString();
-  const safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  let displayText = text;
+  if (text.startsWith('[image]') && text.endsWith('[/image]')) {
+    const url = text.slice(7, -8);
+    displayText = `<img src="${url}" style="max-width:300px;border-radius:12px;cursor:pointer;" onclick="window.open('${url}')">`;
+  } else {
+    displayText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  
   let replyHTML = '';
   if (replyData && replyData.user) {
     replyHTML = `<div class="reply-preview">↩ ${replyData.user}: ${(replyData.text||'').substring(0,30)}</div>`;
   }
+  
   div.innerHTML = (activeType === 'group' || activeType === 'channel')
-    ? `${replyHTML}<div class="sender">${user}</div>${safe}<div class="time">${time}</div>`
-    : `${replyHTML}${safe}<div class="time">${time}</div>`;
+    ? `${replyHTML}<div class="sender">${user}</div>${displayText}<div class="time">${time}</div>`
+    : `${replyHTML}${displayText}<div class="time">${time}</div>`;
 
   div.oncontextmenu = (e) => {
     e.preventDefault();
@@ -271,13 +330,7 @@ function sendMsg() {
 }
 
 $('send-btn').onclick = sendMsg;
-msgInput.onkeydown = (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMsg();
-  }
-};
-
+msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 msgInput.oninput = () => {
   if (!activeRoom) return;
   socket.emit('typing', { room: activeRoom });
@@ -285,10 +338,39 @@ msgInput.oninput = () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 };
 
-// КОНТЕКСТНОЕ МЕНЮ
-document.onclick = (e) => {
-  if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
+// ========== ОТПРАВКА ФАЙЛОВ ==========
+attachBtn.onclick = () => fileInput.click();
+fileInput.onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const supabase = window.supabase;
+  if (!supabase) {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+    window.supabase = createClient(
+      'https://pecfhqthefjxfeokyzza.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8'
+    );
+  }
+  
+  const fileName = `chat/${Date.now()}_${file.name}`;
+  const { data, error } = await window.supabase.storage.from('chat-images').upload(fileName, file);
+  
+  if (error) { alert('Ошибка загрузки файла'); return; }
+  
+  const { data: urlData } = window.supabase.storage.from('chat-images').getPublicUrl(fileName);
+  
+  socket.emit('chat message', {
+    room: activeRoom,
+    text: `[image]${urlData.publicUrl}[/image]`,
+    id: Date.now().toString()
+  });
+  
+  fileInput.value = '';
 };
+
+// ========== КОНТЕКСТНОЕ МЕНЮ ==========
+document.onclick = (e) => { if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none'; };
 
 $('context-copy').onclick = () => {
   if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent.replace(/↩.*\n?/, '').trim());
@@ -297,14 +379,21 @@ $('context-copy').onclick = () => {
 
 $('context-reply').onclick = () => {
   if (contextTarget) {
-    replyTo = {
-      id: contextTarget.dataset.id,
-      user: contextTarget.dataset.user,
-      text: contextTarget.textContent.substring(0, 30)
-    };
+    replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0, 30) };
     replyText.textContent = `${replyTo.user}: ${replyTo.text}`;
     replyBar.style.display = 'flex';
     msgInput.focus();
+  }
+  contextMenu.style.display = 'none';
+};
+
+$('context-edit').onclick = () => {
+  if (contextTarget && contextTarget.dataset.user === currentUser) {
+    const oldText = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim();
+    const newText = prompt('Редактировать сообщение:', oldText);
+    if (newText && newText !== oldText) {
+      socket.emit('edit message', { room: activeRoom, id: contextTarget.dataset.id, text: newText });
+    }
   }
   contextMenu.style.display = 'none';
 };
@@ -338,12 +427,25 @@ $('context-reactions').onclick = () => {
   }
 };
 
-replyCancel.onclick = () => {
-  replyTo = null;
-  replyBar.style.display = 'none';
+replyCancel.onclick = () => { replyTo = null; replyBar.style.display = 'none'; };
+
+// ========== ПОИСК ПО СООБЩЕНИЯМ ==========
+searchMsgBtn.onclick = () => {
+  const term = prompt('Поиск по сообщениям:');
+  if (!term) return;
+  const allMsgs = document.querySelectorAll('.msg');
+  allMsgs.forEach(msg => {
+    if (msg.textContent.toLowerCase().includes(term.toLowerCase())) {
+      msg.style.background = 'rgba(255, 255, 0, 0.2)';
+      msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      msg.style.background = '';
+    }
+  });
+  setTimeout(() => allMsgs.forEach(msg => msg.style.background = ''), 3000);
 };
 
-// ПЛЮС
+// ========== ПЛЮС ==========
 $('plus-btn').onclick = () => { plusModal.style.display = 'flex'; };
 $('close-plus').onclick = () => { plusModal.style.display = 'none'; };
 plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
@@ -397,7 +499,7 @@ $('create-btn').onclick = () => {
   }
 };
 
-// НАСТРОЙКИ
+// ========== НАСТРОЙКИ ==========
 $('settings-btn').onclick = () => {
   settingsNickname.value = currentUser;
   settingsOldPass.value = '';
@@ -405,7 +507,6 @@ $('settings-btn').onclick = () => {
   renderThemeGrid();
   settingsModal.style.display = 'flex';
 };
-
 $('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
 
 function renderThemeGrid() {
@@ -440,7 +541,7 @@ $('save-settings-btn').onclick = () => {
   setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
 };
 
-// ПРОФИЛЬ
+// ========== ПРОФИЛЬ ==========
 $('user-info').onclick = () => showProfile(true);
 chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
 $('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
@@ -457,7 +558,7 @@ $('close-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
 
-// ПОИСК
+// ========== ПОИСК ==========
 searchInput.oninput = () => {
   const q = searchInput.value.toLowerCase();
   document.querySelectorAll('.chat-item').forEach((el) => {
@@ -466,7 +567,7 @@ searchInput.oninput = () => {
   });
 };
 
-// АДАПТИВ
+// ========== АДАПТИВ ==========
 $('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
 window.onresize = () => {
   if (window.innerWidth > 768) sidebar.classList.remove('hidden');
