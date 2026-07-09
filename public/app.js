@@ -77,7 +77,6 @@ let allChannels = [];
 let contextTarget = null;
 let replyTo = null;
 
-// КОРОТКИЙ ЗВУК
 const sounds = {
   message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
 };
@@ -167,6 +166,7 @@ function initApp() {
     }
   });
 
+  // РЕДАКТИРОВАНИЕ — работает у обоих
   socket.on('edit message', (data) => {
     const el = document.querySelector(`[data-id="${data.id}"]`);
     if (el) {
@@ -180,6 +180,7 @@ function initApp() {
     }
   });
 
+  // УДАЛЕНИЕ — работает у обоих
   socket.on('delete message', (data) => {
     const el = document.querySelector(`[data-id="${data.id}"]`);
     if (el) { el.remove(); }
@@ -290,10 +291,6 @@ function addMsg(user, text, time, id, replyData) {
   div.oncontextmenu = (e) => {
     e.preventDefault();
     contextTarget = div;
-    const editBtn = $('context-edit');
-    const deleteBtn = $('context-delete');
-    if (editBtn) editBtn.style.display = (user === currentUser) ? 'flex' : 'none';
-    if (deleteBtn) deleteBtn.style.display = (user === currentUser) ? 'flex' : 'none';
     contextMenu.style.display = 'block';
     contextMenu.style.left = Math.min(e.pageX, window.innerWidth - 200) + 'px';
     contextMenu.style.top = Math.min(e.pageY, window.innerHeight - 200) + 'px';
@@ -317,32 +314,6 @@ function sendMsg() {
 
 $('send-btn').onclick = sendMsg;
 msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
-
-// ФАЙЛЫ
-attachBtn.onclick = () => fileInput.click();
-fileInput.onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Файл больше 5MB'); return; }
-  try {
-    const fileName = `chat/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-        'x-upsert': 'true'
-      },
-      body: file
-    });
-    if (!response.ok) throw new Error('Upload failed');
-    const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
-    socket.emit('chat message', { room: activeRoom, text: `[image]${publicUrl}[/image]`, id: Date.now().toString() });
-  } catch (err) {
-    alert('Ошибка загрузки: ' + err.message);
-  }
-  fileInput.value = '';
-};
 
 // КОНТЕКСТНОЕ МЕНЮ
 document.onclick = (e) => {
@@ -374,7 +345,9 @@ $('save-edit-btn').onclick = () => {
   editModal.style.display = 'none';
 };
 $('context-delete').onclick = () => {
-  if (contextTarget && contextTarget.dataset.user === currentUser) socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
+  if (contextTarget && contextTarget.dataset.user === currentUser) {
+    socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
+  }
   contextMenu.style.display = 'none';
 };
 $('context-reactions').onclick = (e) => {
@@ -406,4 +379,63 @@ chatMenuSearch.onclick = () => {
   setTimeout(() => allMsgs.forEach(msg => msg.style.background = ''), 3000);
 };
 
-// ПЛЮС, НАСТРОЙКИ, ПРОФИЛЬ, ПОИСК, АДАПТИВ — оставь без изменений как в предыдущей версии
+// ПЛЮС
+$('plus-btn').onclick = (e) => { e.stopPropagation(); plusModal.style.display = 'flex'; };
+$('close-plus').onclick = () => { plusModal.style.display = 'none'; };
+plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
+
+menuGroupBtn.onclick = () => {
+  plusModal.style.display = 'none'; creatingMode = 'group';
+  createTitle.textContent = 'Новая группа'; membersLabel.style.display = 'block'; membersList.style.display = 'block';
+  entityName.value = ''; selectedMembers.clear(); renderMembers(); createModal.style.display = 'flex';
+};
+menuChannelBtn.onclick = () => {
+  plusModal.style.display = 'none'; creatingMode = 'channel';
+  createTitle.textContent = 'Новый канал'; membersLabel.style.display = 'none'; membersList.style.display = 'none';
+  entityName.value = ''; createModal.style.display = 'flex';
+};
+$('close-create').onclick = () => { createModal.style.display = 'none'; };
+
+function renderMembers() {
+  membersList.innerHTML = '';
+  onlineUsers.filter(u => u !== currentUser).forEach((u) => {
+    const div = document.createElement('div'); div.className = 'member-item';
+    if (selectedMembers.has(u)) div.classList.add('selected');
+    div.innerHTML = `<div class="avatar-sm">${u[0]}</div><span>${u}</span><span class="check">✓</span>`;
+    div.onclick = () => { if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); } else { selectedMembers.add(u); div.classList.add('selected'); } };
+    membersList.appendChild(div);
+  });
+}
+$('create-btn').onclick = () => {
+  const name = entityName.value.trim(); if (!name) return;
+  if (creatingMode === 'group') { if (selectedMembers.size === 0) return; socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; }); }
+  else { socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; }); }
+};
+
+// НАСТРОЙКИ
+$('settings-btn').onclick = () => { settingsNickname.value = currentUser; settingsOldPass.value = ''; settingsNewPass.value = ''; settingsPassError.textContent = ''; renderThemeGrid(); settingsModal.style.display = 'flex'; };
+$('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
+settingsModal.onclick = (e) => { if (e.target === settingsModal) settingsModal.style.display = 'none'; };
+function renderThemeGrid() { themeGrid.innerHTML = ''; Object.entries(themes).forEach(([key, t]) => { const div = document.createElement('div'); div.className = 'theme-item'; if (key === currentTheme) div.classList.add('active'); div.style.background = t.gradient; div.onclick = () => { applyTheme(key); renderThemeGrid(); }; themeGrid.appendChild(div); }); }
+$('save-settings-btn').onclick = () => {
+  const nick = settingsNickname.value.trim();
+  if (nick && nick !== currentUser) { if (nick.length > 15) { settingsPassError.textContent = 'Максимум 15 символов'; settingsPassError.style.color = '#ff6b6b'; return; } socket.emit('change username', { oldUsername: currentUser, newUsername: nick }, (res) => { if (res.success) { currentUser = nick; $('my-name').textContent = nick; $('my-avatar').textContent = nick[0].toUpperCase(); settingsPassError.textContent = 'Ник изменён'; settingsPassError.style.color = '#4caf50'; } else { settingsPassError.textContent = res.message; settingsPassError.style.color = '#ff6b6b'; } }); }
+  const oldPass = settingsOldPass.value; const newPass = settingsNewPass.value;
+  if (oldPass && newPass) { socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => { settingsPassError.textContent = res.success ? 'Пароль изменён' : res.message; settingsPassError.style.color = res.success ? '#4caf50' : '#ff6b6b'; }); }
+  setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
+};
+
+// ПРОФИЛЬ
+$('user-info').onclick = () => showProfile(true);
+chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
+$('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
+function showProfile(isSelf) { const name = isSelf ? currentUser : activeContact; profileAvatar.textContent = (name || '?')[0].toUpperCase(); profileName.textContent = name || 'Неизвестно'; selfActions.style.display = isSelf ? 'flex' : 'none'; contactActions.style.display = isSelf ? 'none' : 'block'; profileModal.style.display = 'flex'; }
+$('close-profile').onclick = () => { profileModal.style.display = 'none'; };
+$('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
+$('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
+
+// ПОИСК
+searchInput.oninput = () => { const q = searchInput.value.toLowerCase(); document.querySelectorAll('.chat-item').forEach((el) => { const name = el.querySelector('.name'); el.style.display = name && name.textContent.toLowerCase().includes(q) ? 'flex' : 'none'; }); };
+
+// АДАПТИВ
+$('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
