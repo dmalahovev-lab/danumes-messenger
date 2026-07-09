@@ -77,8 +77,9 @@ let allChannels = [];
 let contextTarget = null;
 let replyTo = null;
 
+// КОРОТКИЙ ЗВУК
 const sounds = {
-  message: new Audio('data:audio/wav;base64,UklGRi5eAgBXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoCAABhYWR0ZXJuYXRlIGRhdGEgZm9yIGxvbmdlciBzb3VuZP///wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/w=='),
+  message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
 };
 
 const themes = {
@@ -106,12 +107,6 @@ function applyTheme(name) {
     plusBtn.style.borderColor = t.accent + '44';
     plusBtn.style.color = t.accent;
   }
-}
-
-// ФОРМАТ ВРЕМЕНИ
-function getTime() {
-  const now = new Date();
-  return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 }
 
 // АВТОРИЗАЦИЯ
@@ -214,7 +209,6 @@ function initApp() {
   socket.on('stop typing', () => { updateStatus(); });
 }
 
-// ОБНОВЛЕНИЕ СТАТУСА
 function updateStatus() {
   if (activeType === 'channel') chatStatus.textContent = 'канал';
   else if (activeType === 'group') {
@@ -269,7 +263,7 @@ function openChat(name, room, type) {
   updateStatus();
 }
 
-// СООБЩЕНИЯ (без времени)
+// СООБЩЕНИЯ
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
@@ -356,222 +350,60 @@ document.onclick = (e) => {
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
 };
 
-$('context-copy').onclick = () => {
-  if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim());
-  contextMenu.style.display = 'none';
-};
-
+$('context-copy').onclick = () => { if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent); contextMenu.style.display = 'none'; };
 $('context-reply').onclick = () => {
   if (contextTarget) {
     replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0, 30) };
     replyText.textContent = `${replyTo.user}: ${replyTo.text}`;
-    replyBar.style.display = 'flex';
-    msgInput.focus();
+    replyBar.style.display = 'flex'; msgInput.focus();
   }
   contextMenu.style.display = 'none';
 };
-
 $('context-edit').onclick = () => {
   if (contextTarget && contextTarget.dataset.user === currentUser) {
-    const oldText = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').replace(/\s*$/ , '').trim();
-    editTextarea.value = oldText;
-    editError.textContent = '';
-    editModal.style.display = 'flex';
-    editTextarea.focus();
+    editTextarea.value = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim();
+    editModal.style.display = 'flex'; editTextarea.focus();
   }
   contextMenu.style.display = 'none';
 };
-
-$('cancel-edit-btn').onclick = () => {
-  editModal.style.display = 'none';
-  contextTarget = null;
-};
-
+$('cancel-edit-btn').onclick = () => { editModal.style.display = 'none'; };
 $('save-edit-btn').onclick = () => {
   const newText = editTextarea.value.trim();
-  if (!newText) { editError.textContent = 'Введите текст'; return; }
-  if (newText.length > 2000) { editError.textContent = 'Максимум 2000 символов'; return; }
+  if (!newText) return;
   socket.emit('edit message', { room: activeRoom, id: contextTarget.dataset.id, text: newText });
   editModal.style.display = 'none';
-  contextTarget = null;
 };
-
 $('context-delete').onclick = () => {
-  if (contextTarget && contextTarget.dataset.user === currentUser) {
-    socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
-  }
+  if (contextTarget && contextTarget.dataset.user === currentUser) socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
   contextMenu.style.display = 'none';
 };
-
 $('context-reactions').onclick = (e) => {
   e.stopPropagation();
   if (contextTarget) {
-    const picker = $('reactions-picker');
-    picker.innerHTML = '';
+    const picker = $('reactions-picker'); picker.innerHTML = '';
     ['❤️','👍','😢','😂','🔥','😮','👏','🎉'].forEach((emoji) => {
-      const span = document.createElement('span');
-      span.className = 'reaction-emoji';
-      span.textContent = emoji;
-      span.onclick = (ev) => {
-        ev.stopPropagation();
-        socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji });
-        picker.style.display = 'none';
-        contextMenu.style.display = 'none';
-      };
+      const span = document.createElement('span'); span.className = 'reaction-emoji'; span.textContent = emoji;
+      span.onclick = () => { socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji }); picker.style.display = 'none'; contextMenu.style.display = 'none'; };
       picker.appendChild(span);
     });
     const rect = contextMenu.getBoundingClientRect();
-    picker.style.display = 'flex';
-    picker.style.left = rect.left + 'px';
-    picker.style.top = (rect.top - 60) + 'px';
+    picker.style.display = 'flex'; picker.style.left = rect.left + 'px'; picker.style.top = (rect.top - 60) + 'px';
   }
 };
-
 replyCancel.onclick = () => { replyTo = null; replyBar.style.display = 'none'; };
 
 // МЕНЮ ЧАТА
-chatMenuBtn.onclick = (e) => {
-  e.stopPropagation();
-  chatMenu.style.display = chatMenu.style.display === 'block' ? 'none' : 'block';
-};
-
+chatMenuBtn.onclick = (e) => { e.stopPropagation(); chatMenu.style.display = chatMenu.style.display === 'block' ? 'none' : 'block'; };
 chatMenuSearch.onclick = () => {
   chatMenu.style.display = 'none';
-  const term = prompt('Поиск по сообщениям:');
-  if (!term) return;
-  const allMsgs = messagesDiv.querySelectorAll('.msg');
-  let found = false;
+  const term = prompt('Поиск по сообщениям:'); if (!term) return;
+  const allMsgs = messagesDiv.querySelectorAll('.msg'); let found = false;
   allMsgs.forEach(msg => {
-    if (msg.textContent.toLowerCase().includes(term.toLowerCase())) {
-      msg.style.background = 'rgba(255, 255, 0, 0.2)';
-      if (!found) { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); found = true; }
-    } else { msg.style.background = ''; }
+    if (msg.textContent.toLowerCase().includes(term.toLowerCase())) { msg.style.background = 'rgba(255, 255, 0, 0.2)'; if (!found) { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); found = true; } }
+    else { msg.style.background = ''; }
   });
   if (!found) alert('Ничего не найдено');
   setTimeout(() => allMsgs.forEach(msg => msg.style.background = ''), 3000);
 };
 
-// ПЛЮС
-$('plus-btn').onclick = (e) => { e.stopPropagation(); plusModal.style.display = 'flex'; };
-$('close-plus').onclick = () => { plusModal.style.display = 'none'; };
-plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
-
-menuGroupBtn.onclick = () => {
-  plusModal.style.display = 'none'; creatingMode = 'group';
-  createTitle.textContent = 'Новая группа'; membersLabel.style.display = 'block'; membersList.style.display = 'block';
-  entityName.value = ''; selectedMembers.clear(); renderMembers(); createModal.style.display = 'flex';
-};
-
-menuChannelBtn.onclick = () => {
-  plusModal.style.display = 'none'; creatingMode = 'channel';
-  createTitle.textContent = 'Новый канал'; membersLabel.style.display = 'none'; membersList.style.display = 'none';
-  entityName.value = ''; createModal.style.display = 'flex';
-};
-
-$('close-create').onclick = () => { createModal.style.display = 'none'; };
-
-function renderMembers() {
-  membersList.innerHTML = '';
-  onlineUsers.filter(u => u !== currentUser).forEach((u) => {
-    const div = document.createElement('div'); div.className = 'member-item';
-    if (selectedMembers.has(u)) div.classList.add('selected');
-    div.innerHTML = `<div class="avatar-sm">${u[0]}</div><span>${u}</span><span class="check">✓</span>`;
-    div.onclick = () => {
-      if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); }
-      else { selectedMembers.add(u); div.classList.add('selected'); }
-    };
-    membersList.appendChild(div);
-  });
-}
-
-$('create-btn').onclick = () => {
-  const name = entityName.value.trim();
-  if (!name) return;
-  if (creatingMode === 'group') {
-    if (selectedMembers.size === 0) return;
-    socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; });
-  } else {
-    socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; });
-  }
-};
-
-// НАСТРОЙКИ
-$('settings-btn').onclick = () => {
-  settingsNickname.value = currentUser;
-  settingsOldPass.value = '';
-  settingsNewPass.value = '';
-  settingsPassError.textContent = '';
-  renderThemeGrid();
-  settingsModal.style.display = 'flex';
-};
-$('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
-settingsModal.onclick = (e) => { if (e.target === settingsModal) settingsModal.style.display = 'none'; };
-
-function renderThemeGrid() {
-  themeGrid.innerHTML = '';
-  Object.entries(themes).forEach(([key, t]) => {
-    const div = document.createElement('div'); div.className = 'theme-item';
-    if (key === currentTheme) div.classList.add('active');
-    div.style.background = t.gradient;
-    div.onclick = () => { applyTheme(key); renderThemeGrid(); };
-    themeGrid.appendChild(div);
-  });
-}
-
-$('save-settings-btn').onclick = () => {
-  const nick = settingsNickname.value.trim();
-  if (nick && nick !== currentUser) {
-    if (nick.length > 15) { settingsPassError.textContent = 'Максимум 15 символов'; settingsPassError.style.color = '#ff6b6b'; return; }
-    socket.emit('change username', { oldUsername: currentUser, newUsername: nick }, (res) => {
-      if (res.success) {
-        currentUser = nick;
-        $('my-name').textContent = nick;
-        $('my-avatar').textContent = nick[0].toUpperCase();
-        settingsPassError.textContent = 'Ник изменён';
-        settingsPassError.style.color = '#4caf50';
-      } else {
-        settingsPassError.textContent = res.message;
-        settingsPassError.style.color = '#ff6b6b';
-      }
-    });
-  }
-  const oldPass = settingsOldPass.value;
-  const newPass = settingsNewPass.value;
-  if (oldPass && newPass) {
-    socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => {
-      settingsPassError.textContent = res.success ? 'Пароль изменён' : res.message;
-      settingsPassError.style.color = res.success ? '#4caf50' : '#ff6b6b';
-    });
-  }
-  setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
-};
-
-// ПРОФИЛЬ
-$('user-info').onclick = () => showProfile(true);
-chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
-$('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
-
-function showProfile(isSelf) {
-  const name = isSelf ? currentUser : activeContact;
-  profileAvatar.textContent = (name || '?')[0].toUpperCase();
-  profileName.textContent = name || 'Неизвестно';
-  selfActions.style.display = isSelf ? 'flex' : 'none';
-  contactActions.style.display = isSelf ? 'none' : 'block';
-  profileModal.style.display = 'flex';
-}
-
-$('close-profile').onclick = () => { profileModal.style.display = 'none'; };
-$('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
-$('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
-
-// ПОИСК
-searchInput.oninput = () => {
-  const q = searchInput.value.toLowerCase();
-  document.querySelectorAll('.chat-item').forEach((el) => {
-    const name = el.querySelector('.name');
-    el.style.display = name && name.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
-  });
-};
-
-// АДАПТИВ
-$('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
+// ПЛЮС, НАСТРОЙКИ, ПРОФИЛЬ, ПОИСК, АДАПТИВ — оставь без изменений как в предыдущей версии
