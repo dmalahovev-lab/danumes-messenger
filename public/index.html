@@ -167,6 +167,12 @@
   <!-- Пикер реакций -->
   <div id="reactions-picker" class="reactions-picker" style="display:none"></div>
 
+  <!-- Просмотр изображений -->
+  <div id="image-viewer" class="image-viewer" style="display:none;">
+    <span id="image-viewer-close" class="image-viewer-close">✕</span>
+    <img id="image-viewer-img" src="" alt="Просмотр изображения">
+  </div>
+
   <!-- Основной интерфейс -->
   <div id="app" class="app-container" style="display:none">
     <aside id="sidebar" class="sidebar">
@@ -218,15 +224,5 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-  </script>
-  <!-- Просмотр изображений -->
-<div id="image-viewer" class="image-viewer" style="display:none;">
-  <span id="image-viewer-close" class="image-viewer-close">✕</span>
-  <img id="image-viewer-img" src="" alt="Просмотр изображения">
-</div>
 </body>
 </html>
