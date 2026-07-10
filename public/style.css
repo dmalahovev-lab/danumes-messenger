@@ -119,11 +119,107 @@ textarea.glass-input { resize:vertical; min-height:80px; }
 .image-viewer { position:fixed; inset:0; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; z-index:2000; }
 .image-viewer img { max-width:90%; max-height:90%; border-radius:12px; object-fit:contain; }
 .image-viewer-close { position:absolute; top:20px; right:30px; color:white; font-size:2rem; cursor:pointer; z-index:2001; }
-@media (max-width:768px) {
-  .sidebar { position:absolute; width:100%; height:100%; z-index:20; background:rgba(10,10,15,0.96); transition:transform 0.3s; }
-  .sidebar.hidden { transform:translateX(-100%); }
-  .back-btn { display:flex; }
+
+/* ========== АДАПТИВНАЯ МОБИЛЬНАЯ ВЕРСИЯ ========== */
+@media (max-width: 768px) {
+  .app-container {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 20;
+    background: rgba(10,10,15,0.97);
+    backdrop-filter: blur(30px);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  }
+  
+  .sidebar.hidden {
+    transform: translateX(-100%);
+  }
+  
+  .back-btn {
+    display: flex !important;
+  }
+  
+  .chat-head {
+    padding: 12px 14px;
+  }
+  
+  .chat-head .avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+  
+  .messages-box {
+    padding: 16px 12px;
+  }
+  
+  .msg {
+    max-width: 85% !important;
+    font-size: 0.9rem;
+  }
+  
+  .composer {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  
+  .composer .icon-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+  
+  .message-input {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+  
+  .send-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .modal-card {
+    padding: 28px 20px;
+    width: 95%;
+  }
+  
+  .modal-card h2 {
+    font-size: 1.6rem;
+  }
+  
+  .big-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+  
+  .profile-detail-card {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+  
+  .chat-menu {
+    right: 10px;
+    top: 50px;
+    min-width: 180px;
+  }
+  
+  .settings-card {
+    max-height: 90vh;
+  }
+  
+  .emoji-option {
+    width: 36px;
+    height: 36px;
+    font-size: 1.4rem;
+  }
 }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-@keyframes msgIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
