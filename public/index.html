@@ -205,11 +205,14 @@
         <div id="messages" class="messages"></div>
       </div>
       <div id="composer" class="composer">
-        <input type="file" id="file-input" accept="image/*" style="display:none">
+        <input type="file" id="file-input" accept="image/*,video/*,audio/*" style="display:none">
         <button id="attach-btn" class="icon-btn" title="Прикрепить файл">📎</button>
+        <button id="voice-btn" class="icon-btn" title="Голосовое сообщение">🎤</button>
+        <button id="video-btn" class="icon-btn" title="Видеосообщение">🎥</button>
         <input id="msg-input" class="message-input" placeholder="Сообщение..." maxlength="2000">
         <button id="send-btn" class="send-btn">↑</button>
       </div>
+      <div id="recording-indicator" style="display:none;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(255,0,0,0.8);color:white;padding:8px 20px;border-radius:20px;z-index:10;">🔴 Запись... <span id="recording-timer">0:00</span></div>
     </main>
   </div>
 
