@@ -39,6 +39,73 @@ function broadcastOnlineUsers() {
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
+  // Отправка заявки в друзья
+socket.on('add_friend', async (data, cb) => {
+  const from = sessions.get(socket.id);
+  const to = data.username;
+  if (!from || !to || from === to) return cb({ success: false });
+  
+  const { data: existing } = await supabase
+    .from('friends')
+    .select('*')
+    .or(`user_from.eq.${from},user_to.eq.${from}`)
+    .or(`user_from.eq.${to},user_to.eq.${to}`)
+    .eq('status', 'pending');
+  
+  if (existing && existing.length > 0) return cb({ success: false, message: 'Уже есть заявка' });
+  
+  await supabase.from('friends').insert({ user_from: from, user_to: to, status: 'pending' });
+  
+  // Уведомляем получателя
+  for (let [sid, user] of sessions) {
+    if (user === to) {
+      io.to(sid).emit('friend_request', { from, to });
+    }
+  }
+  cb({ success: true });
+});
+
+// Принятие заявки
+socket.on('accept_friend', async (data, cb) => {
+  const user = sessions.get(socket.id);
+  const from = data.from;
+  await supabase.from('friends').update({ status: 'accepted' })
+    .eq('user_from', from).eq('user_to', user);
+  cb({ success: true });
+});
+
+// Отклонение заявки
+socket.on('reject_friend', async (data, cb) => {
+  const user = sessions.get(socket.id);
+  const from = data.from;
+  await supabase.from('friends').delete()
+    .eq('user_from', from).eq('user_to', user);
+  cb({ success: true });
+});
+
+// Список друзей
+socket.on('get_friends', async (cb) => {
+  const user = sessions.get(socket.id);
+  const { data } = await supabase
+    .from('friends')
+    .select('*')
+    .or(`user_from.eq.${user},user_to.eq.${user}`)
+    .eq('status', 'accepted');
+  const friends = data.map(f => f.user_from === user ? f.user_to : f.user_from);
+  cb(friends);
+});
+
+// Заявки в друзья (для отображения)
+socket.on('get_friend_requests', async (cb) => {
+  const user = sessions.get(socket.id);
+  const { data } = await supabase
+    .from('friends')
+    .select('*')
+    .eq('user_to', user)
+    .eq('status', 'pending');
+  cb(data.map(f => f.user_from));
+});
+
   // ===== АВТО-ВХОД =====
   socket.on('auto_login', async (data, cb) => {
     try {
