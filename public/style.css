@@ -85,7 +85,15 @@ textarea.glass-input { resize:vertical; min-height:80px; }
 .plus-menu-options { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
 .plus-option-btn { display:flex; align-items:center; gap:15px; padding:15px 20px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius); color:var(--text); cursor:pointer; font-family:inherit; transition:0.15s; }
 .plus-option-btn:hover { background:var(--glass-bg-hover); }
-.settings-card { max-width:440px; text-align:left; }
+
+/* Настройки – теперь с прокруткой */
+.settings-card {
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
 .settings-label { color:var(--text-secondary); font-size:0.85rem; display:block; margin-top:16px; margin-bottom:6px; }
 .theme-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:8px; }
 .theme-item { aspect-ratio:1; border-radius:var(--radius); cursor:pointer; border:3px solid transparent; transition:0.15s; }
