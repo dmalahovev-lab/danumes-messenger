@@ -205,6 +205,7 @@ socket.on('chat message', async (data) => {
 
   const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  // Сохраняем в БД
   try {
     const { error } = await supabase
       .from('messages')
@@ -215,14 +216,14 @@ socket.on('chat message', async (data) => {
         time,
         reply_to: data.replyTo || null
       });
-
+    
     if (error) {
-      console.error('Message insert error:', error);
+      console.error('❌ Ошибка сохранения сообщения:', error.message);
     } else {
-      console.log('Message saved:', data.text.substring(0, 20));
+      console.log('✅ Сообщение сохранено:', data.text.substring(0, 30));
     }
   } catch (err) {
-    console.error('Message insert exception:', err);
+    console.error('❌ Исключение при сохранении:', err.message);
   }
 
   io.to(data.room).emit('chat message', {
@@ -238,6 +239,7 @@ socket.on('chat message', async (data) => {
 socket.on('edit message', async (data) => {
   if (!data.room || !data.id || !data.text) return;
 
+  // Обновляем в БД
   try {
     const { error } = await supabase
       .from('messages')
@@ -245,10 +247,12 @@ socket.on('edit message', async (data) => {
       .eq('id', data.id);
 
     if (error) {
-      console.error('Message update error:', error);
+      console.error('❌ Ошибка редактирования:', error.message);
+    } else {
+      console.log('✅ Сообщение отредактировано, id:', data.id);
     }
   } catch (err) {
-    console.error('Message update exception:', err);
+    console.error('❌ Исключение при редактировании:', err.message);
   }
 
   io.to(data.room).emit('edit message', {
@@ -259,11 +263,28 @@ socket.on('edit message', async (data) => {
 });
 
 // Удаление сообщения
-socket.on('delete message', (data) => {
+socket.on('delete message', async (data) => {
   if (!data.room || !data.id) return;
+
+  // Удаляем из БД
+  try {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', data.id);
+
+    if (error) {
+      console.error('❌ Ошибка удаления:', error.message);
+    } else {
+      console.log('✅ Сообщение удалено, id:', data.id);
+    }
+  } catch (err) {
+    console.error('❌ Исключение при удалении:', err.message);
+  }
+
   io.to(data.room).emit('delete message', { id: data.id });
 });
-
+  
   socket.on('reaction', (data) => {
     if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
   });
