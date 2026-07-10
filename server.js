@@ -70,17 +70,22 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ===== ВХОД =====
+  // ===== ВХОД (по username ИЛИ username_alias) =====
   socket.on('login', async (data, cb) => {
     try {
       const { username, password } = data;
-      const { data: user } = await supabase.from('users').select('*').eq('username', username).single();
+      // Ищем по username или username_alias
+      let { data: user } = await supabase.from('users').select('*').eq('username', username).single();
+      if (!user) {
+        const { data: aliasUser } = await supabase.from('users').select('*').eq('username_alias', username).single();
+        user = aliasUser;
+      }
       if (!user || user.password_hash !== password) return cb({ success: false, message: 'Wrong credentials' });
-      if (onlineUsers.has(username)) return cb({ success: false, message: 'Already online' });
+      if (onlineUsers.has(user.username)) return cb({ success: false, message: 'Already online' });
 
-      sessions.set(socket.id, username);
-      onlineUsers.add(username);
-      cb({ success: true, username, profile: user });
+      sessions.set(socket.id, user.username);
+      onlineUsers.add(user.username);
+      cb({ success: true, username: user.username, profile: user });
       broadcastOnlineUsers();
       socket.emit('groups list', groups);
       socket.emit('channels list', channels);
@@ -116,7 +121,6 @@ io.on('connection', (socket) => {
       if (error) return cb({ success: false, message: 'Update failed' });
       const { data: updatedUser } = await supabase.from('users').select('*').eq('username', username).single();
 
-      // Уведомляем всех об изменении профиля
       io.emit('user_profile_updated', {
         username: updatedUser.username,
         display_name: updatedUser.display_name,
@@ -155,7 +159,6 @@ io.on('connection', (socket) => {
     const room = 'group_' + Date.now();
     const group = { name: data.name, room, members, admin, type: 'group' };
 
-    // Проверяем, нет ли уже такой группы (по комнате)
     if (groups.some(g => g.room === room)) return cb({ success: false, message: 'Group already exists' });
 
     await supabase.from('groups_table').insert({ name: data.name, room, members, admin, type: 'group' });
