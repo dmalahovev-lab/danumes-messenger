@@ -410,7 +410,7 @@ function renderChats() {
     const ava = avatarEmoji || (userData?.avatar_url) || username[0].toUpperCase();
     const div = document.createElement('div'); div.className = 'chat-item';
     // Внутри addUserToChatList измени строку с именем:
-div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name} ${userData?.verified ? '<span class="verified-badge" title="Верифицирован">✅</span>' : ''}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
+div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name} ${userData?.verified ? '<span class="verified-badge" title="Верифицирован">✔️</span>' : ''}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
     div.onclick = () => openChat(username, null, 'user');
     chatList.appendChild(div);
   }
@@ -431,7 +431,7 @@ function openChat(name, room, type) {
   // После строки chatTitle.textContent = displayName;
 const contactData = allUsers.find(u => u.username === name);
 if (contactData?.verified) {
-  chatTitle.innerHTML = `${displayName} <span class="verified-badge" title="Верифицирован">✅</span>`;
+  chatTitle.innerHTML = `${displayName} <span class="verified-badge" title="Верифицирован">✔️</span>`;
 }
 
   messagesDiv.innerHTML = '';
