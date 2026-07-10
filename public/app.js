@@ -428,6 +428,11 @@ function openChat(name, room, type) {
     if (user) displayName = user.display_name || name;
   }
   chatTitle.textContent = displayName;
+  // После строки chatTitle.textContent = displayName;
+const contactData = allUsers.find(u => u.username === name);
+if (contactData?.verified) {
+  chatTitle.innerHTML = `${displayName} <span class="verified-badge" title="Верифицирован">✅</span>`;
+}
 
   messagesDiv.innerHTML = '';
   const userData = allUsers.find(u => u.username === name);
@@ -727,7 +732,7 @@ $('save-settings-btn').onclick = () => {
 function showProfile(isSelf) {
   if (isSelf) {
     profileAvatar.textContent = currentUserProfile?.avatar_url || currentUser[0].toUpperCase();
-    profileName.textContent = currentUserProfile?.display_name || currentUser;
+    profileName.innerHTML = `${currentUserProfile?.display_name || currentUser} ${currentUserProfile?.verified ? '<span class="verified-badge" title="Верифицирован">✅</span>' : ''}`;
     profileDisplayName.textContent = currentUserProfile?.display_name || '';
     profileUsernameAlias.textContent = currentUserProfile?.username_alias || '';
     profileBio.textContent = currentUserProfile?.bio || '';
@@ -740,7 +745,7 @@ function showProfile(isSelf) {
       if (res.success && res.profile) {
         const p = res.profile;
         profileAvatar.textContent = p.avatar_url || activeContact[0].toUpperCase();
-        profileName.textContent = p.display_name || activeContact;
+        profileName.innerHTML = `${p.display_name || activeContact} ${p.verified ? '<span class="verified-badge" title="Верифицирован">✅</span>' : ''}`;
         profileDisplayName.textContent = p.display_name || '';
         profileUsernameAlias.textContent = p.username_alias || '';
         profileBio.textContent = p.bio || '';
