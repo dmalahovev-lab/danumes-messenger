@@ -84,9 +84,14 @@ const replyCancel = $('reply-cancel');
 
 const fileInput = $('file-input');
 const attachBtn = $('attach-btn');
+const voiceBtn = $('voice-btn');
+const videoBtn = $('video-btn');
 const chatMenuBtn = $('chat-menu-btn');
 const chatMenu = $('chat-menu');
 const chatMenuSearch = $('chat-menu-search');
+
+const recordingIndicator = $('recording-indicator');
+const recordingTimer = $('recording-timer');
 
 let currentUser = '';
 let isLogin = true;
@@ -103,6 +108,14 @@ let allChannels = [];
 let contextTarget = null;
 let replyTo = null;
 let currentUserProfile = null;
+
+// Переменные для записи
+let mediaRecorder = null;
+let audioChunks = [];
+let videoChunks = [];
+let recordingStream = null;
+let recordingStartTime = null;
+let recordingInterval = null;
 
 const sounds = {
   message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
@@ -239,7 +252,7 @@ function initApp() {
   socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
 
   socket.on('all users', (users) => {
-    allUsers = users;   // массив объектов {username, display_name, avatar_url}
+    allUsers = users;
     renderChats();
   });
 
@@ -324,7 +337,7 @@ function updateStatus() {
   }
 }
 
-// ========== РЕНДЕР ЧАТОВ (ИСПРАВЛЕНО NULL) ==========
+// ========== РЕНДЕР ЧАТОВ ==========
 function renderChats() {
   chatList.innerHTML = '';
   allChannels.forEach((ch) => {
@@ -382,7 +395,7 @@ function openChat(name, room, type) {
   updateStatus();
 }
 
-// ========== СООБЩЕНИЯ (ШИРИНА ИСПРАВЛЕНА) ==========
+// ========== СООБЩЕНИЯ (включая медиа) ==========
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
@@ -390,7 +403,13 @@ function addMsg(user, text, time, id, replyData) {
   div.dataset.id = id || Date.now().toString();
 
   let displayText = text;
-  if (text.startsWith('[image]') && text.endsWith('[/image]')) {
+  if (text.startsWith('[voice]') && text.endsWith('[/voice]')) {
+    const url = text.slice(7, -8);
+    displayText = `<div class="voice-message-container"><audio controls src="${url}"></audio></div>`;
+  } else if (text.startsWith('[video]') && text.endsWith('[/video]')) {
+    const url = text.slice(7, -8);
+    displayText = `<div class="video-message-container"><video controls src="${url}" style="max-width:250px;border-radius:12px;" playsinline></video></div>`;
+  } else if (text.startsWith('[image]') && text.endsWith('[/image]')) {
     const url = text.slice(7, -8);
     displayText = `<img src="${url}" style="max-width:300px;border-radius:12px;cursor:pointer;width:100%;height:auto;" loading="lazy" onclick="window.open('${url}')">`;
   } else {
@@ -440,12 +459,17 @@ msgInput.oninput = () => {
   typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
 };
 
-// ========== ЗАГРУЗКА ФАЙЛОВ ==========
+// ========== ЗАГРУЗКА ФАЙЛОВ И ЗАПИСЬ ==========
 attachBtn.onclick = () => fileInput.click();
 fileInput.onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Файл больше 5MB'); return; }
+  if (file.size > 10 * 1024 * 1024) { alert('Файл больше 10MB'); return; }
+
+  let prefix = '[image]';
+  if (file.type.startsWith('audio/')) prefix = '[voice]';
+  else if (file.type.startsWith('video/')) prefix = '[video]';
+
   try {
     const fileName = `chat/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
     const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
@@ -459,12 +483,103 @@ fileInput.onchange = async (e) => {
     });
     if (!response.ok) throw new Error('Upload failed');
     const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
-    socket.emit('chat message', { room: activeRoom, text: `[image]${publicUrl}[/image]`, id: Date.now().toString() });
+    socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
   } catch (err) {
     alert('Ошибка загрузки: ' + err.message);
   }
   fileInput.value = '';
 };
+
+// Голосовое сообщение
+voiceBtn.addEventListener('mousedown', startVoiceRecording);
+voiceBtn.addEventListener('mouseup', stopRecording);
+voiceBtn.addEventListener('mouseleave', stopRecording);
+voiceBtn.addEventListener('touchstart', startVoiceRecording);
+voiceBtn.addEventListener('touchend', stopRecording);
+
+videoBtn.addEventListener('mousedown', startVideoRecording);
+videoBtn.addEventListener('mouseup', stopRecording);
+videoBtn.addEventListener('mouseleave', stopRecording);
+videoBtn.addEventListener('touchstart', startVideoRecording);
+videoBtn.addEventListener('touchend', stopRecording);
+
+async function startVoiceRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    startMediaRecording(stream, 'audio/webm');
+  } catch (err) {
+    alert('Нет доступа к микрофону');
+  }
+}
+
+async function startVideoRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+    startMediaRecording(stream, 'video/webm');
+  } catch (err) {
+    alert('Нет доступа к камере');
+  }
+}
+
+function startMediaRecording(stream, mimeType) {
+  recordingStream = stream;
+  mediaRecorder = new MediaRecorder(stream, { mimeType });
+  audioChunks = [];
+  videoChunks = [];
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) {
+      if (mimeType.startsWith('audio')) audioChunks.push(e.data);
+      else videoChunks.push(e.data);
+    }
+  };
+
+  mediaRecorder.onstop = async () => {
+    recordingIndicator.style.display = 'none';
+    clearInterval(recordingInterval);
+    const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
+    const blob = new Blob(chunks, { type: mimeType });
+    const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
+
+    try {
+      const fileName = `chat/${Date.now()}_recording.${mimeType.split('/')[1]}`;
+      const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
+          'x-upsert': 'true'
+        },
+        body: blob
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
+      socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
+    } catch (err) {
+      alert('Ошибка загрузки записи');
+    }
+
+    // Останавливаем все треки
+    recordingStream.getTracks().forEach(track => track.stop());
+  };
+
+  mediaRecorder.start();
+  recordingStartTime = Date.now();
+  recordingIndicator.style.display = 'block';
+  recordingInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    recordingTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    if (elapsed >= 60) stopRecording(); // ограничение 1 минута
+  }, 1000);
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+}
 
 // ========== КОНТЕКСТНОЕ МЕНЮ ==========
 document.addEventListener('click', (e) => {
