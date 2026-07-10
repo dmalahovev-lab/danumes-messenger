@@ -436,6 +436,14 @@ div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div 
   }
 }
 
+// При создании элемента чата
+const chatItem = document.createElement('div');
+chatItem.className = 'chat-item';
+chatItem.dataset.userId = chat.userId;        // <-- ЭТО ВАЖНО!
+chatItem.dataset.username = chat.username;    // <-- ЭТО ВАЖНО!
+chatItem.dataset.nickname = chat.nickname;    // <-- ЭТО ВАЖНО!
+chatItem.dataset.avatar = chat.avatar;        // <-- ЭТО ВАЖНО!
+
 // ========== ОТКРЫТИЕ ЧАТА ==========
 function openChat(name, room, type) {
   if (activeRoom) socket.emit('leave room', { room: activeRoom });
@@ -1231,6 +1239,18 @@ function initContextMenu() {
   });
 }
 
+document.addEventListener('contextmenu', async (e) => {
+  const chatItem = e.target.closest('.chat-item');
+  if (chatItem && chatItem.dataset.userId) {
+    e.preventDefault();
+    const userId = chatItem.dataset.userId;
+    const username = chatItem.dataset.username || 'Пользователь';
+    const nickname = chatItem.dataset.nickname || '';
+    const avatar = chatItem.dataset.avatar || '👤';
+    showContextMenu(e, userId, username, nickname, avatar);
+  }
+});
+  
 // Начать чат с пользователем
 function startChatWithUser(userId) {
   // Проверяем, есть ли уже такой чат
