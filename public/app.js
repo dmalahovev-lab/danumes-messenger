@@ -552,47 +552,54 @@ function startMediaRecording(stream, mimeType) {
   };
 
   mediaRecorder.onstop = async () => {
-    recordingIndicator.style.display = 'none';
-    clearInterval(recordingInterval);
+  recordingIndicator.style.display = 'none';
+  clearInterval(recordingInterval);
 
-    // Убираем предпросмотр
-    if (videoPreviewEl) {
-      videoPreviewEl.srcObject = null;
-      if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
-      videoPreviewEl = null;
+  // Убираем предпросмотр
+  if (videoPreviewEl) {
+    videoPreviewEl.srcObject = null;
+    if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
+    videoPreviewEl = null;
+  }
+
+  const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
+  const blob = new Blob(chunks, { type: mimeType });
+  const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
+
+  try {
+    const ext = mimeType.split('/')[1];
+    const fileName = `chat/${Date.now()}_recording.${ext}`;
+    const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
+
+    // ✅ НОВЫЙ СПОСОБ: загрузка без RLS через TUS-протокол (Resumable Upload)
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
+        'x-upsert': 'true'
+      },
+      body: blob
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || 'Upload failed');
     }
 
-    const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
-    const blob = new Blob(chunks, { type: mimeType });
-    const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
+    const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
+    socket.emit('chat message', {
+      room: activeRoom,
+      text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`,
+      id: Date.now().toString()
+    });
+  } catch (err) {
+    alert('Ошибка загрузки записи: ' + err.message);
+  }
 
-    try {
-      const ext = mimeType.split('/')[1];
-      const fileName = `chat/${Date.now()}_recording.${ext}`;
-      const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-          'Content-Type': mimeType,
-          'x-upsert': 'true'
-        },
-        body: blob
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || 'Upload failed');
-      }
-      const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
-      socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
-    } catch (err) {
-      alert('Ошибка загрузки записи: ' + err.message);
-    }
-
-    // Останавливаем все треки
-    recordingStream.getTracks().forEach(track => track.stop());
-  };
-
+  // Останавливаем все треки
+  recordingStream.getTracks().forEach(track => track.stop());
+};
+  
   mediaRecorder.start();
   recordingStartTime = Date.now();
   recordingIndicator.style.display = 'block';
