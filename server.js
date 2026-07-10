@@ -115,6 +115,15 @@ io.on('connection', (socket) => {
       const { error } = await supabase.from('users').update(updates).eq('username', username);
       if (error) return cb({ success: false, message: 'Update failed' });
       const { data: updatedUser } = await supabase.from('users').select('*').eq('username', username).single();
+
+      // Уведомляем всех об изменении профиля
+      io.emit('user_profile_updated', {
+        username: updatedUser.username,
+        display_name: updatedUser.display_name,
+        avatar_url: updatedUser.avatar_url,
+        username_alias: updatedUser.username_alias
+      });
+
       cb({ success: true, profile: updatedUser });
     } else {
       cb({ success: false, message: 'No fields to update' });
@@ -145,6 +154,10 @@ io.on('connection', (socket) => {
     const members = [admin, ...data.members];
     const room = 'group_' + Date.now();
     const group = { name: data.name, room, members, admin, type: 'group' };
+
+    // Проверяем, нет ли уже такой группы (по комнате)
+    if (groups.some(g => g.room === room)) return cb({ success: false, message: 'Group already exists' });
+
     await supabase.from('groups_table').insert({ name: data.name, room, members, admin, type: 'group' });
     groups.push(group);
     socket.join(room);
@@ -157,6 +170,9 @@ io.on('connection', (socket) => {
     if (!admin) return cb({ success: false });
     const room = 'channel_' + Date.now();
     const channel = { name: data.name, room, subscribers: [admin], admin, type: 'channel' };
+
+    if (channels.some(c => c.room === room)) return cb({ success: false, message: 'Channel already exists' });
+
     await supabase.from('channels_table').insert({ name: data.name, room, subscribers: [admin], admin, type: 'channel' });
     channels.push(channel);
     socket.join(room);
@@ -225,8 +241,8 @@ io.on('connection', (socket) => {
 
   socket.on('request online users', () => socket.emit('online users', Array.from(onlineUsers)));
   socket.on('request all users', async () => {
-    const { data } = await supabase.from('users').select('username');
-    socket.emit('all users', (data || []).map(u => u.username));
+    const { data } = await supabase.from('users').select('username, display_name, avatar_url');
+    socket.emit('all users', data || []);
   });
 });
 
