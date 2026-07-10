@@ -211,6 +211,11 @@ loginBtn.onclick = () => {
         profileSetupModal.style.display = 'flex';
       }
       initApp();
+      // На мобильных показываем сайдбар при входе
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('hidden');
+        backBtn.style.display = 'none';
+      }
     } else {
       loginError.textContent = res.message;
     }
@@ -318,12 +323,6 @@ function initApp() {
 
   socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
   socket.on('stop typing', () => { updateStatus(); });
-  
-  // Проверка мобильного при загрузке
-  if (window.innerWidth <= 768) {
-    sidebar.classList.add('hidden');
-    backBtn.style.display = 'none';
-  }
 }
 
 function updateStatus() {
@@ -373,7 +372,7 @@ function renderChats() {
   }
 }
 
-// ========== ОТКРЫТИЕ ЧАТА (С МОБИЛЬНОЙ АДАПТАЦИЕЙ) ==========
+// ========== ОТКРЫТИЕ ЧАТА (МОБИЛЬНАЯ АДАПТАЦИЯ) ==========
 function openChat(name, room, type) {
   if (activeRoom) socket.emit('leave room', { room: activeRoom });
   activeContact = name; activeType = type;
@@ -394,7 +393,7 @@ function openChat(name, room, type) {
   socket.emit('join room', { room: activeRoom });
   updateStatus();
 
-  // МОБИЛЬНАЯ АДАПТАЦИЯ: скрываем сайдбар и показываем кнопку "Назад"
+  // МОБИЛЬНАЯ АДАПТАЦИЯ
   if (window.innerWidth <= 768) {
     sidebar.classList.add('hidden');
     backBtn.style.display = 'flex';
@@ -741,19 +740,25 @@ searchInput.oninput = () => {
   });
 };
 
-// ========== АДАПТИВ ==========
+// ========== АДАПТИВ (МОБИЛЬНЫЙ) ==========
 $('back-btn').onclick = () => { 
   sidebar.classList.remove('hidden');
   if (window.innerWidth <= 768) {
     backBtn.style.display = 'none';
+    activeRoom = null;
+    activeContact = null;
   }
 };
+
 window.onresize = () => { 
   if (window.innerWidth > 768) {
     sidebar.classList.remove('hidden');
     backBtn.style.display = 'none';
   } else {
-    if (!activeRoom) {
+    if (activeRoom) {
+      sidebar.classList.add('hidden');
+      backBtn.style.display = 'flex';
+    } else {
       sidebar.classList.remove('hidden');
       backBtn.style.display = 'none';
     }
