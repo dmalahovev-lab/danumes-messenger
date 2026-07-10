@@ -97,7 +97,7 @@ let typingTimer;
 let selectedMembers = new Set();
 let creatingMode = 'group';
 let onlineUsers = [];
-let allUsers = [];   // массив объектов {username, display_name, avatar_url}
+let allUsers = [];
 let allGroups = [];
 let allChannels = [];
 let contextTarget = null;
@@ -239,7 +239,7 @@ function initApp() {
   socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
 
   socket.on('all users', (users) => {
-    allUsers = users;
+    allUsers = users;   // массив объектов {username, display_name, avatar_url}
     renderChats();
   });
 
@@ -324,7 +324,7 @@ function updateStatus() {
   }
 }
 
-// ========== РЕНДЕР ЧАТОВ ==========
+// ========== РЕНДЕР ЧАТОВ (ИСПРАВЛЕНО NULL) ==========
 function renderChats() {
   chatList.innerHTML = '';
   allChannels.forEach((ch) => {
@@ -351,8 +351,8 @@ function renderChats() {
 
   function addUserToChatList(username, online, displayName, avatarEmoji) {
     const userData = allUsers.find(u => u.username === username);
-    const name = displayName || (userData ? userData.display_name : username);
-    const ava = avatarEmoji || (userData ? userData.avatar_url : null) || username[0].toUpperCase();
+    const name = displayName || (userData?.display_name) || username;
+    const ava = avatarEmoji || (userData?.avatar_url) || username[0].toUpperCase();
     const div = document.createElement('div'); div.className = 'chat-item';
     div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
     div.onclick = () => openChat(username, null, 'user');
@@ -374,14 +374,15 @@ function openChat(name, room, type) {
   chatTitle.textContent = displayName;
 
   messagesDiv.innerHTML = '';
-  chatAvatar.textContent = (type === 'channel') ? '📢' : (type === 'group') ? '👥' : (allUsers.find(u => u.username === name)?.avatar_url || name[0].toUpperCase());
+  const userData = allUsers.find(u => u.username === name);
+  chatAvatar.textContent = (type === 'channel') ? '📢' : (type === 'group') ? '👥' : (userData?.avatar_url || name[0].toUpperCase());
   chatAvatar.style.background = (type === 'channel') ? 'linear-gradient(135deg,#f093fb,#f5576c)' : (type === 'group') ? 'linear-gradient(135deg,#4ecdc4,#44a08d)' : 'linear-gradient(135deg, var(--accent), #6c5ce7)';
   composer.style.display = (type === 'channel' && allChannels.find(c => c.room === room)?.admin !== currentUser) ? 'none' : 'flex';
   socket.emit('join room', { room: activeRoom });
   updateStatus();
 }
 
-// ========== СООБЩЕНИЯ ==========
+// ========== СООБЩЕНИЯ (ШИРИНА ИСПРАВЛЕНА) ==========
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
