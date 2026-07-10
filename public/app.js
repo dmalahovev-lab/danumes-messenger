@@ -36,6 +36,7 @@ const contactActions = $('contact-actions');
 
 const editModal = $('edit-modal');
 const editTextarea = $('edit-textarea');
+const editError = $('edit-error');
 
 const settingsModal = $('settings-modal');
 const settingsEmojiPicker = $('settings-emoji-picker');
@@ -201,7 +202,6 @@ loginBtn.onclick = () => {
       if (res.profile) {
         currentUserProfile = res.profile;
         updateSidebarAvatar();
-        // Оформление профиля показываем только если profile_setup_complete === false
         if (res.profile.profile_setup_complete === false) {
           buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
           profileSetupModal.style.display = 'flex';
@@ -318,6 +318,12 @@ function initApp() {
 
   socket.on('typing', () => { chatStatus.textContent = 'печатает...'; });
   socket.on('stop typing', () => { updateStatus(); });
+  
+  // Проверка мобильного при загрузке
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('hidden');
+    backBtn.style.display = 'none';
+  }
 }
 
 function updateStatus() {
@@ -367,7 +373,7 @@ function renderChats() {
   }
 }
 
-// ========== ОТКРЫТИЕ ЧАТА ==========
+// ========== ОТКРЫТИЕ ЧАТА (С МОБИЛЬНОЙ АДАПТАЦИЕЙ) ==========
 function openChat(name, room, type) {
   if (activeRoom) socket.emit('leave room', { room: activeRoom });
   activeContact = name; activeType = type;
@@ -387,6 +393,12 @@ function openChat(name, room, type) {
   composer.style.display = (type === 'channel' && allChannels.find(c => c.room === room)?.admin !== currentUser) ? 'none' : 'flex';
   socket.emit('join room', { room: activeRoom });
   updateStatus();
+
+  // МОБИЛЬНАЯ АДАПТАЦИЯ: скрываем сайдбар и показываем кнопку "Назад"
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('hidden');
+    backBtn.style.display = 'flex';
+  }
 }
 
 // ========== СООБЩЕНИЯ ==========
@@ -443,11 +455,15 @@ imageViewer.onclick = (e) => { if (e.target === imageViewer) imageViewer.style.d
 function sendMsg() {
   const text = msgInput.value.trim();
   if (!text || !activeRoom) return;
+  if (activeContact === currentUser) { alert('Нельзя писать самому себе'); return; }
+  if (text.length > 2000) { alert('Максимум 2000 символов'); return; }
   socket.emit('chat message', { room: activeRoom, text, id: Date.now().toString(), replyTo });
   msgInput.value = '';
   replyTo = null;
   replyBar.style.display = 'none';
+  msgInput.focus();
 }
+
 $('send-btn').onclick = sendMsg;
 msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 
@@ -726,5 +742,20 @@ searchInput.oninput = () => {
 };
 
 // ========== АДАПТИВ ==========
-$('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
-window.onresize = () => { if (window.innerWidth > 768) sidebar.classList.remove('hidden'); };
+$('back-btn').onclick = () => { 
+  sidebar.classList.remove('hidden');
+  if (window.innerWidth <= 768) {
+    backBtn.style.display = 'none';
+  }
+};
+window.onresize = () => { 
+  if (window.innerWidth > 768) {
+    sidebar.classList.remove('hidden');
+    backBtn.style.display = 'none';
+  } else {
+    if (!activeRoom) {
+      sidebar.classList.remove('hidden');
+      backBtn.style.display = 'none';
+    }
+  }
+};
