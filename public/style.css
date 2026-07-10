@@ -37,14 +37,14 @@ textarea.glass-input { resize:vertical; min-height:80px; }
 .toggle-text a { color:var(--accent); text-decoration:none; }
 .modal-close { position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.2rem; }
 .profile-card { padding-top:50px; }
-.big-avatar { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #6c5ce7); display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700; color:#fff; margin:0 auto 16px; background-size: cover; background-position: center; }
+.big-avatar { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #6c5ce7); display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:#fff; margin:0 auto 16px; }
 .profile-status { color:var(--text-secondary); margin-bottom:24px; }
 .profile-actions { display:flex; gap:12px; margin-top:12px; }
 .app-container { display:flex; height:100vh; }
 .sidebar { width:340px; display:flex; flex-direction:column; background:var(--glass-bg); backdrop-filter:blur(25px); border-right:1px solid var(--glass-border); }
 .sidebar-head { display:flex; justify-content:space-between; align-items:center; padding:20px; }
 .user-info { display:flex; align-items:center; gap:12px; cursor:pointer; }
-.avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #6c5ce7); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; margin-right:14px; flex-shrink:0; background-size: cover; background-position: center; }
+.avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #6c5ce7); display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#fff; margin-right:14px; flex-shrink:0; }
 .plus-btn { background:rgba(74,158,255,0.15); border:1px solid rgba(74,158,255,0.3); border-radius:14px; width:38px; height:38px; color:var(--accent); font-size:1.4rem; font-weight:700; }
 .search-wrap { padding:0 18px 16px; }
 .search-input { padding:13px 16px; }
@@ -102,30 +102,36 @@ textarea.glass-input { resize:vertical; min-height:80px; }
 .chat-menu-btn { margin-left:auto; font-size:1.3rem; flex-shrink:0; }
 .chat-menu { position:absolute; top:60px; right:20px; background:rgba(20,20,30,0.97); backdrop-filter:blur(30px); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:6px; min-width:220px; z-index:200; box-shadow:0 12px 40px rgba(0,0,0,0.6); }
 
-/* Оформление профиля */
-.profile-setup-card {
-  max-width: 420px;
-  text-align: center;
+/* Эмодзи-пикер */
+.emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 0 auto 16px;
 }
-.profile-setup-avatar {
-  width: 80px; height: 80px;
+.emoji-option {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background-color: var(--glass-bg);
-  background-size: cover;
-  background-position: center;
-  margin: 0 auto 8px;
+  background: var(--glass-bg);
+  border: 2px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.8rem;
   cursor: pointer;
-  border: 2px dashed var(--glass-border);
+  transition: 0.15s;
 }
-.profile-setup-avatar span {
-  font-size: 2rem;
-  color: var(--text-secondary);
+.emoji-option:hover {
+  background: var(--glass-bg-hover);
+}
+.emoji-option.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(74,158,255,0.4);
 }
 
-/* Кнопка лупы в профиле */
+/* Профиль */
 .search-btn-loupe {
   width: 38px; height: 38px;
   border-radius: 8px;
@@ -142,24 +148,21 @@ textarea.glass-input { resize:vertical; min-height:80px; }
   background: #388e3c;
   box-shadow: 0 0 16px rgba(102,187,106,0.8);
 }
-
-/* Строки данных в профиле */
-.profile-details {
-  text-align: left;
-  margin-top: 12px;
-}
-.profile-detail-row {
+.profile-detail-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--glass-border);
+  align-items: center;
   font-size: 0.9rem;
 }
-.profile-detail-row span:first-child {
-  color: var(--text-secondary);
-}
+.detail-label { color: var(--text-secondary); }
+.detail-value { color: var(--text); font-weight: 500; }
 
-/* Видимость в настройках */
+/* Видимость */
 .visibility-toggle {
   display: flex;
   flex-direction: column;
