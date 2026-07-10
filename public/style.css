@@ -223,3 +223,242 @@ textarea.glass-input { resize:vertical; min-height:80px; }
     font-size: 1.4rem;
   }
 }
+/* ========== МОБИЛЬНЫЙ ИНТЕРФЕЙС ========== */
+@media (max-width: 768px) {
+  /* Сайдбар на всю ширину */
+  .sidebar {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 20;
+    background: rgba(10, 10, 15, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  }
+  
+  .sidebar.hidden {
+    transform: translateX(-100%);
+  }
+  
+  /* Шапка сайдбара */
+  .sidebar-head {
+    padding: 16px 16px 12px;
+  }
+  
+  .sidebar-title {
+    font-size: 1.5rem;
+  }
+  
+  /* Поиск */
+  .search-wrap {
+    padding: 0 14px 12px;
+  }
+  
+  .search-input {
+    padding: 11px 14px;
+    font-size: 0.9rem;
+  }
+  
+  /* Элементы чата */
+  .chat-item {
+    padding: 13px 16px;
+    margin: 0 4px;
+  }
+  
+  .chat-item .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+  }
+  
+  .chat-item .name {
+    font-size: 1rem;
+  }
+  
+  .chat-item .last {
+    font-size: 0.85rem;
+  }
+  
+  /* Область переписки */
+  .chat {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    background: var(--bg);
+  }
+  
+  /* Шапка чата */
+  .chat-head {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  
+  .chat-head .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .chat-head h3 {
+    font-size: 1rem;
+  }
+  
+  .status {
+    font-size: 0.75rem;
+  }
+  
+  /* Кнопка назад */
+  .back-btn {
+    display: flex !important;
+    width: 36px;
+    height: 36px;
+    font-size: 1.3rem;
+    margin-right: 4px;
+  }
+  
+  /* Сообщения */
+  .messages-box {
+    padding: 14px 10px;
+  }
+  
+  .messages {
+    gap: 4px;
+  }
+  
+  .msg {
+    max-width: 88% !important;
+    padding: 9px 12px;
+    font-size: 0.92rem;
+    border-radius: 16px;
+  }
+  
+  .msg.own {
+    border-bottom-right-radius: 4px;
+  }
+  
+  .msg.other {
+    border-bottom-left-radius: 4px;
+  }
+  
+  .msg img {
+    max-width: 250px;
+  }
+  
+  .sender {
+    font-size: 0.75rem;
+  }
+  
+  /* Поле ввода */
+  .composer {
+    padding: 8px 10px;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+  }
+  
+  .composer .icon-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+  
+  .message-input {
+    padding: 9px 14px;
+    font-size: 0.92rem;
+    border-radius: 20px;
+  }
+  
+  .send-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+  
+  /* Модальные окна */
+  .modal-card {
+    padding: 24px 18px;
+    width: 92%;
+    border-radius: 20px;
+  }
+  
+  .modal-card h2 {
+    font-size: 1.5rem;
+  }
+  
+  .big-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+  
+  /* Профиль */
+  .profile-detail-card {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
+  
+  /* Контекстное меню */
+  .context-menu {
+    min-width: 160px;
+    border-radius: 14px;
+  }
+  
+  .context-item {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+  
+  /* Меню чата */
+  .chat-menu {
+    right: 8px;
+    top: 48px;
+    min-width: 180px;
+    border-radius: 14px;
+  }
+  
+  /* Просмотр изображений */
+  .image-viewer img {
+    max-width: 95%;
+    max-height: 80%;
+  }
+  
+  .image-viewer-close {
+    top: 16px;
+    right: 20px;
+    font-size: 1.8rem;
+  }
+  
+  /* Эмодзи-пикер */
+  .emoji-option {
+    width: 38px;
+    height: 38px;
+    font-size: 1.5rem;
+  }
+  
+  /* Настройки */
+  .settings-card {
+    max-height: 90vh;
+    padding: 20px 16px;
+  }
+  
+  .settings-label {
+    margin-top: 12px;
+    font-size: 0.8rem;
+  }
+  
+  /* Создание группы */
+  .group-modal-card {
+    max-height: 85vh;
+  }
+  
+  .member-item {
+    padding: 8px 12px;
+  }
+}
