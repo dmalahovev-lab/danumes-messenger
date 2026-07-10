@@ -70,6 +70,9 @@ io.on('connection', (socket) => {
       const { username, password } = data;
       if (!username || !password) return cb({ success: false, message: 'Fill fields' });
       if (username.length > 15) return cb({ success: false, message: 'Max 15 symbols' });
+      if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(username)) {
+  return cb({ success: false, message: 'No emoji allowed in username' });
+}
       const { data: existing } = await supabase.from('users').select('username').eq('username', username).single();
       if (existing) return cb({ success: false, message: 'User exists' });
 
