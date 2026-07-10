@@ -1,7 +1,8 @@
 const socket = io();
-const $ = (id) => document.getElementById(id);
 
 // ========== DOM-элементы ==========
+const $ = (id) => document.getElementById(id);
+
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
@@ -189,6 +190,36 @@ function switchMode() {
 }
 toggleLink.onclick = (e) => { e.preventDefault(); switchMode(); };
 
+// ========== АВТО-ВХОД ==========
+function tryAutoLogin() {
+  const savedUser = localStorage.getItem('danumes_user');
+  if (savedUser) {
+    socket.emit('auto_login', { token: savedUser }, (res) => {
+      if (res.success) {
+        currentUser = res.username;
+        loginModal.style.display = 'none';
+        appDiv.style.display = 'flex';
+        if (res.profile) {
+          currentUserProfile = res.profile;
+          updateSidebarAvatar();
+        }
+        initApp();
+        if (window.innerWidth <= 768) {
+          sidebar.classList.remove('hidden');
+          backBtn.style.display = 'none';
+        }
+      } else {
+        // Токен недействителен, показываем логин
+        localStorage.removeItem('danumes_user');
+        loginModal.style.display = 'flex';
+      }
+    });
+  }
+}
+
+// Вызываем авто-вход при загрузке
+tryAutoLogin();
+
 loginBtn.onclick = () => {
   const u = loginUsername.value.trim();
   const p = loginPassword.value.trim();
@@ -197,6 +228,8 @@ loginBtn.onclick = () => {
   socket.emit(isLogin ? 'login' : 'register', { username: u, password: p }, (res) => {
     if (res.success) {
       currentUser = res.username;
+      // Сохраняем токен
+      localStorage.setItem('danumes_user', currentUser);
       loginModal.style.display = 'none';
       appDiv.style.display = 'flex';
       if (res.profile) {
@@ -211,7 +244,6 @@ loginBtn.onclick = () => {
         profileSetupModal.style.display = 'flex';
       }
       initApp();
-      // На мобильных показываем сайдбар при входе
       if (window.innerWidth <= 768) {
         sidebar.classList.remove('hidden');
         backBtn.style.display = 'none';
@@ -277,7 +309,8 @@ function initApp() {
     addMsg(data.user, data.text, data.time, data.id, data.replyTo);
     if (data.user !== currentUser) {
       sounds.message.play().catch(() => {});
-      if (document.hidden && Notification.permission === 'granted') {
+      // Уведомление при любом новом сообщении (даже если сайт открыт)
+      if (Notification.permission === 'granted') {
         new Notification(`Новое сообщение от ${data.user}`, { body: data.text.substring(0, 100) });
       }
     }
@@ -372,7 +405,7 @@ function renderChats() {
   }
 }
 
-// ========== ОТКРЫТИЕ ЧАТА (МОБИЛЬНАЯ АДАПТАЦИЯ) ==========
+// ========== ОТКРЫТИЕ ЧАТА ==========
 function openChat(name, room, type) {
   if (activeRoom) socket.emit('leave room', { room: activeRoom });
   activeContact = name; activeType = type;
@@ -393,7 +426,6 @@ function openChat(name, room, type) {
   socket.emit('join room', { room: activeRoom });
   updateStatus();
 
-  // МОБИЛЬНАЯ АДАПТАЦИЯ
   if (window.innerWidth <= 768) {
     sidebar.classList.add('hidden');
     backBtn.style.display = 'flex';
@@ -716,7 +748,11 @@ chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
 $('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
 $('close-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
-$('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
+$('logout-btn').onclick = () => {
+  localStorage.removeItem('danumes_user');
+  socket.emit('logout');
+  location.reload();
+};
 profileSearchBtn.onclick = () => {
   if (!activeContact) return;
   const term = prompt('Поиск сообщений от ' + activeContact);
@@ -740,8 +776,8 @@ searchInput.oninput = () => {
   });
 };
 
-// ========== АДАПТИВ (МОБИЛЬНЫЙ) ==========
-$('back-btn').onclick = () => { 
+// ========== АДАПТИВ ==========
+$('back-btn').onclick = () => {
   sidebar.classList.remove('hidden');
   if (window.innerWidth <= 768) {
     backBtn.style.display = 'none';
@@ -749,8 +785,7 @@ $('back-btn').onclick = () => {
     activeContact = null;
   }
 };
-
-window.onresize = () => { 
+window.onresize = () => {
   if (window.innerWidth > 768) {
     sidebar.classList.remove('hidden');
     backBtn.style.display = 'none';
