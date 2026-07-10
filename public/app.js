@@ -13,16 +13,14 @@ const toggleLink = $('toggle-link');
 const toggleText = $('toggle-text');
 
 const profileSetupModal = $('profile-setup-modal');
-const setupAvatarPreview = $('setup-avatar-preview');
-const setupAvatarPlaceholder = $('setup-avatar-placeholder');
-const setupAvatarInput = $('setup-avatar-input');
-const setupAvatarBtn = $('setup-avatar-btn');
+const setupEmojiPicker = $('setup-emoji-picker');
 const setupDisplayName = $('setup-display-name');
 const setupUsernameAlias = $('setup-username-alias');
 const setupEmail = $('setup-email');
 const setupGender = $('setup-gender');
 const setupBio = $('setup-bio');
 const setupSaveBtn = $('setup-save-btn');
+let selectedSetupEmoji = '😊';
 
 const profileModal = $('profile-modal');
 const profileAvatar = $('profile-avatar');
@@ -41,7 +39,12 @@ const editTextarea = $('edit-textarea');
 const editError = $('edit-error');
 
 const settingsModal = $('settings-modal');
+const settingsEmojiPicker = $('settings-emoji-picker');
 const settingsNickname = $('settings-nickname');
+const settingsUsernameAlias = $('settings-username-alias');
+const settingsEmail = $('settings-email');
+const settingsGender = $('settings-gender');
+const settingsBio = $('settings-bio');
 const themeGrid = $('theme-grid');
 const settingsOldPass = $('settings-old-pass');
 const settingsNewPass = $('settings-new-pass');
@@ -49,6 +52,7 @@ const settingsPassError = $('settings-pass-error');
 const visibilityEmail = $('visibility-email');
 const visibilityGender = $('visibility-gender');
 const visibilityBio = $('visibility-bio');
+let selectedSettingsEmoji = null;
 
 const createModal = $('create-modal');
 const createTitle = $('create-title');
@@ -112,6 +116,8 @@ const themes = {
   'ocean': { bg:'#0a1a1a', accent:'#00bcd4', gradient:'radial-gradient(ellipse at 30% 20%, rgba(0,188,212,0.08) 0%, transparent 60%), #0a1a1a' },
 };
 
+const emojiList = ['😊','😂','❤️','👍','😢','🔥','😮','👏','🎉','😡','🥺','😎','🤔','🙄','😴','🤗','😇','🤩','😈','💀','👻','👽','🤖','🐶','🦊','🐱','🐼','🐨','🦁','🐸'];
+
 let currentTheme = localStorage.getItem('theme') || 'blue-dark';
 applyTheme(currentTheme);
 
@@ -129,6 +135,31 @@ function applyTheme(name) {
     plusBtn.style.borderColor = t.accent + '44';
     plusBtn.style.color = t.accent;
   }
+}
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ==========
+function buildEmojiPicker(container, onSelect, currentEmoji) {
+  container.innerHTML = '';
+  emojiList.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'emoji-option';
+    if (e === currentEmoji) div.classList.add('selected');
+    div.textContent = e;
+    div.onclick = () => {
+      container.querySelectorAll('.emoji-option').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      onSelect(e);
+    };
+    container.appendChild(div);
+  });
+}
+
+function updateLocalProfileUI() {
+  if (!currentUserProfile) return;
+  const avatar = $('my-avatar');
+  avatar.textContent = currentUserProfile.avatar_url || currentUser[0].toUpperCase();
+  avatar.style.backgroundImage = '';
+  $('my-name').textContent = currentUserProfile.display_name || currentUser;
 }
 
 // ========== АВТОРИЗАЦИЯ ==========
@@ -157,11 +188,13 @@ loginBtn.onclick = () => {
         currentUserProfile = res.profile;
         updateLocalProfileUI();
         if (!res.profile.profile_setup_complete) {
+          buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
           profileSetupModal.style.display = 'flex';
         }
       }
       if (!isLogin) {
         currentUserProfile = null;
+        buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
         profileSetupModal.style.display = 'flex';
       }
       initApp();
@@ -171,47 +204,7 @@ loginBtn.onclick = () => {
   });
 };
 
-function updateLocalProfileUI() {
-  if (!currentUserProfile) return;
-  const avatar = $('my-avatar');
-  if (currentUserProfile.avatar_url) {
-    avatar.style.backgroundImage = `url(${currentUserProfile.avatar_url})`;
-    avatar.textContent = '';
-  } else {
-    avatar.style.backgroundImage = '';
-    avatar.textContent = currentUser?.[0]?.toUpperCase() || '?';
-  }
-  $('my-name').textContent = currentUserProfile.display_name || currentUser;
-}
-
 // ========== ОФОРМЛЕНИЕ ПРОФИЛЯ ==========
-setupAvatarBtn.onclick = () => setupAvatarInput.click();
-setupAvatarInput.onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Файл больше 5MB'); return; }
-  try {
-    const fileName = `avatars/${currentUser}_${Date.now()}`;
-    const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-        'x-upsert': 'true'
-      },
-      body: file
-    });
-    if (!response.ok) throw new Error('Upload failed');
-    const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
-    setupAvatarPreview.style.backgroundImage = `url(${publicUrl})`;
-    setupAvatarPlaceholder.style.display = 'none';
-    setupAvatarPreview.dataset.url = publicUrl;
-  } catch (err) {
-    alert('Ошибка загрузки аватара');
-  }
-  setupAvatarInput.value = '';
-};
-
 setupSaveBtn.onclick = () => {
   const displayName = setupDisplayName.value.trim();
   const alias = setupUsernameAlias.value.trim();
@@ -224,7 +217,7 @@ setupSaveBtn.onclick = () => {
     email: setupEmail.value.trim(),
     gender: setupGender.value,
     bio: setupBio.value.trim(),
-    avatar_url: setupAvatarPreview.dataset.url || null
+    avatar_url: selectedSetupEmoji
   };
   socket.emit('update_profile', profileData, (res) => {
     if (res.success) {
@@ -322,14 +315,14 @@ function renderChats() {
   chatList.innerHTML = '';
   allChannels.forEach((ch) => {
     const div = document.createElement('div'); div.className = 'chat-item';
-    div.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">📢</div><div class="info"><div class="name">${ch.name}</div><div class="last">Канал</div></div>`;
+    div.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c);font-size:1.2rem;">📢</div><div class="info"><div class="name">${ch.name}</div><div class="last">Канал</div></div>`;
     div.onclick = () => openChat(ch.name, ch.room, 'channel');
     chatList.appendChild(div);
   });
   allGroups.forEach((g) => {
     if (!g.members.includes(currentUser)) return;
     const div = document.createElement('div'); div.className = 'chat-item';
-    div.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#4ecdc4,#44a08d)">${g.name[0]}</div><div class="info"><div class="name">${g.name}</div><div class="last">Группа</div></div>`;
+    div.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,#4ecdc4,#44a08d);font-size:1.2rem;">${g.name[0]}</div><div class="info"><div class="name">${g.name}</div><div class="last">Группа</div></div>`;
     div.onclick = () => openChat(g.name, g.room, 'group');
     chatList.appendChild(div);
   });
@@ -340,7 +333,8 @@ function renderChats() {
 
   function addUserToChatList(u, online) {
     const div = document.createElement('div'); div.className = 'chat-item';
-    div.innerHTML = `<div class="avatar" style="background-size:cover;background-position:center;">${u[0].toUpperCase()}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
+    const avatarEmoji = currentUserProfile?.avatar_url || '?';
+    div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${u[0].toUpperCase()}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
     div.onclick = () => { if (u !== currentUser) openChat(u, null, 'user'); };
     chatList.appendChild(div);
   }
@@ -355,7 +349,6 @@ function openChat(name, room, type) {
   messagesDiv.innerHTML = '';
   chatAvatar.textContent = (type === 'channel') ? '📢' : (type === 'group') ? '👥' : name[0].toUpperCase();
   chatAvatar.style.background = (type === 'channel') ? 'linear-gradient(135deg,#f093fb,#f5576c)' : (type === 'group') ? 'linear-gradient(135deg,#4ecdc4,#44a08d)' : 'linear-gradient(135deg, var(--accent), #6c5ce7)';
-  chatAvatar.style.backgroundImage = ''; // сброс
   composer.style.display = (type === 'channel' && allChannels.find(c => c.room === room)?.admin !== currentUser) ? 'none' : 'flex';
   socket.emit('join room', { room: activeRoom });
   updateStatus();
@@ -412,7 +405,6 @@ function sendMsg() {
 $('send-btn').onclick = sendMsg;
 msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 
-// Индикатор печати
 msgInput.oninput = () => {
   if (!activeRoom) return;
   socket.emit('typing', { room: activeRoom });
@@ -452,88 +444,59 @@ document.addEventListener('click', (e) => {
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
 });
 
-$('context-copy').onclick = () => {
-  if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent);
-  contextMenu.style.display = 'none';
-};
-
+$('context-copy').onclick = () => { if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent); contextMenu.style.display = 'none'; };
 $('context-reply').onclick = () => {
   if (contextTarget) {
     replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0, 30) };
     replyText.textContent = `${replyTo.user}: ${replyTo.text}`;
-    replyBar.style.display = 'flex';
-    msgInput.focus();
+    replyBar.style.display = 'flex'; msgInput.focus();
   }
   contextMenu.style.display = 'none';
 };
-
 $('context-edit').onclick = () => {
   if (contextTarget && contextTarget.dataset.user === currentUser) {
     editTextarea.value = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim();
-    editModal.style.display = 'flex';
-    editTextarea.focus();
+    editModal.style.display = 'flex'; editTextarea.focus();
   }
   contextMenu.style.display = 'none';
 };
-
 $('cancel-edit-btn').onclick = () => { editModal.style.display = 'none'; };
-
 $('save-edit-btn').onclick = () => {
   const newText = editTextarea.value.trim();
   if (!newText) return;
   socket.emit('edit message', { room: activeRoom, id: contextTarget.dataset.id, text: newText });
   editModal.style.display = 'none';
 };
-
 $('context-delete').onclick = () => {
   if (contextTarget && contextTarget.dataset.user === currentUser) {
     socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
   }
   contextMenu.style.display = 'none';
 };
-
 $('context-reactions').onclick = (e) => {
   e.stopPropagation();
   if (contextTarget) {
-    const picker = $('reactions-picker');
-    picker.innerHTML = '';
+    const picker = $('reactions-picker'); picker.innerHTML = '';
     ['❤️','👍','😢','😂','🔥','😮','👏','🎉'].forEach((emoji) => {
-      const span = document.createElement('span');
-      span.className = 'reaction-emoji';
-      span.textContent = emoji;
-      span.onclick = () => {
-        socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji });
-        picker.style.display = 'none';
-        contextMenu.style.display = 'none';
-      };
+      const span = document.createElement('span'); span.className = 'reaction-emoji'; span.textContent = emoji;
+      span.onclick = () => { socket.emit('reaction', { room: activeRoom, id: contextTarget.dataset.id, emoji }); picker.style.display = 'none'; contextMenu.style.display = 'none'; };
       picker.appendChild(span);
     });
     const rect = contextMenu.getBoundingClientRect();
-    picker.style.display = 'flex';
-    picker.style.left = rect.left + 'px';
-    picker.style.top = (rect.top - 60) + 'px';
+    picker.style.display = 'flex'; picker.style.left = rect.left + 'px'; picker.style.top = (rect.top - 60) + 'px';
   }
 };
-
 replyCancel.onclick = () => { replyTo = null; replyBar.style.display = 'none'; };
 
 // ========== МЕНЮ ЧАТА ==========
-chatMenuBtn.onclick = (e) => {
-  e.stopPropagation();
-  chatMenu.style.display = chatMenu.style.display === 'block' ? 'none' : 'block';
-};
-
+chatMenuBtn.onclick = (e) => { e.stopPropagation(); chatMenu.style.display = chatMenu.style.display === 'block' ? 'none' : 'block'; };
 chatMenuSearch.onclick = () => {
   chatMenu.style.display = 'none';
-  const term = prompt('Поиск по сообщениям:');
-  if (!term) return;
-  const allMsgs = messagesDiv.querySelectorAll('.msg');
-  let found = false;
+  const term = prompt('Поиск по сообщениям:'); if (!term) return;
+  const allMsgs = messagesDiv.querySelectorAll('.msg'); let found = false;
   allMsgs.forEach(msg => {
-    if (msg.textContent.toLowerCase().includes(term.toLowerCase())) {
-      msg.style.background = 'rgba(255, 255, 0, 0.2)';
-      if (!found) { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); found = true; }
-    } else { msg.style.background = ''; }
+    if (msg.textContent.toLowerCase().includes(term.toLowerCase())) { msg.style.background = 'rgba(255, 255, 0, 0.2)'; if (!found) { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); found = true; } }
+    else { msg.style.background = ''; }
   });
   if (!found) alert('Ничего не найдено');
   setTimeout(() => allMsgs.forEach(msg => msg.style.background = ''), 3000);
@@ -549,13 +512,11 @@ menuGroupBtn.onclick = () => {
   createTitle.textContent = 'Новая группа'; membersLabel.style.display = 'block'; membersList.style.display = 'block';
   entityName.value = ''; selectedMembers.clear(); renderMembers(); createModal.style.display = 'flex';
 };
-
 menuChannelBtn.onclick = () => {
   plusModal.style.display = 'none'; creatingMode = 'channel';
   createTitle.textContent = 'Новый канал'; membersLabel.style.display = 'none'; membersList.style.display = 'none';
   entityName.value = ''; createModal.style.display = 'flex';
 };
-
 $('close-create').onclick = () => { createModal.style.display = 'none'; };
 
 function renderMembers() {
@@ -564,37 +525,32 @@ function renderMembers() {
     const div = document.createElement('div'); div.className = 'member-item';
     if (selectedMembers.has(u)) div.classList.add('selected');
     div.innerHTML = `<div class="avatar-sm">${u[0]}</div><span>${u}</span><span class="check">✓</span>`;
-    div.onclick = () => {
-      if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); }
-      else { selectedMembers.add(u); div.classList.add('selected'); }
-    };
+    div.onclick = () => { if (selectedMembers.has(u)) { selectedMembers.delete(u); div.classList.remove('selected'); } else { selectedMembers.add(u); div.classList.add('selected'); } };
     membersList.appendChild(div);
   });
 }
-
 $('create-btn').onclick = () => {
-  const name = entityName.value.trim();
-  if (!name) return;
-  if (creatingMode === 'group') {
-    if (selectedMembers.size === 0) return;
-    socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; });
-  } else {
-    socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; });
-  }
+  const name = entityName.value.trim(); if (!name) return;
+  if (creatingMode === 'group') { if (selectedMembers.size === 0) return; socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; }); }
+  else { socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; }); }
 };
 
 // ========== НАСТРОЙКИ ==========
 $('settings-btn').onclick = () => {
-  settingsNickname.value = currentUserProfile?.display_name || currentUser;
+  if (!currentUserProfile) return;
+  settingsNickname.value = currentUserProfile.display_name || '';
+  settingsUsernameAlias.value = currentUserProfile.username_alias || '';
+  settingsEmail.value = currentUserProfile.email || '';
+  settingsGender.value = currentUserProfile.gender || '';
+  settingsBio.value = currentUserProfile.bio || '';
+  visibilityEmail.checked = currentUserProfile.visibility_email !== false;
+  visibilityGender.checked = currentUserProfile.visibility_gender !== false;
+  visibilityBio.checked = currentUserProfile.visibility_bio !== false;
   settingsOldPass.value = '';
   settingsNewPass.value = '';
   settingsPassError.textContent = '';
+  buildEmojiPicker(settingsEmojiPicker, (emoji) => { selectedSettingsEmoji = emoji; }, currentUserProfile.avatar_url || '😊');
   renderThemeGrid();
-  if (currentUserProfile) {
-    visibilityEmail.checked = currentUserProfile.visibility_email !== false;
-    visibilityGender.checked = currentUserProfile.visibility_gender !== false;
-    visibilityBio.checked = currentUserProfile.visibility_bio !== false;
-  }
   settingsModal.style.display = 'flex';
 };
 $('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
@@ -612,16 +568,22 @@ function renderThemeGrid() {
 }
 
 $('save-settings-btn').onclick = () => {
-  const nick = settingsNickname.value.trim();
-  const updates = {
+  const displayName = settingsNickname.value.trim();
+  const alias = settingsUsernameAlias.value.trim();
+  if (!displayName || !alias) return alert('Никнейм и псевдоним обязательны');
+  if (!/^[a-zA-Z0-9_]+$/.test(alias)) return alert('Псевдоним только английские буквы, цифры и _');
+  const profileData = {
+    display_name: displayName,
+    username_alias: alias,
+    email: settingsEmail.value.trim(),
+    gender: settingsGender.value,
+    bio: settingsBio.value.trim(),
+    avatar_url: selectedSettingsEmoji || currentUserProfile?.avatar_url || '😊',
     visibility_email: visibilityEmail.checked,
     visibility_gender: visibilityGender.checked,
     visibility_bio: visibilityBio.checked
   };
-  if (nick && nick !== (currentUserProfile?.display_name || '')) {
-    updates.display_name = nick;
-  }
-  socket.emit('update_profile', updates, (res) => {
+  socket.emit('update_profile', profileData, (res) => {
     if (res.success) {
       currentUserProfile = res.profile;
       updateLocalProfileUI();
@@ -646,9 +608,9 @@ $('save-settings-btn').onclick = () => {
 // ========== ПРОФИЛЬ ==========
 function showProfile(isSelf) {
   if (isSelf) {
-    const avatarUrl = currentUserProfile?.avatar_url;
-    profileAvatar.style.backgroundImage = avatarUrl ? `url(${avatarUrl})` : '';
-    profileAvatar.textContent = avatarUrl ? '' : (currentUser?.[0]?.toUpperCase() || '?');
+    const avatarEmoji = currentUserProfile?.avatar_url || currentUser?.[0]?.toUpperCase() || '?';
+    profileAvatar.textContent = avatarEmoji;
+    profileAvatar.style.backgroundImage = '';
     profileName.textContent = currentUserProfile?.display_name || currentUser;
     profileDisplayName.textContent = currentUserProfile?.display_name || '';
     profileUsernameAlias.textContent = currentUserProfile?.username_alias || '';
@@ -661,8 +623,8 @@ function showProfile(isSelf) {
     socket.emit('get_user_profile', { username: activeContact }, (res) => {
       if (res.success && res.profile) {
         const p = res.profile;
-        profileAvatar.style.backgroundImage = p.avatar_url ? `url(${p.avatar_url})` : '';
-        profileAvatar.textContent = p.avatar_url ? '' : (activeContact?.[0]?.toUpperCase() || '?');
+        profileAvatar.textContent = p.avatar_url || activeContact?.[0]?.toUpperCase() || '?';
+        profileAvatar.style.backgroundImage = '';
         profileName.textContent = p.display_name || activeContact;
         profileDisplayName.textContent = p.display_name || '';
         profileUsernameAlias.textContent = p.username_alias || '';
@@ -712,6 +674,4 @@ searchInput.oninput = () => {
 
 // ========== АДАПТИВ ==========
 $('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 768) sidebar.classList.remove('hidden');
-});
+window.addEventListener('resize', () => { if (window.innerWidth > 768) sidebar.classList.remove('hidden'); });
