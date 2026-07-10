@@ -410,6 +410,33 @@ function renderChats() {
     chatList.appendChild(div);
   });
 
+// Заявки в друзья
+socket.emit('get_friend_requests', (requests) => {
+  requests.forEach(from => {
+    const div = document.createElement('div');
+    div.className = 'chat-item friend-request';
+    div.innerHTML = `
+      <div class="avatar">${from[0].toUpperCase()}</div>
+      <div class="info">
+        <div class="name">${from}</div>
+        <div class="last">Хочет добавить в друзья</div>
+      </div>
+      <button class="accept-friend" data-user="${from}" style="background:#2e7d32;color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem;">✓</button>
+      <button class="reject-friend" data-user="${from}" style="background:#c62828;color:white;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem;margin-left:4px;">✕</button>
+    `;
+    chatList.appendChild(div);
+    
+    div.querySelector('.accept-friend').onclick = (e) => {
+      e.stopPropagation();
+      socket.emit('accept_friend', { from }, () => renderChats());
+    };
+    div.querySelector('.reject-friend').onclick = (e) => {
+      e.stopPropagation();
+      socket.emit('reject_friend', { from }, () => renderChats());
+    };
+  });
+});
+  
   const shownUsers = new Set();
   onlineUsers.forEach(u => { if (u !== currentUser) { shownUsers.add(u); addUserToChatList(u, true); } });
   allUsers.forEach(user => {
@@ -428,6 +455,28 @@ div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div 
     div.onclick = () => openChat(username, null, 'user');
     chatList.appendChild(div);
   }
+}
+
+// В renderChats() при создании элемента пользователя
+div.oncontextmenu = (e) => {
+  e.preventDefault();
+  showUserContextMenu(e.pageX, e.pageY, username);
+};
+
+function showUserContextMenu(x, y, username) {
+  contextMenu.innerHTML = `
+    <div class="context-item" id="context-add-friend">👤 Добавить в друзья</div>
+  `;
+  contextMenu.style.display = 'block';
+  contextMenu.style.left = x + 'px';
+  contextMenu.style.top = y + 'px';
+  
+  document.getElementById('context-add-friend').onclick = () => {
+    socket.emit('add_friend', { username }, (res) => {
+      alert(res.success ? 'Заявка отправлена' : res.message);
+    });
+    contextMenu.style.display = 'none';
+  };
 }
 
 // ========== ОТКРЫТИЕ ЧАТА ==========
