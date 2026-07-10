@@ -195,28 +195,74 @@ io.on('connection', (socket) => {
   socket.on('leave room', (data) => { if (data.room) socket.leave(data.room); });
 
   // ===== СООБЩЕНИЯ =====
-  socket.on('chat message', async (data) => {
-    const sender = sessions.get(socket.id);
-    if (!sender || !data.room || !data.text) return;
-    const channel = channels.find(c => c.room === data.room);
-    if (channel && channel.admin !== sender) return;
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    try {
-      await supabase.from('messages').insert({ room: data.room, username: sender, text: data.text, time, reply_to: data.replyTo || null });
-    } catch (err) {}
-    io.to(data.room).emit('chat message', { user: sender, text: data.text, time, id: data.id, replyTo: data.replyTo });
-  });
+ // Отправка сообщения
+socket.on('chat message', async (data) => {
+  const sender = sessions.get(socket.id);
+  if (!sender || !data.room || !data.text) return;
 
-  socket.on('edit message', async (data) => {
-    if (!data.room || !data.id || !data.text) return;
-    try { await supabase.from('messages').update({ text: data.text }).eq('id', data.id); } catch (err) {}
-    io.to(data.room).emit('edit message', { id: data.id, text: data.text, user: sessions.get(socket.id) });
-  });
+  const channel = channels.find(c => c.room === data.room);
+  if (channel && channel.admin !== sender) return;
 
-  socket.on('delete message', (data) => {
-    if (!data.room || !data.id) return;
-    io.to(data.room).emit('delete message', { id: data.id });
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  try {
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        room: data.room,
+        username: sender,
+        text: data.text,
+        time,
+        reply_to: data.replyTo || null
+      });
+
+    if (error) {
+      console.error('Message insert error:', error);
+    } else {
+      console.log('Message saved:', data.text.substring(0, 20));
+    }
+  } catch (err) {
+    console.error('Message insert exception:', err);
+  }
+
+  io.to(data.room).emit('chat message', {
+    user: sender,
+    text: data.text,
+    time,
+    id: data.id,
+    replyTo: data.replyTo
   });
+});
+
+// Редактирование сообщения
+socket.on('edit message', async (data) => {
+  if (!data.room || !data.id || !data.text) return;
+
+  try {
+    const { error } = await supabase
+      .from('messages')
+      .update({ text: data.text })
+      .eq('id', data.id);
+
+    if (error) {
+      console.error('Message update error:', error);
+    }
+  } catch (err) {
+    console.error('Message update exception:', err);
+  }
+
+  io.to(data.room).emit('edit message', {
+    id: data.id,
+    text: data.text,
+    user: sessions.get(socket.id)
+  });
+});
+
+// Удаление сообщения
+socket.on('delete message', (data) => {
+  if (!data.room || !data.id) return;
+  io.to(data.room).emit('delete message', { id: data.id });
+});
 
   socket.on('reaction', (data) => {
     if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
