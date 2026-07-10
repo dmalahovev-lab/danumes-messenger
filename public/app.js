@@ -97,7 +97,7 @@ let typingTimer;
 let selectedMembers = new Set();
 let creatingMode = 'group';
 let onlineUsers = [];
-let allUsers = [];   // теперь массив объектов {username, display_name, avatar_url}
+let allUsers = [];   // массив объектов {username, display_name, avatar_url}
 let allGroups = [];
 let allChannels = [];
 let contextTarget = null;
@@ -239,7 +239,6 @@ function initApp() {
   socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
 
   socket.on('all users', (users) => {
-    // users теперь массив объектов {username, display_name, avatar_url}
     allUsers = users;
     renderChats();
   });
@@ -248,7 +247,6 @@ function initApp() {
   socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
 
   socket.on('user_profile_updated', (updatedUser) => {
-    // обновляем данные в allUsers и перерисовываем
     const idx = allUsers.findIndex(u => u.username === updatedUser.username);
     if (idx !== -1) {
       allUsers[idx].display_name = updatedUser.display_name;
@@ -257,7 +255,6 @@ function initApp() {
     renderChats();
   });
 
-  // ... остальные обработчики сообщений, редактирования, удаления, реакций – оставляем без изменений
   socket.on('chat history', (messages) => {
     messagesDiv.innerHTML = '';
     messages.forEach(msg => addMsg(msg.username, msg.text, msg.time, msg.id, msg.reply_to));
@@ -369,7 +366,6 @@ function openChat(name, room, type) {
   activeContact = name; activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
 
-  // Определяем отображаемое имя
   let displayName = name;
   if (type === 'user') {
     const user = allUsers.find(u => u.username === name);
@@ -469,7 +465,7 @@ fileInput.onchange = async (e) => {
   fileInput.value = '';
 };
 
-// ========== КОНТЕКСТНОЕ МЕНЮ (без изменений) ==========
+// ========== КОНТЕКСТНОЕ МЕНЮ ==========
 document.addEventListener('click', (e) => {
   if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
@@ -561,7 +557,6 @@ function renderMembers() {
   });
 }
 
-// Блокируем повторное создание группы/канала
 $('create-btn').onclick = (e) => {
   e.stopPropagation();
   const btn = $('create-btn');
