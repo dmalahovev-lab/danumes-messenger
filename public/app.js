@@ -116,6 +116,7 @@ let videoChunks = [];
 let recordingStream = null;
 let recordingStartTime = null;
 let recordingInterval = null;
+let videoPreviewEl = null; // элемент для предпросмотра видео
 
 const sounds = {
   message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
@@ -515,6 +516,22 @@ async function startVoiceRecording() {
 async function startVideoRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+    // Создаём элемент предпросмотра
+    if (!videoPreviewEl) {
+      videoPreviewEl = document.createElement('video');
+      videoPreviewEl.style.position = 'fixed';
+      videoPreviewEl.style.bottom = '100px';
+      videoPreviewEl.style.right = '20px';
+      videoPreviewEl.style.width = '150px';
+      videoPreviewEl.style.height = '200px';
+      videoPreviewEl.style.borderRadius = '12px';
+      videoPreviewEl.style.objectFit = 'cover';
+      videoPreviewEl.style.zIndex = '9999';
+      videoPreviewEl.muted = true;
+      videoPreviewEl.autoplay = true;
+      document.body.appendChild(videoPreviewEl);
+    }
+    videoPreviewEl.srcObject = stream;
     startMediaRecording(stream, 'video/webm');
   } catch (err) {
     alert('Нет доступа к камере');
@@ -537,26 +554,39 @@ function startMediaRecording(stream, mimeType) {
   mediaRecorder.onstop = async () => {
     recordingIndicator.style.display = 'none';
     clearInterval(recordingInterval);
+
+    // Убираем предпросмотр
+    if (videoPreviewEl) {
+      videoPreviewEl.srcObject = null;
+      if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
+      videoPreviewEl = null;
+    }
+
     const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
     const blob = new Blob(chunks, { type: mimeType });
     const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
 
     try {
-      const fileName = `chat/${Date.now()}_recording.${mimeType.split('/')[1]}`;
+      const ext = mimeType.split('/')[1];
+      const fileName = `chat/${Date.now()}_recording.${ext}`;
       const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
+          'Content-Type': mimeType,
           'x-upsert': 'true'
         },
         body: blob
       });
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Upload failed');
+      }
       const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
       socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
     } catch (err) {
-      alert('Ошибка загрузки записи');
+      alert('Ошибка загрузки записи: ' + err.message);
     }
 
     // Останавливаем все треки
