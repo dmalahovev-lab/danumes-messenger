@@ -209,7 +209,6 @@ function tryAutoLogin() {
           backBtn.style.display = 'none';
         }
       } else {
-        // Токен недействителен, показываем логин
         localStorage.removeItem('danumes_user');
         loginModal.style.display = 'flex';
       }
@@ -217,7 +216,6 @@ function tryAutoLogin() {
   }
 }
 
-// Вызываем авто-вход при загрузке
 tryAutoLogin();
 
 loginBtn.onclick = () => {
@@ -228,7 +226,6 @@ loginBtn.onclick = () => {
   socket.emit(isLogin ? 'login' : 'register', { username: u, password: p }, (res) => {
     if (res.success) {
       currentUser = res.username;
-      // Сохраняем токен
       localStorage.setItem('danumes_user', currentUser);
       loginModal.style.display = 'none';
       appDiv.style.display = 'flex';
@@ -281,7 +278,12 @@ setupSaveBtn.onclick = () => {
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 function initApp() {
-  if ('Notification' in window) Notification.requestPermission();
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(perm => {
+      console.log('Разрешение на уведомления:', perm);
+    });
+  }
+
   socket.emit('request online users');
   socket.emit('request all users');
 
@@ -309,9 +311,17 @@ function initApp() {
     addMsg(data.user, data.text, data.time, data.id, data.replyTo);
     if (data.user !== currentUser) {
       sounds.message.play().catch(() => {});
-      // Уведомление при любом новом сообщении (даже если сайт открыт)
       if (Notification.permission === 'granted') {
-        new Notification(`Новое сообщение от ${data.user}`, { body: data.text.substring(0, 100) });
+        try {
+          new Notification(`Новое сообщение от ${data.user}`, {
+            body: data.text.substring(0, 100),
+            icon: '/icon-192.png',
+            vibrate: [200, 100, 200],
+            tag: 'danumes-msg'
+          });
+        } catch (err) {
+          console.log('Ошибка уведомления:', err);
+        }
       }
     }
   });
