@@ -253,3 +253,48 @@ textarea.glass-input { resize:vertical; min-height:80px; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 @keyframes msgIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+/* Видео и аудио сообщения */
+.voice-message-container, .video-message-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.voice-message-container button, .video-message-container button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.voice-message-container audio, .video-message-container video {
+  max-width: 250px;
+  border-radius: 12px;
+  outline: none;
+}
+
+.video-message-container video {
+  max-height: 300px;
+  background: #000;
+}
+
+/* Кнопки микрофона и видео */
+#voice-btn, #video-btn {
+  font-size: 1.3rem;
+}
+
+#voice-btn.recording, #video-btn.recording {
+  color: #ff4444;
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
