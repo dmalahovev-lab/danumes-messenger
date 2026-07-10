@@ -223,6 +223,10 @@ loginBtn.onclick = () => {
   const p = loginPassword.value.trim();
   if (!u || !p) { loginError.textContent = 'Заполните все поля'; return; }
   if (u.length > 15) { loginError.textContent = 'Максимум 15 символов'; return; }
+  if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(u)) {
+  loginError.textContent = 'Нельзя использовать эмодзи в логине';
+  return;
+}
   socket.emit(isLogin ? 'login' : 'register', { username: u, password: p }, (res) => {
     if (res.success) {
       currentUser = res.username;
@@ -256,6 +260,16 @@ setupSaveBtn.onclick = () => {
   const displayName = setupDisplayName.value.trim();
   const alias = setupUsernameAlias.value.trim();
   if (!displayName || !alias) return alert('Никнейм и псевдоним обязательны');
+
+// Запрет эмодзи в никнейме
+if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(displayName)) {
+  return alert('Нельзя использовать эмодзи в никнейме');
+}
+
+// Запрет эмодзи в псевдониме
+if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(alias)) {
+  return alert('Нельзя использовать эмодзи в псевдониме');
+}
   if (!/^[a-zA-Z0-9_]+$/.test(alias)) return alert('Псевдоним только английские буквы, цифры и _');
   const profileData = {
     display_name: displayName,
@@ -702,6 +716,16 @@ $('save-settings-btn').onclick = () => {
   const displayName = settingsNickname.value.trim();
   const alias = settingsUsernameAlias.value.trim();
   if (!displayName || !alias) return alert('Никнейм и псевдоним обязательны');
+
+// Запрет эмодзи в никнейме
+if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(displayName)) {
+  return alert('Нельзя использовать эмодзи в никнейме');
+}
+
+// Запрет эмодзи в псевдониме
+if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(alias)) {
+  return alert('Нельзя использовать эмодзи в псевдониме');
+}
   if (!/^[a-zA-Z0-9_]+$/.test(alias)) return alert('Псевдоним только английские буквы, цифры и _');
   const profileData = {
     display_name: displayName,
