@@ -97,7 +97,7 @@ let typingTimer;
 let selectedMembers = new Set();
 let creatingMode = 'group';
 let onlineUsers = [];
-let allUsers = [];
+let allUsers = [];   // теперь массив объектов {username, display_name, avatar_url}
 let allGroups = [];
 let allChannels = [];
 let contextTarget = null;
@@ -237,10 +237,27 @@ function initApp() {
   socket.emit('request all users');
 
   socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
-  socket.on('all users', (users) => { allUsers = users; renderChats(); });
+
+  socket.on('all users', (users) => {
+    // users теперь массив объектов {username, display_name, avatar_url}
+    allUsers = users;
+    renderChats();
+  });
+
   socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
   socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
 
+  socket.on('user_profile_updated', (updatedUser) => {
+    // обновляем данные в allUsers и перерисовываем
+    const idx = allUsers.findIndex(u => u.username === updatedUser.username);
+    if (idx !== -1) {
+      allUsers[idx].display_name = updatedUser.display_name;
+      allUsers[idx].avatar_url = updatedUser.avatar_url;
+    }
+    renderChats();
+  });
+
+  // ... остальные обработчики сообщений, редактирования, удаления, реакций – оставляем без изменений
   socket.on('chat history', (messages) => {
     messagesDiv.innerHTML = '';
     messages.forEach(msg => addMsg(msg.username, msg.text, msg.time, msg.id, msg.reply_to));
@@ -329,13 +346,19 @@ function renderChats() {
 
   const shownUsers = new Set();
   onlineUsers.forEach(u => { if (u !== currentUser) { shownUsers.add(u); addUserToChatList(u, true); } });
-  allUsers.forEach(u => { if (u !== currentUser && !shownUsers.has(u)) { addUserToChatList(u, false); } });
+  allUsers.forEach(user => {
+    if (user.username !== currentUser && !shownUsers.has(user.username)) {
+      addUserToChatList(user.username, false, user.display_name, user.avatar_url);
+    }
+  });
 
-  function addUserToChatList(u, online) {
+  function addUserToChatList(username, online, displayName, avatarEmoji) {
+    const userData = allUsers.find(u => u.username === username);
+    const name = displayName || (userData ? userData.display_name : username);
+    const ava = avatarEmoji || (userData ? userData.avatar_url : null) || username[0].toUpperCase();
     const div = document.createElement('div'); div.className = 'chat-item';
-    const avatarEmoji = currentUserProfile?.avatar_url || '?';
-    div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${u[0].toUpperCase()}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
-    div.onclick = () => { if (u !== currentUser) openChat(u, null, 'user'); };
+    div.innerHTML = `<div class="avatar" style="font-size:1.2rem;">${ava}</div><div class="info"><div class="name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</div><div class="last">${online ? 'В сети' : 'Не в сети'}</div></div>`;
+    div.onclick = () => openChat(username, null, 'user');
     chatList.appendChild(div);
   }
 }
@@ -345,9 +368,17 @@ function openChat(name, room, type) {
   if (activeRoom) socket.emit('leave room', { room: activeRoom });
   activeContact = name; activeType = type;
   activeRoom = room || [currentUser, name].sort().join(':');
-  chatTitle.textContent = name;
+
+  // Определяем отображаемое имя
+  let displayName = name;
+  if (type === 'user') {
+    const user = allUsers.find(u => u.username === name);
+    if (user) displayName = user.display_name || name;
+  }
+  chatTitle.textContent = displayName;
+
   messagesDiv.innerHTML = '';
-  chatAvatar.textContent = (type === 'channel') ? '📢' : (type === 'group') ? '👥' : name[0].toUpperCase();
+  chatAvatar.textContent = (type === 'channel') ? '📢' : (type === 'group') ? '👥' : (allUsers.find(u => u.username === name)?.avatar_url || name[0].toUpperCase());
   chatAvatar.style.background = (type === 'channel') ? 'linear-gradient(135deg,#f093fb,#f5576c)' : (type === 'group') ? 'linear-gradient(135deg,#4ecdc4,#44a08d)' : 'linear-gradient(135deg, var(--accent), #6c5ce7)';
   composer.style.display = (type === 'channel' && allChannels.find(c => c.room === room)?.admin !== currentUser) ? 'none' : 'flex';
   socket.emit('join room', { room: activeRoom });
@@ -438,7 +469,7 @@ fileInput.onchange = async (e) => {
   fileInput.value = '';
 };
 
-// ========== КОНТЕКСТНОЕ МЕНЮ ==========
+// ========== КОНТЕКСТНОЕ МЕНЮ (без изменений) ==========
 document.addEventListener('click', (e) => {
   if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
@@ -529,10 +560,37 @@ function renderMembers() {
     membersList.appendChild(div);
   });
 }
-$('create-btn').onclick = () => {
-  const name = entityName.value.trim(); if (!name) return;
-  if (creatingMode === 'group') { if (selectedMembers.size === 0) return; socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; }); }
-  else { socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; }); }
+
+// Блокируем повторное создание группы/канала
+$('create-btn').onclick = (e) => {
+  e.stopPropagation();
+  const btn = $('create-btn');
+  if (btn.disabled) return;
+  const name = entityName.value.trim();
+  if (!name) return;
+  btn.disabled = true;
+
+  if (creatingMode === 'group') {
+    if (selectedMembers.size === 0) { btn.disabled = false; return; }
+    socket.emit('create group', { name, members: Array.from(selectedMembers) }, (res) => {
+      btn.disabled = false;
+      if (res.success) {
+        createModal.style.display = 'none';
+        selectedMembers.clear();
+      } else {
+        alert(res.message);
+      }
+    });
+  } else {
+    socket.emit('create channel', { name }, (res) => {
+      btn.disabled = false;
+      if (res.success) {
+        createModal.style.display = 'none';
+      } else {
+        alert(res.message);
+      }
+    });
+  }
 };
 
 // ========== НАСТРОЙКИ ==========
