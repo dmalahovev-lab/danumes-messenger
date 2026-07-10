@@ -462,3 +462,10 @@ textarea.glass-input { resize:vertical; min-height:80px; }
     padding: 8px 12px;
   }
 }
+.verified-badge {
+  color: #4a9eff;
+  font-size: 0.8rem;
+  margin-left: 4px;
+  display: inline-block;
+  vertical-align: middle;
+}
