@@ -38,6 +38,7 @@ function broadcastOnlineUsers() {
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
+  // ===== РЕГИСТРАЦИЯ =====
   socket.on('register', async (data, cb) => {
     try {
       const { username, password } = data;
@@ -69,6 +70,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== ВХОД (всегда возвращает актуальный профиль) =====
   socket.on('login', async (data, cb) => {
     try {
       const { username, password } = data;
@@ -87,6 +89,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== ОБНОВЛЕНИЕ ПРОФИЛЯ =====
   socket.on('update_profile', async (data, cb) => {
     const username = sessions.get(socket.id);
     if (!username) return cb({ success: false, message: 'Not authorized' });
@@ -113,11 +116,11 @@ io.on('connection', (socket) => {
       if (error) return cb({ success: false, message: 'Update failed' });
       const { data: updatedUser } = await supabase.from('users').select('*').eq('username', username).single();
 
+      // Уведомляем всех об изменении
       io.emit('user_profile_updated', {
         username: updatedUser.username,
         display_name: updatedUser.display_name,
-        avatar_url: updatedUser.avatar_url,
-        username_alias: updatedUser.username_alias
+        avatar_url: updatedUser.avatar_url
       });
 
       cb({ success: true, profile: updatedUser });
@@ -126,6 +129,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== ПОЛУЧЕНИЕ ПРОФИЛЯ ДРУГОГО ПОЛЬЗОВАТЕЛЯ =====
   socket.on('get_user_profile', async (data, cb) => {
     const { username } = data;
     const { data: user } = await supabase.from('users').select('*').eq('username', username).single();
@@ -142,15 +146,13 @@ io.on('connection', (socket) => {
     cb({ success: true, profile: publicProfile });
   });
 
+  // ===== ГРУППЫ И КАНАЛЫ =====
   socket.on('create group', async (data, cb) => {
     const admin = sessions.get(socket.id);
     if (!admin) return cb({ success: false });
     const members = [admin, ...data.members];
     const room = 'group_' + Date.now();
     const group = { name: data.name, room, members, admin, type: 'group' };
-
-    if (groups.some(g => g.room === room)) return cb({ success: false, message: 'Group already exists' });
-
     await supabase.from('groups_table').insert({ name: data.name, room, members, admin, type: 'group' });
     groups.push(group);
     socket.join(room);
@@ -163,9 +165,6 @@ io.on('connection', (socket) => {
     if (!admin) return cb({ success: false });
     const room = 'channel_' + Date.now();
     const channel = { name: data.name, room, subscribers: [admin], admin, type: 'channel' };
-
-    if (channels.some(c => c.room === room)) return cb({ success: false, message: 'Channel already exists' });
-
     await supabase.from('channels_table').insert({ name: data.name, room, subscribers: [admin], admin, type: 'channel' });
     channels.push(channel);
     socket.join(room);
@@ -184,21 +183,18 @@ io.on('connection', (socket) => {
 
   socket.on('leave room', (data) => { if (data.room) socket.leave(data.room); });
 
+  // ===== СООБЩЕНИЯ =====
   socket.on('chat message', async (data) => {
     const sender = sessions.get(socket.id);
     if (!sender || !data.room || !data.text) return;
-    const channel = channels.find(c => c.room === data.room);
-    if (channel && channel.admin !== sender) return;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    try {
-      await supabase.from('messages').insert({ room: data.room, username: sender, text: data.text, time, reply_to: data.replyTo || null });
-    } catch (err) {}
+    await supabase.from('messages').insert({ room: data.room, username: sender, text: data.text, time, reply_to: data.replyTo || null });
     io.to(data.room).emit('chat message', { user: sender, text: data.text, time, id: data.id, replyTo: data.replyTo });
   });
 
   socket.on('edit message', async (data) => {
     if (!data.room || !data.id || !data.text) return;
-    try { await supabase.from('messages').update({ text: data.text }).eq('id', data.id); } catch (err) {}
+    await supabase.from('messages').update({ text: data.text }).eq('id', data.id);
     io.to(data.room).emit('edit message', { id: data.id, text: data.text, user: sessions.get(socket.id) });
   });
 
@@ -211,6 +207,7 @@ io.on('connection', (socket) => {
     if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
   });
 
+  // ===== СМЕНА ПАРОЛЯ =====
   socket.on('change password', async (data, cb) => {
     const username = sessions.get(socket.id);
     if (!username) return cb({ success: false });
