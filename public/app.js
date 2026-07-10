@@ -113,7 +113,6 @@ let contextTarget = null;
 let replyTo = null;
 let currentUserProfile = null;
 
-// Переменные для записи
 let mediaRecorder = null;
 let audioChunks = [];
 let videoChunks = [];
@@ -155,7 +154,6 @@ function applyTheme(name) {
   }
 }
 
-// ========== ЭМОДЗИ-ПИКЕР ==========
 function buildEmojiPicker(container, onSelect, currentEmoji) {
   container.innerHTML = '';
   emojiList.forEach(e => {
@@ -206,13 +204,11 @@ loginBtn.onclick = () => {
       if (res.profile) {
         currentUserProfile = res.profile;
         updateLocalProfileUI();
-        // Показываем оформление ТОЛЬКО если profile_setup_complete = false
         if (res.profile.profile_setup_complete === false) {
           buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
           profileSetupModal.style.display = 'flex';
         }
       } else {
-        // Новый пользователь
         buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
         profileSetupModal.style.display = 'flex';
       }
@@ -504,15 +500,15 @@ fileInput.onchange = async (e) => {
 };
 
 // ========== ГОЛОСОВЫЕ И ВИДЕО ==========
-voiceBtn.addEventListener('mousedown', startVoiceRecording);
-voiceBtn.addEventListener('mouseup', stopRecording);
-voiceBtn.addEventListener('touchstart', startVoiceRecording);
-voiceBtn.addEventListener('touchend', stopRecording);
+voiceBtn.onmousedown = startVoiceRecording;
+voiceBtn.onmouseup = stopRecording;
+voiceBtn.ontouchstart = startVoiceRecording;
+voiceBtn.ontouchend = stopRecording;
 
-videoBtn.addEventListener('mousedown', startVideoRecording);
-videoBtn.addEventListener('mouseup', stopRecording);
-videoBtn.addEventListener('touchstart', startVideoRecording);
-videoBtn.addEventListener('touchend', stopRecording);
+videoBtn.onmousedown = startVideoRecording;
+videoBtn.onmouseup = stopRecording;
+videoBtn.ontouchstart = startVideoRecording;
+videoBtn.ontouchend = stopRecording;
 
 async function startVoiceRecording() {
   try {
