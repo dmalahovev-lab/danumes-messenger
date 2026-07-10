@@ -155,7 +155,7 @@ function applyTheme(name) {
   }
 }
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ==========
+// ========== ЭМОДЗИ-ПИКЕР ==========
 function buildEmojiPicker(container, onSelect, currentEmoji) {
   container.innerHTML = '';
   emojiList.forEach(e => {
@@ -202,16 +202,17 @@ loginBtn.onclick = () => {
       currentUser = res.username;
       loginModal.style.display = 'none';
       appDiv.style.display = 'flex';
-      if (isLogin && res.profile) {
+
+      if (res.profile) {
         currentUserProfile = res.profile;
         updateLocalProfileUI();
-        if (!res.profile.profile_setup_complete) {
+        // Показываем оформление ТОЛЬКО если profile_setup_complete = false
+        if (res.profile.profile_setup_complete === false) {
           buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
           profileSetupModal.style.display = 'flex';
         }
-      }
-      if (!isLogin) {
-        currentUserProfile = null;
+      } else {
+        // Новый пользователь
         buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
         profileSetupModal.style.display = 'flex';
       }
@@ -455,6 +456,7 @@ imageViewer.onclick = (e) => {
   }
 };
 
+// ========== ОТПРАВКА СООБЩЕНИЙ ==========
 function sendMsg() {
   const text = msgInput.value.trim();
   if (!text || !activeRoom) return;
@@ -470,14 +472,7 @@ function sendMsg() {
 $('send-btn').onclick = sendMsg;
 msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 
-msgInput.oninput = () => {
-  if (!activeRoom) return;
-  socket.emit('typing', { room: activeRoom });
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => socket.emit('stop typing', { room: activeRoom }), 1000);
-};
-
-// ========== ЗАГРУЗКА ФАЙЛОВ И ЗАПИСЬ ==========
+// ========== ЗАГРУЗКА ФАЙЛОВ ==========
 attachBtn.onclick = () => fileInput.click();
 fileInput.onchange = async (e) => {
   const file = e.target.files[0];
@@ -508,16 +503,14 @@ fileInput.onchange = async (e) => {
   fileInput.value = '';
 };
 
-// Голосовое сообщение
+// ========== ГОЛОСОВЫЕ И ВИДЕО ==========
 voiceBtn.addEventListener('mousedown', startVoiceRecording);
 voiceBtn.addEventListener('mouseup', stopRecording);
-voiceBtn.addEventListener('mouseleave', stopRecording);
 voiceBtn.addEventListener('touchstart', startVoiceRecording);
 voiceBtn.addEventListener('touchend', stopRecording);
 
 videoBtn.addEventListener('mousedown', startVideoRecording);
 videoBtn.addEventListener('mouseup', stopRecording);
-videoBtn.addEventListener('mouseleave', stopRecording);
 videoBtn.addEventListener('touchstart', startVideoRecording);
 videoBtn.addEventListener('touchend', stopRecording);
 
