@@ -34,12 +34,8 @@
   <div id="profile-setup-modal" class="modal-overlay" style="display:none">
     <div class="modal-card profile-setup-card">
       <h2>Оформление профиля</h2>
-      <p class="modal-sub">Расскажите о себе</p>
-      <div class="profile-setup-avatar" id="setup-avatar-preview" style="background-image:url('')">
-        <span id="setup-avatar-placeholder">+</span>
-      </div>
-      <input type="file" id="setup-avatar-input" accept="image/*" style="display:none">
-      <button id="setup-avatar-btn" class="btn-secondary" style="margin-bottom:12px;">Загрузить фото</button>
+      <p class="modal-sub">Выберите аватар и заполните поля</p>
+      <div class="emoji-picker" id="setup-emoji-picker"></div>
       <input id="setup-display-name" class="glass-input" placeholder="Никнейм" maxlength="20">
       <input id="setup-username-alias" class="glass-input" placeholder="Псевдоним (@username)" maxlength="20">
       <input id="setup-email" class="glass-input" placeholder="Email (необязательно)">
@@ -63,11 +59,11 @@
       <p class="profile-status">В сети</p>
       <div class="profile-details">
         <button id="profile-search-btn" class="search-btn-loupe" title="Поиск сообщений">🔍</button>
-        <div class="profile-detail-row"><span>Никнейм:</span> <span id="profile-display-name"></span></div>
-        <div class="profile-detail-row"><span>Псевдоним:</span> <span id="profile-username-alias"></span></div>
-        <div class="profile-detail-row"><span>Описание:</span> <span id="profile-bio"></span></div>
-        <div class="profile-detail-row"><span>Почта:</span> <span id="profile-email"></span></div>
-        <div class="profile-detail-row"><span>Пол:</span> <span id="profile-gender"></span></div>
+        <div class="profile-detail-card"><span class="detail-label">Никнейм</span><span id="profile-display-name" class="detail-value"></span></div>
+        <div class="profile-detail-card"><span class="detail-label">Псевдоним</span><span id="profile-username-alias" class="detail-value"></span></div>
+        <div class="profile-detail-card"><span class="detail-label">Описание</span><span id="profile-bio" class="detail-value"></span></div>
+        <div class="profile-detail-card"><span class="detail-label">Почта</span><span id="profile-email" class="detail-value"></span></div>
+        <div class="profile-detail-card"><span class="detail-label">Пол</span><span id="profile-gender" class="detail-value"></span></div>
       </div>
       <div id="self-actions" class="profile-actions">
         <button id="logout-btn" class="btn-danger">Выйти</button>
@@ -120,8 +116,23 @@
     <div class="modal-card settings-card">
       <button class="modal-close icon-btn" id="close-settings">✕</button>
       <h2>Настройки</h2>
-      <label class="settings-label">Никнейм (макс. 15 символов)</label>
-      <input id="settings-nickname" class="glass-input" placeholder="Новый никнейм" maxlength="15">
+      <label class="settings-label">Аватар</label>
+      <div class="emoji-picker" id="settings-emoji-picker"></div>
+      <label class="settings-label">Никнейм</label>
+      <input id="settings-nickname" class="glass-input" placeholder="Никнейм" maxlength="20">
+      <label class="settings-label">Псевдоним (@username)</label>
+      <input id="settings-username-alias" class="glass-input" placeholder="Псевдоним" maxlength="20">
+      <label class="settings-label">Email</label>
+      <input id="settings-email" class="glass-input" placeholder="Email">
+      <label class="settings-label">Пол</label>
+      <select id="settings-gender" class="glass-input">
+        <option value="">Не указан</option>
+        <option value="male">Мужской</option>
+        <option value="female">Женский</option>
+        <option value="other">Другой</option>
+      </select>
+      <label class="settings-label">Описание</label>
+      <textarea id="settings-bio" class="glass-input" placeholder="Описание" maxlength="200" style="height:60px;"></textarea>
       <label class="settings-label">Тема</label>
       <div id="theme-grid" class="theme-grid"></div>
       <label class="settings-label">Сменить пароль</label>
