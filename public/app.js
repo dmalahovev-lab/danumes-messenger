@@ -1,8 +1,7 @@
 const socket = io();
-
-// ========== DOM-элементы ==========
 const $ = (id) => document.getElementById(id);
 
+// ========== DOM-элементы ==========
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
@@ -37,7 +36,6 @@ const contactActions = $('contact-actions');
 
 const editModal = $('edit-modal');
 const editTextarea = $('edit-textarea');
-const editError = $('edit-error');
 
 const settingsModal = $('settings-modal');
 const settingsEmojiPicker = $('settings-emoji-picker');
@@ -172,11 +170,9 @@ function buildEmojiPicker(container, onSelect, currentEmoji) {
   });
 }
 
-function updateLocalProfileUI() {
+function updateSidebarAvatar() {
   if (!currentUserProfile) return;
-  const avatar = $('my-avatar');
-  avatar.textContent = currentUserProfile.avatar_url || currentUser[0].toUpperCase();
-  avatar.style.backgroundImage = '';
+  $('my-avatar').textContent = currentUserProfile.avatar_url || currentUser[0].toUpperCase();
   $('my-name').textContent = currentUserProfile.display_name || currentUser;
 }
 
@@ -204,7 +200,8 @@ loginBtn.onclick = () => {
       appDiv.style.display = 'flex';
       if (res.profile) {
         currentUserProfile = res.profile;
-        updateLocalProfileUI();
+        updateSidebarAvatar();
+        // Оформление профиля показываем только если profile_setup_complete === false
         if (res.profile.profile_setup_complete === false) {
           buildEmojiPicker(setupEmojiPicker, (emoji) => { selectedSetupEmoji = emoji; }, '😊');
           profileSetupModal.style.display = 'flex';
@@ -226,7 +223,6 @@ setupSaveBtn.onclick = () => {
   const alias = setupUsernameAlias.value.trim();
   if (!displayName || !alias) return alert('Никнейм и псевдоним обязательны');
   if (!/^[a-zA-Z0-9_]+$/.test(alias)) return alert('Псевдоним только английские буквы, цифры и _');
-  if (alias.length > 20) return alert('Псевдоним не более 20 символов');
   const profileData = {
     display_name: displayName,
     username_alias: alias,
@@ -238,7 +234,7 @@ setupSaveBtn.onclick = () => {
   socket.emit('update_profile', profileData, (res) => {
     if (res.success) {
       currentUserProfile = res.profile;
-      updateLocalProfileUI();
+      updateSidebarAvatar();
       profileSetupModal.style.display = 'none';
     } else {
       alert(res.message);
@@ -440,32 +436,18 @@ window.openImageViewer = function(url) {
   imageViewerImg.src = url;
   imageViewer.style.display = 'flex';
 };
-
-imageViewerClose.onclick = () => {
-  imageViewer.style.display = 'none';
-  imageViewerImg.src = '';
-};
-
-imageViewer.onclick = (e) => {
-  if (e.target === imageViewer) {
-    imageViewer.style.display = 'none';
-    imageViewerImg.src = '';
-  }
-};
+imageViewerClose.onclick = () => { imageViewer.style.display = 'none'; };
+imageViewer.onclick = (e) => { if (e.target === imageViewer) imageViewer.style.display = 'none'; };
 
 // ========== ОТПРАВКА СООБЩЕНИЙ ==========
 function sendMsg() {
   const text = msgInput.value.trim();
   if (!text || !activeRoom) return;
-  if (activeContact === currentUser) { alert('Нельзя писать самому себе'); return; }
-  if (text.length > 2000) { alert('Максимум 2000 символов'); return; }
   socket.emit('chat message', { room: activeRoom, text, id: Date.now().toString(), replyTo });
   msgInput.value = '';
   replyTo = null;
   replyBar.style.display = 'none';
-  msgInput.focus();
 }
-
 $('send-btn').onclick = sendMsg;
 msgInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 
@@ -475,49 +457,35 @@ fileInput.onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { alert('Файл больше 10MB'); return; }
-
   let prefix = '[image]';
   if (file.type.startsWith('audio/')) prefix = '[voice]';
   else if (file.type.startsWith('video/')) prefix = '[video]';
-
   try {
     const fileName = `chat/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
     const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-        'x-upsert': 'true'
-      },
+      headers: { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8', 'x-upsert': 'true' },
       body: file
     });
     if (!response.ok) throw new Error('Upload failed');
     const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
     socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
-  } catch (err) {
-    alert('Ошибка загрузки: ' + err.message);
-  }
+  } catch (err) { alert('Ошибка загрузки: ' + err.message); }
   fileInput.value = '';
 };
 
 // ========== ГОЛОСОВЫЕ И ВИДЕО ==========
 voiceBtn.onmousedown = startVoiceRecording;
 voiceBtn.onmouseup = stopRecording;
-voiceBtn.ontouchstart = startVoiceRecording;
-voiceBtn.ontouchend = stopRecording;
-
 videoBtn.onmousedown = startVideoRecording;
 videoBtn.onmouseup = stopRecording;
-videoBtn.ontouchstart = startVideoRecording;
-videoBtn.ontouchend = stopRecording;
 
 async function startVoiceRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     startMediaRecording(stream, 'audio/webm');
-  } catch (err) {
-    alert('Нет доступа к микрофону');
-  }
+  } catch (err) { alert('Нет доступа к микрофону'); }
 }
 
 async function startVideoRecording() {
@@ -525,90 +493,54 @@ async function startVideoRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
     if (!videoPreviewEl) {
       videoPreviewEl = document.createElement('video');
-      videoPreviewEl.style.position = 'fixed';
-      videoPreviewEl.style.bottom = '100px';
-      videoPreviewEl.style.right = '20px';
-      videoPreviewEl.style.width = '150px';
-      videoPreviewEl.style.height = '200px';
-      videoPreviewEl.style.borderRadius = '12px';
-      videoPreviewEl.style.objectFit = 'cover';
-      videoPreviewEl.style.zIndex = '9999';
+      videoPreviewEl.style.cssText = 'position:fixed;bottom:100px;right:20px;width:150px;height:200px;border-radius:12px;object-fit:cover;z-index:9999;';
       videoPreviewEl.muted = true;
       videoPreviewEl.autoplay = true;
       document.body.appendChild(videoPreviewEl);
     }
     videoPreviewEl.srcObject = stream;
     startMediaRecording(stream, 'video/webm');
-  } catch (err) {
-    alert('Нет доступа к камере');
-  }
+  } catch (err) { alert('Нет доступа к камере'); }
 }
 
 function startMediaRecording(stream, mimeType) {
   recordingStream = stream;
   mediaRecorder = new MediaRecorder(stream, { mimeType });
-  audioChunks = [];
-  videoChunks = [];
-
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) {
-      if (mimeType.startsWith('audio')) audioChunks.push(e.data);
-      else videoChunks.push(e.data);
-    }
-  };
-
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) (mimeType.startsWith('audio') ? audioChunks : videoChunks).push(e.data); };
   mediaRecorder.onstop = async () => {
     recordingIndicator.style.display = 'none';
     clearInterval(recordingInterval);
-
-    if (videoPreviewEl) {
-      videoPreviewEl.srcObject = null;
-      if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
-      videoPreviewEl = null;
-    }
-
+    if (videoPreviewEl) { videoPreviewEl.srcObject = null; videoPreviewEl.remove(); videoPreviewEl = null; }
     const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
     const blob = new Blob(chunks, { type: mimeType });
     const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
-
     try {
       const ext = mimeType.split('/')[1];
       const fileName = `chat/${Date.now()}_recording.${ext}`;
       const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-          'x-upsert': 'true'
-        },
+        headers: { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8', 'x-upsert': 'true' },
         body: blob
       });
       if (!response.ok) throw new Error('Upload failed');
       const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
       socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
-    } catch (err) {
-      alert('Ошибка загрузки записи: ' + err.message);
-    }
-
-    recordingStream.getTracks().forEach(track => track.stop());
+    } catch (err) { alert('Ошибка загрузки записи'); }
+    recordingStream.getTracks().forEach(t => t.stop());
   };
-
   mediaRecorder.start();
   recordingStartTime = Date.now();
   recordingIndicator.style.display = 'block';
   recordingInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-    const mins = Math.floor(elapsed / 60);
-    const secs = elapsed % 60;
-    recordingTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    recordingTimer.textContent = `${Math.floor(elapsed/60)}:${(elapsed%60).toString().padStart(2,'0')}`;
     if (elapsed >= 60) stopRecording();
   }, 1000);
 }
 
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
-  }
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
 }
 
 // ========== КОНТЕКСТНОЕ МЕНЮ ==========
@@ -616,21 +548,13 @@ document.onclick = (e) => {
   if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
 };
-
 $('context-copy').onclick = () => { if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent); contextMenu.style.display = 'none'; };
 $('context-reply').onclick = () => {
-  if (contextTarget) {
-    replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0, 30) };
-    replyText.textContent = `${replyTo.user}: ${replyTo.text}`;
-    replyBar.style.display = 'flex'; msgInput.focus();
-  }
+  if (contextTarget) { replyTo = { id: contextTarget.dataset.id, user: contextTarget.dataset.user, text: contextTarget.textContent.substring(0, 30) }; replyText.textContent = `${replyTo.user}: ${replyTo.text}`; replyBar.style.display = 'flex'; msgInput.focus(); }
   contextMenu.style.display = 'none';
 };
 $('context-edit').onclick = () => {
-  if (contextTarget && contextTarget.dataset.user === currentUser) {
-    editTextarea.value = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim();
-    editModal.style.display = 'flex'; editTextarea.focus();
-  }
+  if (contextTarget && contextTarget.dataset.user === currentUser) { editTextarea.value = contextTarget.textContent.replace(/↩.*\n?/, '').replace(/\(ред.\)/, '').trim(); editModal.style.display = 'flex'; }
   contextMenu.style.display = 'none';
 };
 $('cancel-edit-btn').onclick = () => { editModal.style.display = 'none'; };
@@ -640,12 +564,7 @@ $('save-edit-btn').onclick = () => {
   socket.emit('edit message', { room: activeRoom, id: contextTarget.dataset.id, text: newText });
   editModal.style.display = 'none';
 };
-$('context-delete').onclick = () => {
-  if (contextTarget && contextTarget.dataset.user === currentUser) {
-    socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id });
-  }
-  contextMenu.style.display = 'none';
-};
+$('context-delete').onclick = () => { if (contextTarget && contextTarget.dataset.user === currentUser) socket.emit('delete message', { room: activeRoom, id: contextTarget.dataset.id }); contextMenu.style.display = 'none'; };
 $('context-reactions').onclick = (e) => {
   e.stopPropagation();
   if (contextTarget) {
@@ -679,19 +598,9 @@ chatMenuSearch.onclick = () => {
 $('plus-btn').onclick = (e) => { e.stopPropagation(); plusModal.style.display = 'flex'; };
 $('close-plus').onclick = () => { plusModal.style.display = 'none'; };
 plusModal.onclick = (e) => { if (e.target === plusModal) plusModal.style.display = 'none'; };
-
-menuGroupBtn.onclick = () => {
-  plusModal.style.display = 'none'; creatingMode = 'group';
-  createTitle.textContent = 'Новая группа'; membersLabel.style.display = 'block'; membersList.style.display = 'block';
-  entityName.value = ''; selectedMembers.clear(); renderMembers(); createModal.style.display = 'flex';
-};
-menuChannelBtn.onclick = () => {
-  plusModal.style.display = 'none'; creatingMode = 'channel';
-  createTitle.textContent = 'Новый канал'; membersLabel.style.display = 'none'; membersList.style.display = 'none';
-  entityName.value = ''; createModal.style.display = 'flex';
-};
+menuGroupBtn.onclick = () => { plusModal.style.display = 'none'; creatingMode = 'group'; createTitle.textContent = 'Новая группа'; membersLabel.style.display = 'block'; membersList.style.display = 'block'; entityName.value = ''; selectedMembers.clear(); renderMembers(); createModal.style.display = 'flex'; };
+menuChannelBtn.onclick = () => { plusModal.style.display = 'none'; creatingMode = 'channel'; createTitle.textContent = 'Новый канал'; membersLabel.style.display = 'none'; membersList.style.display = 'none'; entityName.value = ''; createModal.style.display = 'flex'; };
 $('close-create').onclick = () => { createModal.style.display = 'none'; };
-
 function renderMembers() {
   membersList.innerHTML = '';
   onlineUsers.filter(u => u !== currentUser).forEach((u) => {
@@ -702,36 +611,10 @@ function renderMembers() {
     membersList.appendChild(div);
   });
 }
-
-$('create-btn').onclick = (e) => {
-  e.stopPropagation();
-  const btn = $('create-btn');
-  if (btn.disabled) return;
-  const name = entityName.value.trim();
-  if (!name) return;
-  btn.disabled = true;
-
-  if (creatingMode === 'group') {
-    if (selectedMembers.size === 0) { btn.disabled = false; return; }
-    socket.emit('create group', { name, members: Array.from(selectedMembers) }, (res) => {
-      btn.disabled = false;
-      if (res.success) {
-        createModal.style.display = 'none';
-        selectedMembers.clear();
-      } else {
-        alert(res.message);
-      }
-    });
-  } else {
-    socket.emit('create channel', { name }, (res) => {
-      btn.disabled = false;
-      if (res.success) {
-        createModal.style.display = 'none';
-      } else {
-        alert(res.message);
-      }
-    });
-  }
+$('create-btn').onclick = () => {
+  const name = entityName.value.trim(); if (!name) return;
+  if (creatingMode === 'group') { if (selectedMembers.size === 0) return; socket.emit('create group', { name, members: Array.from(selectedMembers) }, () => { createModal.style.display = 'none'; }); }
+  else { socket.emit('create channel', { name }, () => { createModal.style.display = 'none'; }); }
 };
 
 // ========== НАСТРОЙКИ ==========
@@ -745,27 +628,13 @@ $('settings-btn').onclick = () => {
   visibilityEmail.checked = currentUserProfile.visibility_email !== false;
   visibilityGender.checked = currentUserProfile.visibility_gender !== false;
   visibilityBio.checked = currentUserProfile.visibility_bio !== false;
-  settingsOldPass.value = '';
-  settingsNewPass.value = '';
-  settingsPassError.textContent = '';
+  settingsOldPass.value = ''; settingsNewPass.value = ''; settingsPassError.textContent = '';
   buildEmojiPicker(settingsEmojiPicker, (emoji) => { selectedSettingsEmoji = emoji; }, currentUserProfile.avatar_url || '😊');
   renderThemeGrid();
   settingsModal.style.display = 'flex';
 };
 $('close-settings').onclick = () => { settingsModal.style.display = 'none'; };
-settingsModal.onclick = (e) => { if (e.target === settingsModal) settingsModal.style.display = 'none'; };
-
-function renderThemeGrid() {
-  themeGrid.innerHTML = '';
-  Object.entries(themes).forEach(([key, t]) => {
-    const div = document.createElement('div'); div.className = 'theme-item';
-    if (key === currentTheme) div.classList.add('active');
-    div.style.background = t.gradient;
-    div.onclick = () => { applyTheme(key); renderThemeGrid(); };
-    themeGrid.appendChild(div);
-  });
-}
-
+function renderThemeGrid() { themeGrid.innerHTML = ''; Object.entries(themes).forEach(([key, t]) => { const div = document.createElement('div'); div.className = 'theme-item'; if (key === currentTheme) div.classList.add('active'); div.style.background = t.gradient; div.onclick = () => { applyTheme(key); renderThemeGrid(); }; themeGrid.appendChild(div); }); }
 $('save-settings-btn').onclick = () => {
   const displayName = settingsNickname.value.trim();
   const alias = settingsUsernameAlias.value.trim();
@@ -783,22 +652,14 @@ $('save-settings-btn').onclick = () => {
     visibility_bio: visibilityBio.checked
   };
   socket.emit('update_profile', profileData, (res) => {
-    if (res.success) {
-      currentUserProfile = res.profile;
-      updateLocalProfileUI();
-      settingsPassError.textContent = 'Сохранено';
-      settingsPassError.style.color = '#4caf50';
-    } else {
-      settingsPassError.textContent = res.message;
-      settingsPassError.style.color = '#ff6b6b';
-    }
+    if (res.success) { currentUserProfile = res.profile; updateSidebarAvatar(); settingsPassError.textContent = 'Сохранено'; settingsPassError.style.color = '#4caf50'; }
+    else { settingsPassError.textContent = res.message; settingsPassError.style.color = '#ff6b6b'; }
   });
   const oldPass = settingsOldPass.value;
   const newPass = settingsNewPass.value;
   if (oldPass && newPass) {
     socket.emit('change password', { oldPassword: oldPass, newPassword: newPass }, (res) => {
       settingsPassError.textContent = res.success ? 'Пароль изменён' : res.message;
-      settingsPassError.style.color = res.success ? '#4caf50' : '#ff6b6b';
     });
   }
   setTimeout(() => { settingsModal.style.display = 'none'; }, 300);
@@ -807,29 +668,26 @@ $('save-settings-btn').onclick = () => {
 // ========== ПРОФИЛЬ ==========
 function showProfile(isSelf) {
   if (isSelf) {
-    const avatarEmoji = currentUserProfile?.avatar_url || currentUser?.[0]?.toUpperCase() || '?';
-    profileAvatar.textContent = avatarEmoji;
-    profileAvatar.style.backgroundImage = '';
+    profileAvatar.textContent = currentUserProfile?.avatar_url || currentUser[0].toUpperCase();
     profileName.textContent = currentUserProfile?.display_name || currentUser;
     profileDisplayName.textContent = currentUserProfile?.display_name || '';
     profileUsernameAlias.textContent = currentUserProfile?.username_alias || '';
     profileBio.textContent = currentUserProfile?.bio || '';
     profileEmail.textContent = currentUserProfile?.email || '';
-    profileGender.textContent = { male: 'Мужской', female: 'Женский', other: 'Другой' }[currentUserProfile?.gender] || '';
+    profileGender.textContent = { male:'Мужской', female:'Женский', other:'Другой' }[currentUserProfile?.gender] || '';
     selfActions.style.display = 'flex';
     contactActions.style.display = 'none';
   } else {
     socket.emit('get_user_profile', { username: activeContact }, (res) => {
       if (res.success && res.profile) {
         const p = res.profile;
-        profileAvatar.textContent = p.avatar_url || activeContact?.[0]?.toUpperCase() || '?';
-        profileAvatar.style.backgroundImage = '';
+        profileAvatar.textContent = p.avatar_url || activeContact[0].toUpperCase();
         profileName.textContent = p.display_name || activeContact;
         profileDisplayName.textContent = p.display_name || '';
         profileUsernameAlias.textContent = p.username_alias || '';
         profileBio.textContent = p.bio || '';
         profileEmail.textContent = p.email || '';
-        profileGender.textContent = { male: 'Мужской', female: 'Женский', other: 'Другой' }[p.gender] || '';
+        profileGender.textContent = { male:'Мужской', female:'Женский', other:'Другой' }[p.gender] || '';
       }
     });
     selfActions.style.display = 'none';
@@ -841,24 +699,20 @@ function showProfile(isSelf) {
 $('user-info').onclick = () => showProfile(true);
 chatAvatar.onclick = () => { if (activeType === 'user') showProfile(false); };
 $('chat-info').onclick = () => { if (activeType === 'user') showProfile(false); };
-
 $('close-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('back-btn-profile').onclick = () => { profileModal.style.display = 'none'; };
 $('logout-btn').onclick = () => { socket.emit('logout'); location.reload(); };
-
 profileSearchBtn.onclick = () => {
   if (!activeContact) return;
   const term = prompt('Поиск сообщений от ' + activeContact);
   if (!term) return;
   const allMsgs = messagesDiv.querySelectorAll('.msg');
-  let found = false;
   allMsgs.forEach(msg => {
     if (msg.dataset.user === activeContact && msg.textContent.toLowerCase().includes(term.toLowerCase())) {
       msg.style.background = 'rgba(255, 255, 0, 0.2)';
-      if (!found) { msg.scrollIntoView({ behavior: 'smooth' }); found = true; }
+      msg.scrollIntoView({ behavior: 'smooth' });
     }
   });
-  if (!found) alert('Ничего не найдено');
   setTimeout(() => allMsgs.forEach(m => m.style.background = ''), 3000);
 };
 
