@@ -1,7 +1,8 @@
 const socket = io();
-const $ = (id) => document.getElementById(id);
 
 // ========== DOM-элементы ==========
+const $ = (id) => document.getElementById(id);
+
 const loginModal = $('login-modal');
 const loginUsername = $('login-username');
 const loginPassword = $('login-password');
@@ -154,6 +155,7 @@ function applyTheme(name) {
   }
 }
 
+// ========== ЭМОДЗИ-ПИКЕР ==========
 function buildEmojiPicker(container, onSelect, currentEmoji) {
   container.innerHTML = '';
   emojiList.forEach(e => {
@@ -200,7 +202,6 @@ loginBtn.onclick = () => {
       currentUser = res.username;
       loginModal.style.display = 'none';
       appDiv.style.display = 'flex';
-
       if (res.profile) {
         currentUserProfile = res.profile;
         updateLocalProfileUI();
@@ -611,10 +612,10 @@ function stopRecording() {
 }
 
 // ========== КОНТЕКСТНОЕ МЕНЮ ==========
-document.addEventListener('click', (e) => {
+document.onclick = (e) => {
   if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
   if (!chatMenu.contains(e.target) && e.target !== chatMenuBtn) chatMenu.style.display = 'none';
-});
+};
 
 $('context-copy').onclick = () => { if (contextTarget) navigator.clipboard.writeText(contextTarget.textContent); contextMenu.style.display = 'none'; };
 $('context-reply').onclick = () => {
@@ -872,4 +873,4 @@ searchInput.oninput = () => {
 
 // ========== АДАПТИВ ==========
 $('back-btn').onclick = () => { sidebar.classList.remove('hidden'); };
-window.addEventListener('resize', () => { if (window.innerWidth > 768) sidebar.classList.remove('hidden'); });
+window.onresize = () => { if (window.innerWidth > 768) sidebar.classList.remove('hidden'); };
