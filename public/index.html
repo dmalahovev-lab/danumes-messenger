@@ -189,6 +189,16 @@
       <div class="search-wrap">
         <input id="search" class="glass-input search-input" placeholder="Поиск контактов...">
       </div>
+      <!-- ===== ЗАЯВКИ В ДРУЗЬЯ ===== -->
+<div class="friend-requests-section" id="friendRequestsSection">
+  <div class="friend-requests-header" id="friendRequestsToggle">
+    <span>📩 Заявки в друзья</span>
+    <span class="badge" id="friendRequestsBadge" style="display: none;">0</span>
+  </div>
+  <div id="pendingRequestsList" style="display: none;">
+    <!-- Список заявок будет здесь -->
+  </div>
+</div>
       <div id="chat-list" class="chat-list"></div>
     </aside>
 
@@ -267,5 +277,20 @@
       return outputArray;
     }
   </script>
+  <!-- ===== КОНТЕКСТНОЕ МЕНЮ ===== -->
+<div id="contextMenu" class="context-menu" style="display: none;">
+  <div class="context-menu-item" data-action="add-friend">
+    <span>👤</span> Добавить в друзья
+  </div>
+  <div class="context-menu-item" data-action="remove-friend" style="display: none;">
+    <span>❌</span> Удалить из друзей
+  </div>
+  <div class="context-menu-item" data-action="view-profile">
+    <span>👁️</span> Просмотр профиля
+  </div>
+  <div class="context-menu-item" data-action="start-chat">
+    <span>💬</span> Начать чат
+  </div>
+</div>
 </body>
 </html>
