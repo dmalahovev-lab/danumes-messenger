@@ -93,6 +93,10 @@ const chatMenuSearch = $('chat-menu-search');
 const recordingIndicator = $('recording-indicator');
 const recordingTimer = $('recording-timer');
 
+const imageViewer = $('image-viewer');
+const imageViewerImg = $('image-viewer-img');
+const imageViewerClose = $('image-viewer-close');
+
 let currentUser = '';
 let isLogin = true;
 let activeRoom = null;
@@ -116,7 +120,7 @@ let videoChunks = [];
 let recordingStream = null;
 let recordingStartTime = null;
 let recordingInterval = null;
-let videoPreviewEl = null; // элемент для предпросмотра видео
+let videoPreviewEl = null;
 
 const sounds = {
   message: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gA=='),
@@ -251,12 +255,7 @@ function initApp() {
   socket.emit('request all users');
 
   socket.on('online users', (users) => { onlineUsers = users; updateStatus(); renderChats(); });
-
-  socket.on('all users', (users) => {
-    allUsers = users;
-    renderChats();
-  });
-
+  socket.on('all users', (users) => { allUsers = users; renderChats(); });
   socket.on('groups list', (groups) => { allGroups = groups; renderChats(); });
   socket.on('channels list', (channels) => { allChannels = channels; renderChats(); });
 
@@ -396,7 +395,7 @@ function openChat(name, room, type) {
   updateStatus();
 }
 
-// ========== СООБЩЕНИЯ (включая медиа) ==========
+// ========== СООБЩЕНИЯ ==========
 function addMsg(user, text, time, id, replyData) {
   const div = document.createElement('div');
   div.className = `msg ${user === currentUser ? 'own' : 'other'}`;
@@ -412,7 +411,7 @@ function addMsg(user, text, time, id, replyData) {
     displayText = `<div class="video-message-container"><video controls src="${url}" style="max-width:250px;border-radius:12px;" playsinline></video></div>`;
   } else if (text.startsWith('[image]') && text.endsWith('[/image]')) {
     const url = text.slice(7, -8);
-    displayText = `<img src="${url}" style="max-width:300px;border-radius:12px;cursor:pointer;width:100%;height:auto;" loading="lazy" onclick="window.open('${url}')">`;
+    displayText = `<img src="${url}" style="max-width:300px;border-radius:12px;cursor:pointer;width:100%;height:auto;" loading="lazy" onclick="openImageViewer('${url}')">`;
   } else {
     displayText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -437,6 +436,24 @@ function addMsg(user, text, time, id, replyData) {
   messagesDiv.appendChild(div);
   messagesBox.scrollTop = messagesBox.scrollHeight;
 }
+
+// ========== ПРОСМОТР ИЗОБРАЖЕНИЙ ==========
+window.openImageViewer = function(url) {
+  imageViewerImg.src = url;
+  imageViewer.style.display = 'flex';
+};
+
+imageViewerClose.onclick = () => {
+  imageViewer.style.display = 'none';
+  imageViewerImg.src = '';
+};
+
+imageViewer.onclick = (e) => {
+  if (e.target === imageViewer) {
+    imageViewer.style.display = 'none';
+    imageViewerImg.src = '';
+  }
+};
 
 function sendMsg() {
   const text = msgInput.value.trim();
@@ -516,7 +533,6 @@ async function startVoiceRecording() {
 async function startVideoRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
-    // Создаём элемент предпросмотра
     if (!videoPreviewEl) {
       videoPreviewEl = document.createElement('video');
       videoPreviewEl.style.position = 'fixed';
@@ -552,54 +568,41 @@ function startMediaRecording(stream, mimeType) {
   };
 
   mediaRecorder.onstop = async () => {
-  recordingIndicator.style.display = 'none';
-  clearInterval(recordingInterval);
+    recordingIndicator.style.display = 'none';
+    clearInterval(recordingInterval);
 
-  // Убираем предпросмотр
-  if (videoPreviewEl) {
-    videoPreviewEl.srcObject = null;
-    if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
-    videoPreviewEl = null;
-  }
-
-  const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
-  const blob = new Blob(chunks, { type: mimeType });
-  const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
-
-  try {
-    const ext = mimeType.split('/')[1];
-    const fileName = `chat/${Date.now()}_recording.${ext}`;
-    const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
-
-    // ✅ НОВЫЙ СПОСОБ: загрузка без RLS через TUS-протокол (Resumable Upload)
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
-        'x-upsert': 'true'
-      },
-      body: blob
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(errText || 'Upload failed');
+    if (videoPreviewEl) {
+      videoPreviewEl.srcObject = null;
+      if (videoPreviewEl.parentNode) videoPreviewEl.parentNode.removeChild(videoPreviewEl);
+      videoPreviewEl = null;
     }
 
-    const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
-    socket.emit('chat message', {
-      room: activeRoom,
-      text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`,
-      id: Date.now().toString()
-    });
-  } catch (err) {
-    alert('Ошибка загрузки записи: ' + err.message);
-  }
+    const chunks = mimeType.startsWith('audio') ? audioChunks : videoChunks;
+    const blob = new Blob(chunks, { type: mimeType });
+    const prefix = mimeType.startsWith('audio') ? '[voice]' : '[video]';
 
-  // Останавливаем все треки
-  recordingStream.getTracks().forEach(track => track.stop());
-};
-  
+    try {
+      const ext = mimeType.split('/')[1];
+      const fileName = `chat/${Date.now()}_recording.${ext}`;
+      const url = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/chat-images/${fileName}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8',
+          'x-upsert': 'true'
+        },
+        body: blob
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      const publicUrl = `https://pecfhqthefjxfeokyzza.supabase.co/storage/v1/object/public/chat-images/${fileName}`;
+      socket.emit('chat message', { room: activeRoom, text: `${prefix}${publicUrl}[/${prefix.slice(1, -1)}]`, id: Date.now().toString() });
+    } catch (err) {
+      alert('Ошибка загрузки записи: ' + err.message);
+    }
+
+    recordingStream.getTracks().forEach(track => track.stop());
+  };
+
   mediaRecorder.start();
   recordingStartTime = Date.now();
   recordingIndicator.style.display = 'block';
@@ -608,7 +611,7 @@ function startMediaRecording(stream, mimeType) {
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
     recordingTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    if (elapsed >= 60) stopRecording(); // ограничение 1 минута
+    if (elapsed >= 60) stopRecording();
   }, 1000);
 }
 
