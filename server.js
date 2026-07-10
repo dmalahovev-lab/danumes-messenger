@@ -296,5 +296,273 @@ io.on('connection', (socket) => {
   });
 });
 
+// ===== ДРУЗЬЯ =====
+
+// Отправить заявку в друзья
+app.post('/api/friends/request', authenticate, async (req, res) => {
+  try {
+    const { friendId } = req.body;
+    const userId = req.user.id;
+
+    if (!friendId) {
+      return res.status(400).json({ error: 'friendId is required' });
+    }
+
+    if (userId === friendId) {
+      return res.status(400).json({ error: 'Cannot add yourself as friend' });
+    }
+
+    // Проверяем, не существует ли уже запись
+    const { data: existing } = await supabase
+      .from('friends')
+      .select('status')
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+      .or(`user_id.eq.${friendId},friend_id.eq.${friendId}`)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.status === 'accepted') {
+        return res.status(400).json({ error: 'Already friends' });
+      }
+      if (existing.status === 'pending') {
+        return res.status(400).json({ error: 'Friend request already sent' });
+      }
+    }
+
+    // Создаем заявку
+    const { data, error } = await supabase
+      .from('friends')
+      .insert({
+        user_id: userId,
+        friend_id: friendId,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Отправляем уведомление через Socket.IO
+    const friendSocketId = userSockets[friendId];
+    if (friendSocketId) {
+      io.to(friendSocketId).emit('friend_request', {
+        id: data.id,
+        userId: userId,
+        username: req.user.username,
+        nickname: req.user.nickname,
+        avatar: req.user.avatar,
+        createdAt: data.created_at
+      });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error sending friend request:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Принять заявку в друзья
+app.post('/api/friends/accept', authenticate, async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('friends')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', requestId)
+      .eq('friend_id', userId)
+      .select(`
+        *,
+        sender:user_id(id, username, nickname, avatar, email),
+        receiver:friend_id(id, username, nickname, avatar, email)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // Уведомляем отправителя
+    const senderSocketId = userSockets[data.user_id];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('friend_accepted', {
+        requestId: requestId,
+        userId: userId,
+        username: req.user.username,
+        nickname: req.user.nickname,
+        avatar: req.user.avatar
+      });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error accepting friend request:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Отклонить заявку в друзья
+app.post('/api/friends/reject', authenticate, async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('friends')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', requestId)
+      .eq('friend_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Уведомляем отправителя
+    const senderSocketId = userSockets[data.user_id];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('friend_rejected', {
+        requestId: requestId,
+        userId: userId
+      });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error rejecting friend request:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Получить список друзей и заявок
+app.get('/api/friends', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Получаем все связи пользователя
+    const { data, error } = await supabase
+      .from('friends')
+      .select(`
+        *,
+        sender:user_id(id, username, nickname, avatar, email, gender, description, visibility),
+        receiver:friend_id(id, username, nickname, avatar, email, gender, description, visibility)
+      `)
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+
+    if (error) throw error;
+
+    // Форматируем данные
+    const friends = [];
+    const pendingRequests = [];
+    const sentRequests = [];
+
+    data.forEach(item => {
+      const isSender = item.user_id === userId;
+      const otherUser = isSender ? item.receiver : item.sender;
+
+      if (item.status === 'accepted') {
+        friends.push({
+          id: item.id,
+          userId: otherUser.id,
+          username: otherUser.username,
+          nickname: otherUser.nickname,
+          avatar: otherUser.avatar,
+          email: otherUser.email,
+          gender: otherUser.gender,
+          description: otherUser.description,
+          visibility: otherUser.visibility,
+          createdAt: item.created_at
+        });
+      } else if (item.status === 'pending' && !isSender) {
+        pendingRequests.push({
+          id: item.id,
+          userId: otherUser.id,
+          username: otherUser.username,
+          nickname: otherUser.nickname,
+          avatar: otherUser.avatar,
+          createdAt: item.created_at
+        });
+      } else if (item.status === 'pending' && isSender) {
+        sentRequests.push({
+          id: item.id,
+          userId: otherUser.id,
+          username: otherUser.username,
+          nickname: otherUser.nickname,
+          avatar: otherUser.avatar,
+          createdAt: item.created_at
+        });
+      }
+    });
+
+    res.json({
+      success: true,
+      friends,
+      pendingRequests,
+      sentRequests
+    });
+  } catch (error) {
+    console.error('Error getting friends:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Удалить из друзей
+app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const friendId = req.params.friendId;
+
+    const { error } = await supabase
+      .from('friends')
+      .delete()
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+      .or(`user_id.eq.${friendId},friend_id.eq.${friendId}`)
+      .eq('status', 'accepted');
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Проверить статус дружбы
+app.get('/api/friends/status/:userId', authenticate, async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const targetUserId = req.params.userId;
+
+    const { data, error } = await supabase
+      .from('friends')
+      .select('status, id, user_id, friend_id')
+      .or(`user_id.eq.${currentUserId},friend_id.eq.${currentUserId}`)
+      .or(`user_id.eq.${targetUserId},friend_id.eq.${targetUserId}`)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    let status = 'none';
+    let requestId = null;
+    let isSender = false;
+
+    if (data) {
+      status = data.status;
+      requestId = data.id;
+      isSender = data.user_id === currentUserId;
+    }
+
+    res.json({
+      success: true,
+      status,
+      requestId,
+      isSender
+    });
+  } catch (error) {
+    console.error('Error checking friend status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server on port ${PORT}`));
