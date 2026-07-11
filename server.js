@@ -18,7 +18,7 @@ const io = new Server(server, {
   }
 });
 
-// Supabase
+// ===== SUPABASE =====
 const supabaseUrl = 'https://pecfhqthefjxfeokyzza.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -46,7 +46,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ===== ФУНКЦИЯ AUTHENTICATE (ОПРЕДЕЛЕНА В САМОМ НАЧАЛЕ) =====
+// ===== ФУНКЦИЯ AUTHENTICATE =====
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token' });
@@ -54,7 +54,7 @@ const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const { data: user } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', decoded.id)
       .single();
@@ -68,13 +68,16 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+// ========================================
 // ===== АУТЕНТИФИКАЦИЯ =====
+// ========================================
+
 app.post('/api/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
     
     const { data: existing } = await supabase
-      .from('profiles')
+      .from('users')
       .select('username')
       .eq('username', username)
       .maybeSingle();
@@ -86,7 +89,7 @@ app.post('/api/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const { data: user, error } = await supabase
-      .from('profiles')
+      .from('users')
       .insert({
         username,
         email,
@@ -113,7 +116,7 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
     const { data: user, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('username', username)
       .maybeSingle();
@@ -145,7 +148,7 @@ app.put('/api/profile', authenticate, async (req, res) => {
     const userId = req.user.id;
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .update({
         avatar: avatar || req.user.avatar,
         nickname: nickname || req.user.nickname,
@@ -168,7 +171,10 @@ app.put('/api/profile', authenticate, async (req, res) => {
   }
 });
 
+// ========================================
 // ===== ЧАТЫ =====
+// ========================================
+
 app.get('/api/chats', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -194,7 +200,7 @@ app.get('/api/chats', authenticate, async (req, res) => {
         const otherUserId = chat.participants.find(id => id !== userId);
         if (otherUserId) {
           const { data: user } = await supabase
-            .from('profiles')
+            .from('users')
             .select('id, username, nickname, avatar')
             .eq('id', otherUserId)
             .single();
@@ -256,7 +262,10 @@ app.post('/api/chats', authenticate, async (req, res) => {
   }
 });
 
+// ========================================
 // ===== СООБЩЕНИЯ =====
+// ========================================
+
 app.get('/api/messages/:chatId', authenticate, async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -369,7 +378,10 @@ app.delete('/api/messages/:messageId', authenticate, async (req, res) => {
   }
 });
 
+// ========================================
 // ===== РЕАКЦИИ =====
+// ========================================
+
 app.post('/api/messages/:messageId/reactions', authenticate, async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -411,7 +423,10 @@ app.post('/api/messages/:messageId/reactions', authenticate, async (req, res) =>
   }
 });
 
+// ========================================
 // ===== ЗАГРУЗКА ФАЙЛОВ =====
+// ========================================
+
 app.post('/api/upload', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -428,7 +443,10 @@ app.post('/api/upload', authenticate, upload.single('file'), async (req, res) =>
 
 app.use('/uploads', express.static('uploads'));
 
+// ========================================
 // ===== ДРУЗЬЯ =====
+// ========================================
+
 app.post('/api/friends/request', authenticate, async (req, res) => {
   try {
     const { friendId } = req.body;
@@ -682,7 +700,10 @@ app.get('/api/friends/status/:userId', authenticate, async (req, res) => {
   }
 });
 
+// ========================================
 // ===== SOCKET.IO =====
+// ========================================
+
 const userSockets = {};
 
 io.on('connection', (socket) => {
@@ -728,7 +749,10 @@ io.on('connection', (socket) => {
   });
 });
 
+// ========================================
 // ===== ЗАПУСК =====
+// ========================================
+
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📍 http://localhost:${PORT}`);
