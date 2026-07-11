@@ -15,21 +15,171 @@
 <body>
   <div class="app-bg"></div>
 
-  <!-- Логин -->
-  <div id="login-modal" class="modal-overlay">
-    <div class="modal-card">
-      <h2 id="modal-title">Вход</h2>
-      <p id="modal-sub" class="modal-sub">Войдите в аккаунт</p>
-      <input id="login-username" class="glass-input" placeholder="Логин" autocomplete="username" maxlength="15">
-      <input id="login-password" type="password" class="glass-input" placeholder="Пароль" autocomplete="current-password">
-      <div id="login-error" class="error-msg"></div>
-      <button id="login-btn" class="btn-primary">Войти</button>
-      <p id="toggle-text" class="toggle-text">
-        Нет аккаунта? <a href="#" id="toggle-link">Зарегистрироваться</a>
-      </p>
-    </div>
-  </div>
+// ===== АУТЕНТИФИКАЦИЯ =====
+async function checkAuth() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showLogin();
+    return;
+  }
 
+  try {
+    const response = await fetch('/api/me', {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const user = await response.json();
+      currentUser = user;
+      showApp();
+      await loadChats();
+      await loadFriends();
+      
+      // Регистрируем сокет
+      if (socket) {
+        socket.emit('register', currentUser.id);
+      }
+      
+      return;
+    }
+  } catch (error) {
+    console.error('Auth error:', error);
+  }
+
+  localStorage.removeItem('token');
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('registerPage').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showRegister() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('registerPage').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('registerPage').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  updateUserProfile();
+}
+
+// ===== ОБРАБОТЧИКИ ФОРМ =====
+function initAuthListeners() {
+  // Логин
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('Login form submitted');
+      
+      const username = document.getElementById('loginUsername')?.value;
+      const password = document.getElementById('loginPassword')?.value;
+      
+      if (!username || !password) {
+        showToast('❌ Заполните все поля');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        console.log('Login response:', data);
+        
+        if (data.success) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          showApp();
+          await loadChats();
+          await loadFriends();
+          
+          if (socket) {
+            socket.emit('register', currentUser.id);
+          }
+          
+          showToast('✅ Добро пожаловать!');
+        } else {
+          showToast('❌ ' + (data.error || 'Ошибка входа'));
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showToast('❌ Ошибка соединения с сервером');
+      }
+    });
+  }
+
+  // Регистрация
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('Register form submitted');
+      
+      const username = document.getElementById('registerUsername')?.value;
+      const email = document.getElementById('registerEmail')?.value;
+      const password = document.getElementById('registerPassword')?.value;
+      
+      if (!username || !email || !password) {
+        showToast('❌ Заполните все поля');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+        console.log('Register response:', data);
+        
+        if (data.success) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          showApp();
+          await loadChats();
+          await loadFriends();
+          
+          if (socket) {
+            socket.emit('register', currentUser.id);
+          }
+          
+          showToast('✅ Регистрация успешна!');
+        } else {
+          showToast('❌ ' + (data.error || 'Ошибка регистрации'));
+        }
+      } catch (error) {
+        console.error('Register error:', error);
+        showToast('❌ Ошибка соединения с сервером');
+      }
+    });
+  }
+
+  // Переключение между формами
+  document.getElementById('showRegister')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showRegister();
+  });
+
+  document.getElementById('showLogin')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showLogin();
+  });
+}
   <!-- Оформление профиля -->
   <div id="profile-setup-modal" class="modal-overlay" style="display:none">
     <div class="modal-card profile-setup-card">
