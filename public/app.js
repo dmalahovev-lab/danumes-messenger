@@ -1321,4 +1321,83 @@ toastStyle.textContent = `
 `;
 document.head.appendChild(toastStyle);
 
+// ===== ПОИСК ПОЛЬЗОВАТЕЛЕЙ =====
+document.getElementById('searchInput').addEventListener('input', async function() {
+  const query = this.value.trim();
+  const resultsContainer = document.getElementById('searchResults');
+  
+  if (query.length < 1) {
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/search/users?query=${encodeURIComponent(query)}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    const data = await response.json();
+    
+    if (data.success && data.users.length > 0) {
+      resultsContainer.innerHTML = data.users.map(user => `
+        <div class="search-result-item" data-user-id="${user.id}">
+          <div class="avatar">${user.avatar_url || '👤'}${user.verified ? ' ✅' : ''}</div>
+          <div>
+            <div class="name">${user.display_name || user.username}</div>
+            <div class="username">@${user.username}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      resultsContainer.style.display = 'block';
+      
+      // Клик по результату
+      resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const userId = this.dataset.userId;
+          resultsContainer.style.display = 'none';
+          document.getElementById('searchInput').value = '';
+          startChatWithUser(userId);
+        });
+      });
+    } else {
+      resultsContainer.innerHTML = '<div style="padding:12px 16px;color:rgba(255,255,255,0.2);font-size:13px;">Пользователи не найдены</div>';
+      resultsContainer.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+  }
+});
+
+// Закрываем поиск при клике вне
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+// ===== ПРИ РЕГИСТРАЦИИ ПОКАЗЫВАЕМ ОФОРМЛЕНИЕ ПРОФИЛЯ =====
+// После успешной регистрации открываем настройки
+// Добавь это в функцию регистрации после showApp():
+// openSettings();
+// И показываем сообщение "Заполните профиль"
+
+// ===== ТЕМЫ =====
+// В функции saveSettings добавь:
+document.documentElement.setAttribute('data-theme', theme);
+
+// При загрузке применяем тему из профиля
+if (currentUser && currentUser.theme) {
+  document.documentElement.setAttribute('data-theme', currentUser.theme);
+}
+
+// В initEventListeners добавь выбор темы:
+document.querySelectorAll('.theme-selector button').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.theme-selector button').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('settingsTheme').value = this.dataset.theme;
+  });
+});
+
 console.log('✅ Danumes полностью загружен!');
