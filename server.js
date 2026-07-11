@@ -3,9 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -30,36 +27,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Создаем папку для загрузок
-const uploadDir = './uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage });
-
-// ===== ФУНКЦИЯ AUTHENTICATE =====
+// ===== AUTHENTICATE =====
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const { data: user } = await supabase
+    const { data: user, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', decoded.id)
       .single();
     
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (error || !user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
     
     req.user = user;
     next();
@@ -72,10 +55,12 @@ const authenticate = async (req, res, next) => {
 // ===== АУТЕНТИФИКАЦИЯ =====
 // ========================================
 
+// РЕГИСТРАЦИЯ
 app.post('/api/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
     
+    // Проверяем, есть ли пользователь
     const { data: existing } = await supabase
       .from('users')
       .select('username')
@@ -88,20 +73,30 @@ app.post('/api/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    // Вставляем пользователя с правильными полями
     const { data: user, error } = await supabase
       .from('users')
       .insert({
-        username,
-        email,
-        password: hashedPassword,
-        avatar: '👤',
-        nickname: username,
-        created_at: new Date().toISOString()
+        username: username,
+        username_alias: '@' + username,
+        email: email,
+        password_hash: hashedPassword,
+        display_name: username,
+        avatar_url: '👤',
+        created_at: new Date().toISOString(),
+        profile_setup_complete: false,
+        verified: false,
+        visibility_email: true,
+        visibility_gender: true,
+        visibility_bio: true
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return res.status(500).json({ error: error.message });
+    }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ success: true, token, user });
@@ -111,6 +106,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+// ЛОГИН
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -125,7 +121,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -138,27 +134,44 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// ПОЛУЧИТЬ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
 app.get('/api/me', authenticate, async (req, res) => {
   res.json(req.user);
 });
 
+// ОБНОВИТЬ ПРОФИЛЬ
 app.put('/api/profile', authenticate, async (req, res) => {
   try {
-    const { avatar, nickname, email, gender, description, visibility, theme } = req.body;
+    const { 
+      avatar_url, 
+      display_name, 
+      email, 
+      gender, 
+      bio,
+      visibility_email,
+      visibility_gender,
+      visibility_bio,
+      theme 
+    } = req.body;
+    
     const userId = req.user.id;
+
+    const updateData = {};
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+    if (display_name !== undefined) updateData.display_name = display_name;
+    if (email !== undefined) updateData.email = email;
+    if (gender !== undefined) updateData.gender = gender;
+    if (bio !== undefined) updateData.bio = bio;
+    if (visibility_email !== undefined) updateData.visibility_email = visibility_email;
+    if (visibility_gender !== undefined) updateData.visibility_gender = visibility_gender;
+    if (visibility_bio !== undefined) updateData.visibility_bio = visibility_bio;
+    if (theme !== undefined) updateData.theme = theme;
+    
+    updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('users')
-      .update({
-        avatar: avatar || req.user.avatar,
-        nickname: nickname || req.user.nickname,
-        email: email || req.user.email,
-        gender: gender || req.user.gender,
-        description: description || req.user.description,
-        visibility: visibility || req.user.visibility,
-        theme: theme || req.user.theme,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();
@@ -181,35 +194,25 @@ app.get('/api/chats', authenticate, async (req, res) => {
 
     const { data: chats, error } = await supabase
       .from('chats')
-      .select(`
-        *,
-        messages:messages(
-          id, content, sender_id, created_at, type, file_url,
-          sender:sender_id(id, username, nickname, avatar)
-        )
-      `)
+      .select('*')
       .contains('participants', [userId])
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
 
     const formattedChats = await Promise.all(chats.map(async (chat) => {
-      let chatData = { ...chat };
+      let chatData = { ...chat, messages: [] };
       
       if (chat.type === 'personal') {
         const otherUserId = chat.participants.find(id => id !== userId);
         if (otherUserId) {
           const { data: user } = await supabase
             .from('users')
-            .select('id, username, nickname, avatar')
+            .select('id, username, username_alias, display_name, avatar_url, verified')
             .eq('id', otherUserId)
             .single();
           chatData.otherUser = user;
         }
-      }
-
-      if (chatData.messages) {
-        chatData.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       }
 
       return chatData;
@@ -273,7 +276,7 @@ app.get('/api/messages/:chatId', authenticate, async (req, res) => {
       .from('messages')
       .select(`
         *,
-        sender:sender_id(id, username, nickname, avatar)
+        sender:sender_id(id, username, display_name, avatar_url)
       `)
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
@@ -304,7 +307,7 @@ app.post('/api/messages', authenticate, async (req, res) => {
       })
       .select(`
         *,
-        sender:sender_id(id, username, nickname, avatar)
+        sender:sender_id(id, username, display_name, avatar_url)
       `)
       .single();
 
@@ -341,7 +344,7 @@ app.put('/api/messages/:messageId', authenticate, async (req, res) => {
       .eq('sender_id', userId)
       .select(`
         *,
-        sender:sender_id(id, username, nickname, avatar)
+        sender:sender_id(id, username, display_name, avatar_url)
       `)
       .single();
 
@@ -424,26 +427,6 @@ app.post('/api/messages/:messageId/reactions', authenticate, async (req, res) =>
 });
 
 // ========================================
-// ===== ЗАГРУЗКА ФАЙЛОВ =====
-// ========================================
-
-app.post('/api/upload', authenticate, upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ success: true, fileUrl });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.use('/uploads', express.static('uploads'));
-
-// ========================================
 // ===== ДРУЗЬЯ =====
 // ========================================
 
@@ -494,8 +477,8 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
         id: data.id,
         userId: userId,
         username: req.user.username,
-        nickname: req.user.nickname,
-        avatar: req.user.avatar,
+        display_name: req.user.display_name,
+        avatar_url: req.user.avatar_url,
         createdAt: data.created_at
       });
     }
@@ -519,8 +502,8 @@ app.post('/api/friends/accept', authenticate, async (req, res) => {
       .eq('friend_id', userId)
       .select(`
         *,
-        sender:user_id(id, username, nickname, avatar, email),
-        receiver:friend_id(id, username, nickname, avatar, email)
+        sender:user_id(id, username, display_name, avatar_url),
+        receiver:friend_id(id, username, display_name, avatar_url)
       `)
       .single();
 
@@ -532,8 +515,8 @@ app.post('/api/friends/accept', authenticate, async (req, res) => {
         requestId: requestId,
         userId: userId,
         username: req.user.username,
-        nickname: req.user.nickname,
-        avatar: req.user.avatar
+        display_name: req.user.display_name,
+        avatar_url: req.user.avatar_url
       });
     }
 
@@ -582,8 +565,8 @@ app.get('/api/friends', authenticate, async (req, res) => {
       .from('friends')
       .select(`
         *,
-        sender:user_id(id, username, nickname, avatar, email, gender, description, visibility),
-        receiver:friend_id(id, username, nickname, avatar, email, gender, description, visibility)
+        sender:user_id(id, username, display_name, avatar_url),
+        receiver:friend_id(id, username, display_name, avatar_url)
       `)
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
@@ -591,7 +574,6 @@ app.get('/api/friends', authenticate, async (req, res) => {
 
     const friends = [];
     const pendingRequests = [];
-    const sentRequests = [];
 
     data.forEach(item => {
       const isSender = item.user_id === userId;
@@ -602,12 +584,8 @@ app.get('/api/friends', authenticate, async (req, res) => {
           id: item.id,
           userId: otherUser.id,
           username: otherUser.username,
-          nickname: otherUser.nickname,
-          avatar: otherUser.avatar,
-          email: otherUser.email,
-          gender: otherUser.gender,
-          description: otherUser.description,
-          visibility: otherUser.visibility,
+          display_name: otherUser.display_name,
+          avatar_url: otherUser.avatar_url,
           createdAt: item.created_at
         });
       } else if (item.status === 'pending' && !isSender) {
@@ -615,17 +593,8 @@ app.get('/api/friends', authenticate, async (req, res) => {
           id: item.id,
           userId: otherUser.id,
           username: otherUser.username,
-          nickname: otherUser.nickname,
-          avatar: otherUser.avatar,
-          createdAt: item.created_at
-        });
-      } else if (item.status === 'pending' && isSender) {
-        sentRequests.push({
-          id: item.id,
-          userId: otherUser.id,
-          username: otherUser.username,
-          nickname: otherUser.nickname,
-          avatar: otherUser.avatar,
+          display_name: otherUser.display_name,
+          avatar_url: otherUser.avatar_url,
           createdAt: item.created_at
         });
       }
@@ -635,7 +604,7 @@ app.get('/api/friends', authenticate, async (req, res) => {
       success: true,
       friends,
       pendingRequests,
-      sentRequests
+      sentRequests: []
     });
   } catch (error) {
     console.error('Error getting friends:', error);
