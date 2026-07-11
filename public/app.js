@@ -4,12 +4,15 @@ let currentChat = null;
 let socket = null;
 let chats = [];
 let messages = {};
+
+// ===== СОСТОЯНИЕ ДЛЯ ДРУЗЕЙ =====
 let friendsState = {
   friends: [],
   pendingRequests: [],
   sentRequests: [],
   requestCount: 0
 };
+
 let emojis = ['😀', '😁', '😂', '🤣', '😊', '😍', '🥰', '😘', '😗', '😙',
   '😚', '🥲', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
   '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
@@ -25,8 +28,15 @@ let emojis = ['😀', '😁', '😂', '🤣', '😊', '😍', '🥰', '😘', '�
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
+  console.log('🚀 Danumes инициализируется...');
+  
+  // Инициализируем Socket
   initSocket();
+  
+  // Проверяем авторизацию
+  await checkAuth();
+  
+  // Инициализируем все обработчики
   initEventListeners();
   initEmojiGrid();
   initContextMenu();
@@ -35,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Загружаем друзей
   await loadFriends();
 
-  // Обработчик правого клика
+  // Обработчик правого клика для добавления в друзья
   document.addEventListener('contextmenu', async (e) => {
     const chatItem = e.target.closest('.chat-item');
     if (chatItem && chatItem.dataset.userId) {
@@ -48,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Toggle заявок
+  // Toggle заявок в друзья
   const toggle = document.getElementById('friendRequestsToggle');
   const list = document.getElementById('pendingRequestsList');
   if (toggle && list) {
@@ -61,6 +71,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  console.log('✅ Danumes готов к работе!');
 });
 
 // ===== АУТЕНТИФИКАЦИЯ =====
@@ -73,7 +85,10 @@ async function checkAuth() {
 
   try {
     const response = await fetch('/api/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
 
     if (response.ok) {
@@ -81,6 +96,12 @@ async function checkAuth() {
       currentUser = user;
       showApp();
       await loadChats();
+      await loadFriends();
+      
+      if (socket) {
+        socket.emit('register', currentUser.id);
+      }
+      
       return;
     }
   } catch (error) {
@@ -92,21 +113,34 @@ async function checkAuth() {
 }
 
 function showLogin() {
-  document.getElementById('loginPage').style.display = 'flex';
-  document.getElementById('registerPage').style.display = 'none';
-  document.getElementById('app').style.display = 'none';
+  const loginPage = document.getElementById('loginPage');
+  const registerPage = document.getElementById('registerPage');
+  const app = document.getElementById('app');
+  
+  if (loginPage) loginPage.style.display = 'flex';
+  if (registerPage) registerPage.style.display = 'none';
+  if (app) app.style.display = 'none';
 }
 
 function showRegister() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('registerPage').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
+  const loginPage = document.getElementById('loginPage');
+  const registerPage = document.getElementById('registerPage');
+  const app = document.getElementById('app');
+  
+  if (loginPage) loginPage.style.display = 'none';
+  if (registerPage) registerPage.style.display = 'flex';
+  if (app) app.style.display = 'none';
 }
 
 function showApp() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('registerPage').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
+  const loginPage = document.getElementById('loginPage');
+  const registerPage = document.getElementById('registerPage');
+  const app = document.getElementById('app');
+  
+  if (loginPage) loginPage.style.display = 'none';
+  if (registerPage) registerPage.style.display = 'none';
+  if (app) app.style.display = 'flex';
+  
   updateUserProfile();
 }
 
@@ -178,68 +212,109 @@ function initSocket() {
 // ===== СОБЫТИЯ =====
 function initEventListeners() {
   // Логин
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
-
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        currentUser = data.user;
-        showApp();
-        await loadChats();
-        socket.emit('register', currentUser.id);
-      } else {
-        showToast('❌ ' + data.error);
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('loginUsername')?.value;
+      const password = document.getElementById('loginPassword')?.value;
+      
+      if (!username || !password) {
+        showToast('❌ Заполните все поля');
+        return;
       }
-    } catch (error) {
-      showToast('❌ Ошибка входа');
-    }
-  });
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          showApp();
+          await loadChats();
+          await loadFriends();
+          
+          if (socket) {
+            socket.emit('register', currentUser.id);
+          }
+          
+          showToast('✅ Добро пожаловать!');
+        } else {
+          showToast('❌ ' + (data.error || 'Ошибка входа'));
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showToast('❌ Ошибка соединения с сервером');
+      }
+    });
+  }
 
   // Регистрация
-  document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('registerUsername').value;
-    const email = document.getElementById('registerEmail').value;
-    const password = document.getElementById('registerPassword').value;
-
-    try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        currentUser = data.user;
-        showApp();
-        await loadChats();
-        socket.emit('register', currentUser.id);
-        showToast('✅ Регистрация успешна!');
-      } else {
-        showToast('❌ ' + data.error);
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('registerUsername')?.value;
+      const email = document.getElementById('registerEmail')?.value;
+      const password = document.getElementById('registerPassword')?.value;
+      
+      if (!username || !email || !password) {
+        showToast('❌ Заполните все поля');
+        return;
       }
-    } catch (error) {
-      showToast('❌ Ошибка регистрации');
-    }
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          localStorage.setItem('token', data.token);
+          currentUser = data.user;
+          showApp();
+          await loadChats();
+          await loadFriends();
+          
+          if (socket) {
+            socket.emit('register', currentUser.id);
+          }
+          
+          showToast('✅ Регистрация успешна!');
+        } else {
+          showToast('❌ ' + (data.error || 'Ошибка регистрации'));
+        }
+      } catch (error) {
+        console.error('Register error:', error);
+        showToast('❌ Ошибка соединения с сервером');
+      }
+    });
+  }
+
+  // Переключение между формами
+  document.getElementById('showRegister')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showRegister();
   });
 
-  document.getElementById('showRegister').addEventListener('click', showRegister);
-  document.getElementById('showLogin').addEventListener('click', showLogin);
+  document.getElementById('showLogin')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showLogin();
+  });
 
   // Выход
-  document.getElementById('logoutBtn').addEventListener('click', () => {
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
     localStorage.removeItem('token');
     currentUser = null;
     showLogin();
@@ -247,17 +322,17 @@ function initEventListeners() {
   });
 
   // Настройки
-  document.getElementById('settingsBtn').addEventListener('click', openSettings);
-  document.getElementById('settingsClose').addEventListener('click', closeSettings);
+  document.getElementById('settingsBtn')?.addEventListener('click', openSettings);
+  document.getElementById('settingsClose')?.addEventListener('click', closeSettings);
 
-  document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+  document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveSettings();
   });
 
   // Отправка сообщения
-  document.getElementById('sendBtn').addEventListener('click', sendMessage);
-  document.getElementById('messageInput').addEventListener('keydown', (e) => {
+  document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
+  document.getElementById('messageInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -265,13 +340,13 @@ function initEventListeners() {
   });
 
   // Поиск
-  document.getElementById('searchInput').addEventListener('input', searchChats);
+  document.getElementById('searchInput')?.addEventListener('input', searchChats);
 
   // Эмодзи
-  document.getElementById('emojiBtn').addEventListener('click', toggleEmojiPicker);
+  document.getElementById('emojiBtn')?.addEventListener('click', toggleEmojiPicker);
 
   // Прикрепление файла
-  document.getElementById('attachBtn').addEventListener('click', () => {
+  document.getElementById('attachBtn')?.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*,audio/*,video/*';
@@ -283,14 +358,14 @@ function initEventListeners() {
   });
 
   // Назад (мобилка)
-  document.getElementById('backBtn').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('chatArea').classList.remove('chat-open');
+  document.getElementById('backBtn')?.addEventListener('click', () => {
+    document.getElementById('sidebar')?.classList.remove('hidden');
+    document.getElementById('chatArea')?.classList.remove('chat-open');
   });
 
   // Закрытие модалки изображений
-  document.getElementById('imageModalClose').addEventListener('click', closeImageModal);
-  document.getElementById('imageModal').addEventListener('click', (e) => {
+  document.getElementById('imageModalClose')?.addEventListener('click', closeImageModal);
+  document.getElementById('imageModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeImageModal();
   });
 
@@ -299,9 +374,9 @@ function initEventListeners() {
   let audioChunks = [];
   let isRecording = false;
 
-  document.getElementById('voiceBtn').addEventListener('mousedown', startRecording);
-  document.getElementById('voiceBtn').addEventListener('mouseup', stopRecording);
-  document.getElementById('voiceBtn').addEventListener('mouseleave', stopRecording);
+  document.getElementById('voiceBtn')?.addEventListener('mousedown', startRecording);
+  document.getElementById('voiceBtn')?.addEventListener('mouseup', stopRecording);
+  document.getElementById('voiceBtn')?.addEventListener('mouseleave', stopRecording);
 
   async function startRecording() {
     if (!currentChat) return;
@@ -360,7 +435,9 @@ async function loadChats() {
 
 function renderChats() {
   const container = document.getElementById('chatList');
-  const search = document.getElementById('searchInput').value.toLowerCase();
+  if (!container) return;
+  
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
   let filtered = chats;
   if (search) {
@@ -416,7 +493,6 @@ function renderChats() {
     `;
   }).join('');
 
-  // Обработчики
   container.querySelectorAll('.chat-item').forEach(item => {
     item.addEventListener('click', () => {
       const chatId = item.dataset.chatId;
@@ -434,16 +510,13 @@ async function openChat(chat) {
   currentChat = chat;
   renderChats();
 
-  // На мобилке
   if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.add('hidden');
-    document.getElementById('chatArea').classList.add('chat-open');
+    document.getElementById('sidebar')?.classList.add('hidden');
+    document.getElementById('chatArea')?.classList.add('chat-open');
   }
 
-  // Загружаем сообщения
   await loadMessages(chat.id);
 
-  // Заголовок
   let name = chat.name || 'Чат';
   let avatar = '💬';
   if (chat.type === 'personal' && chat.otherUser) {
@@ -455,7 +528,6 @@ async function openChat(chat) {
   document.getElementById('chatUserName').textContent = name;
   document.getElementById('chatUserStatus').textContent = 'В сети';
 
-  // Вход в комнату
   socket.emit('join_chat', chat.id);
 }
 
@@ -477,6 +549,8 @@ async function loadMessages(chatId) {
 
 function renderMessages() {
   const container = document.getElementById('messages');
+  if (!container) return;
+  
   const chatMessages = messages[currentChat?.id] || [];
 
   if (chatMessages.length === 0) {
@@ -503,7 +577,6 @@ function renderMessages() {
       </div>`;
     }
 
-    // Реакции
     let reactionsHtml = '';
     if (msg.reactions) {
       const reactionGroups = {};
@@ -534,14 +607,17 @@ function renderMessages() {
     `;
   }).join('');
 
-  // Скролл вниз
   const container2 = document.getElementById('messagesContainer');
-  container2.scrollTop = container2.scrollHeight;
+  if (container2) {
+    container2.scrollTop = container2.scrollHeight;
+  }
 }
 
 // ===== СООБЩЕНИЯ =====
 async function sendMessage() {
   const input = document.getElementById('messageInput');
+  if (!input) return;
+  
   const content = input.value.trim();
   if (!content || !currentChat) return;
 
@@ -562,7 +638,6 @@ async function sendMessage() {
     const data = await response.json();
     if (data.success) {
       input.value = '';
-      // Сообщение добавится через Socket
     }
   } catch (error) {
     console.error('Error sending message:', error);
@@ -584,7 +659,6 @@ async function uploadFile(file) {
 
     const data = await response.json();
     if (data.success) {
-      // Отправляем сообщение с файлом
       const type = file.type.startsWith('image/') ? 'image' : 
                    file.type.startsWith('audio/') ? 'voice' : 'file';
 
@@ -622,7 +696,6 @@ async function toggleReaction(messageId, reaction) {
 
     const data = await response.json();
     if (data.success) {
-      // Обновляем локально
       const chatMessages = messages[currentChat?.id];
       if (chatMessages) {
         const msg = chatMessages.find(m => m.id === messageId);
@@ -641,6 +714,8 @@ async function toggleReaction(messageId, reaction) {
 function openSettings() {
   if (!currentUser) return;
   const modal = document.getElementById('settingsModal');
+  if (!modal) return;
+  
   modal.style.display = 'flex';
 
   document.getElementById('settingsUsername').value = currentUser.username || '';
@@ -653,18 +728,20 @@ function openSettings() {
   document.getElementById('visibilityDescription').checked = currentUser.visibility?.description !== false;
   document.getElementById('settingsTheme').value = currentUser.theme || 'blue';
 
-  // Аватар
   document.querySelectorAll('#emojiGrid button').forEach(btn => {
     btn.classList.toggle('active', btn.textContent === currentUser.avatar);
   });
 }
 
 function closeSettings() {
-  document.getElementById('settingsModal').style.display = 'none';
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'none';
 }
 
 function initEmojiGrid() {
   const grid = document.getElementById('emojiGrid');
+  if (!grid) return;
+  
   grid.innerHTML = emojis.map(emoji => 
     `<button type="button" onclick="selectAvatar('${emoji}')">${emoji}</button>`
   ).join('');
@@ -716,6 +793,7 @@ async function saveSettings() {
 
 function updateUserProfile() {
   if (!currentUser) return;
+  
   document.getElementById('userAvatar').textContent = currentUser.avatar || '👤';
   document.getElementById('userName').textContent = currentUser.nickname || currentUser.username;
   document.getElementById('userStatus').textContent = 'В сети';
@@ -762,7 +840,11 @@ function showToast(message) {
   }, 3000);
 }
 
-// ===== ДРУЗЬЯ =====
+// ==========================================
+// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ДРУЗЬЯМИ =====
+// ==========================================
+
+// Загрузка списка друзей
 async function loadFriends() {
   try {
     const token = localStorage.getItem('token');
@@ -791,6 +873,7 @@ async function loadFriends() {
   }
 }
 
+// Отправить заявку в друзья
 async function sendFriendRequest(userId) {
   try {
     const token = localStorage.getItem('token');
@@ -821,6 +904,7 @@ async function sendFriendRequest(userId) {
   }
 }
 
+// Принять заявку в друзья
 async function acceptFriendRequest(requestId) {
   try {
     const token = localStorage.getItem('token');
@@ -852,6 +936,7 @@ async function acceptFriendRequest(requestId) {
   }
 }
 
+// Отклонить заявку в друзья
 async function rejectFriendRequest(requestId) {
   try {
     const token = localStorage.getItem('token');
@@ -882,6 +967,7 @@ async function rejectFriendRequest(requestId) {
   }
 }
 
+// Удалить из друзей
 async function removeFriend(friendId) {
   if (!confirm('Удалить пользователя из друзей?')) return;
   
@@ -911,6 +997,7 @@ async function removeFriend(friendId) {
   }
 }
 
+// Проверить статус дружбы
 async function checkFriendStatus(userId) {
   try {
     const token = localStorage.getItem('token');
@@ -931,6 +1018,7 @@ async function checkFriendStatus(userId) {
   }
 }
 
+// Обновить UI заявок в друзья
 function updatePendingRequestsUI() {
   const pendingRequests = friendsState.pendingRequests || [];
   const requestCount = pendingRequests.length;
@@ -981,6 +1069,7 @@ function updatePendingRequestsUI() {
   });
 }
 
+// Показать контекстное меню
 function showContextMenu(e, userId, username, nickname, avatar) {
   e.preventDefault();
   e.stopPropagation();
@@ -1044,6 +1133,7 @@ function showContextMenu(e, userId, username, nickname, avatar) {
   });
 }
 
+// Скрыть контекстное меню
 function hideContextMenu() {
   const menu = document.getElementById('contextMenu');
   if (menu) {
@@ -1051,6 +1141,7 @@ function hideContextMenu() {
   }
 }
 
+// Инициализация контекстного меню
 function initContextMenu() {
   const menu = document.getElementById('contextMenu');
   if (!menu) return;
@@ -1092,6 +1183,7 @@ function initContextMenu() {
   });
 }
 
+// Начать чат с пользователем
 function startChatWithUser(userId) {
   let existingChat = null;
   
@@ -1110,6 +1202,7 @@ function startChatWithUser(userId) {
   }
 }
 
+// Создать личный чат
 async function createPersonalChat(userId) {
   try {
     const response = await fetch('/api/chats', {
@@ -1136,6 +1229,7 @@ async function createPersonalChat(userId) {
   }
 }
 
+// Socket.IO обработчики для друзей
 function initFriendSocketHandlers() {
   if (typeof socket === 'undefined' || !socket) {
     console.log('Socket not initialized yet');
@@ -1170,6 +1264,18 @@ function initFriendSocketHandlers() {
     showToast(`😔 ${data.username} отклонил(а) вашу заявку в друзья`);
     loadFriends();
   });
+}
+
+// Функция для эмодзи пикера
+function toggleEmojiPicker() {
+  // Если у тебя есть эмодзи пикер - добавь логику сюда
+  // Или просто вставь эмодзи в поле ввода
+  const input = document.getElementById('messageInput');
+  if (input) {
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    input.value += randomEmoji;
+    input.focus();
+  }
 }
 
 // ===== СТИЛИ ДЛЯ TOAST =====
@@ -1215,4 +1321,4 @@ toastStyle.textContent = `
 `;
 document.head.appendChild(toastStyle);
 
-console.log('✅ Danumes загружен!');
+console.log('✅ Danumes полностью загружен!');
