@@ -1,304 +1,434 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
+// Supabase
 const supabaseUrl = 'https://pecfhqthefjxfeokyzza.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlY2ZocXRoZWZqeGZlb2t5enphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1NjQ0NTYsImV4cCI6MjA5OTE0MDQ1Nn0.TT8fPOoLiVx3GNx5XMtNJtHusefZWQRKM_hDxPJRUO8';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const sessions = new Map();
-const onlineUsers = new Set();
-const groups = [];
-const channels = [];
+const JWT_SECRET = 'danumes-secret-key-2026';
+const PORT = process.env.PORT || 3000;
 
-async function loadGroups() {
-  const { data } = await supabase.from('groups_table').select('*');
-  if (data) groups.push(...data);
-}
-async function loadChannels() {
-  const { data } = await supabase.from('channels_table').select('*');
-  if (data) channels.push(...data);
-}
-loadGroups();
-loadChannels();
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
 
-function broadcastOnlineUsers() {
-  io.emit('online users', Array.from(onlineUsers));
+// Создаем папку для загрузок
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
 }
 
-io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
-  // ===== АВТО-ВХОД =====
-  socket.on('auto_login', async (data, cb) => {
-    try {
-      const { token } = data;
-      if (!token) return cb({ success: false });
-      const { data: user } = await supabase.from('users').select('*').eq('username', token).single();
-      if (!user) return cb({ success: false });
-      if (onlineUsers.has(token)) {
-        sessions.set(socket.id, token);
-        cb({ success: true, username: token, profile: user });
-        socket.emit('groups list', groups);
-        socket.emit('channels list', channels);
-        return;
-      }
-      sessions.set(socket.id, token);
-      onlineUsers.add(token);
-      cb({ success: true, username: token, profile: user });
-      broadcastOnlineUsers();
-      socket.emit('groups list', groups);
-      socket.emit('channels list', channels);
-    } catch (err) {
-      cb({ success: false });
+// ===== ФУНКЦИЯ AUTHENTICATE (ОПРЕДЕЛЕНА В САМОМ НАЧАЛЕ) =====
+const authenticate = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', decoded.id)
+      .single();
+    
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// ===== АУТЕНТИФИКАЦИЯ =====
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', username)
+      .maybeSingle();
+    
+    if (existing) {
+      return res.status(400).json({ error: 'Username already exists' });
     }
-  });
 
-  // ===== РЕГИСТРАЦИЯ =====
-  socket.on('register', async (data, cb) => {
-    try {
-      const { username, password } = data;
-      if (!username || !password) return cb({ success: false, message: 'Fill fields' });
-      if (username.length > 15) return cb({ success: false, message: 'Max 15 symbols' });
-      if (/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(username)) {
-  return cb({ success: false, message: 'No emoji allowed in username' });
-}
-      const { data: existing } = await supabase.from('users').select('username').eq('username', username).single();
-      if (existing) return cb({ success: false, message: 'User exists' });
-
-      const { error } = await supabase.from('users').insert({
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .insert({
         username,
-        password_hash: password,
-        display_name: username,
-        username_alias: username,
-        profile_setup_complete: false,
-        visibility_email: true,
-        visibility_gender: true,
-        visibility_bio: true,
-        verified: false
-      });
-      if (error) return cb({ success: false, message: 'DB error' });
+        email,
+        password: hashedPassword,
+        avatar: '👤',
+        nickname: username,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-      sessions.set(socket.id, username);
-      onlineUsers.add(username);
-      cb({ success: true, username });
-      broadcastOnlineUsers();
-      socket.emit('groups list', groups);
-      socket.emit('channels list', channels);
-    } catch (err) {
-      cb({ success: false, message: 'Server error' });
-    }
-  });
+    if (error) throw error;
 
-  // ===== ВХОД =====
-  socket.on('login', async (data, cb) => {
-    try {
-      const { username, password } = data;
-      const { data: user } = await supabase.from('users').select('*').eq('username', username).single();
-      if (!user || user.password_hash !== password) return cb({ success: false, message: 'Wrong credentials' });
-      if (onlineUsers.has(username)) return cb({ success: false, message: 'Already online' });
-
-      sessions.set(socket.id, username);
-      onlineUsers.add(username);
-      cb({ success: true, username, profile: user });
-      broadcastOnlineUsers();
-      socket.emit('groups list', groups);
-      socket.emit('channels list', channels);
-    } catch (err) {
-      cb({ success: false, message: 'Server error' });
-    }
-  });
-
-  // ===== ОБНОВЛЕНИЕ ПРОФИЛЯ =====
-  socket.on('update_profile', async (data, cb) => {
-    const username = sessions.get(socket.id);
-    if (!username) return cb({ success: false, message: 'Not authorized' });
-
-    const updates = {};
-    if (data.display_name !== undefined) updates.display_name = data.display_name;
-    if (data.username_alias !== undefined) {
-      if (!/^[a-zA-Z0-9_]+$/.test(data.username_alias)) return cb({ success: false, message: 'Alias must be English letters, numbers or underscore' });
-      const { data: existing } = await supabase.from('users').select('username').eq('username_alias', data.username_alias).single();
-      if (existing && existing.username !== username) return cb({ success: false, message: 'Alias taken' });
-      updates.username_alias = data.username_alias;
-    }
-    if (data.email !== undefined) updates.email = data.email;
-    if (data.gender !== undefined) updates.gender = data.gender;
-    if (data.bio !== undefined) updates.bio = data.bio;
-    if (data.avatar_url !== undefined) updates.avatar_url = data.avatar_url;
-    if (data.visibility_email !== undefined) updates.visibility_email = data.visibility_email;
-    if (data.visibility_gender !== undefined) updates.visibility_gender = data.visibility_gender;
-    if (data.visibility_bio !== undefined) updates.visibility_bio = data.visibility_bio;
-
-    if (Object.keys(updates).length > 0) {
-      updates.profile_setup_complete = true;
-      const { error } = await supabase.from('users').update(updates).eq('username', username);
-      if (error) return cb({ success: false, message: 'Update failed' });
-      const { data: updatedUser } = await supabase.from('users').select('*').eq('username', username).single();
-
-      io.emit('user_profile_updated', {
-        username: updatedUser.username,
-        display_name: updatedUser.display_name,
-        avatar_url: updatedUser.avatar_url,
-        verified: updatedUser.verified
-      });
-
-      cb({ success: true, profile: updatedUser });
-    } else {
-      cb({ success: false, message: 'No fields to update' });
-    }
-  });
-
-  // ===== ВЕРИФИКАЦИЯ ПОЛЬЗОВАТЕЛЯ (только для админов) =====
-  socket.on('verify_user', async (data, cb) => {
-    const admin = sessions.get(socket.id);
-    // Здесь можно добавить проверку на админа
-    if (!admin) return cb({ success: false, message: 'Not authorized' });
-
-    const { username, verified } = data;
-    const { error } = await supabase
-      .from('users')
-      .update({ verified: verified })
-      .eq('username', username);
-
-    if (error) return cb({ success: false, message: 'Update failed' });
-
-    io.emit('user_verified', { username, verified });
-    cb({ success: true });
-  });
-
-  // ===== ПОЛУЧЕНИЕ ПРОФИЛЯ =====
-  socket.on('get_user_profile', async (data, cb) => {
-    const { username } = data;
-    const { data: user } = await supabase.from('users').select('*').eq('username', username).single();
-    if (!user) return cb({ success: false });
-
-    const publicProfile = {
-      display_name: user.display_name,
-      username_alias: user.username_alias,
-      avatar_url: user.avatar_url,
-      bio: user.visibility_bio ? user.bio : null,
-      email: user.visibility_email ? user.email : null,
-      gender: user.visibility_gender ? user.gender : null,
-      verified: user.verified
-    };
-    cb({ success: true, profile: publicProfile });
-  });
-
-  // ===== ГРУППЫ И КАНАЛЫ =====
-  socket.on('create group', async (data, cb) => {
-    const admin = sessions.get(socket.id);
-    if (!admin) return cb({ success: false });
-    const members = [admin, ...data.members];
-    const room = 'group_' + Date.now();
-    const group = { name: data.name, room, members, admin, type: 'group' };
-    await supabase.from('groups_table').insert({ name: data.name, room, members, admin, type: 'group' });
-    groups.push(group);
-    socket.join(room);
-    io.emit('groups list', groups);
-    cb({ success: true });
-  });
-
-  socket.on('create channel', async (data, cb) => {
-    const admin = sessions.get(socket.id);
-    if (!admin) return cb({ success: false });
-    const room = 'channel_' + Date.now();
-    const channel = { name: data.name, room, subscribers: [admin], admin, type: 'channel' };
-    await supabase.from('channels_table').insert({ name: data.name, room, subscribers: [admin], admin, type: 'channel' });
-    channels.push(channel);
-    socket.join(room);
-    io.emit('channels list', channels);
-    cb({ success: true });
-  });
-
-  socket.on('join room', async (data) => {
-    if (!data.room) return;
-    socket.join(data.room);
-    try {
-      const { data: messages } = await supabase.from('messages').select('*').eq('room', data.room).order('id', { ascending: false }).limit(50);
-      socket.emit('chat history', (messages || []).reverse());
-    } catch (err) {}
-  });
-
-  socket.on('leave room', (data) => { if (data.room) socket.leave(data.room); });
-
-  // ===== СООБЩЕНИЯ =====
-  socket.on('chat message', async (data) => {
-    const sender = sessions.get(socket.id);
-    if (!sender || !data.room || !data.text) return;
-    const channel = channels.find(c => c.room === data.room);
-    if (channel && channel.admin !== sender) return;
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const { data: inserted } = await supabase
-      .from('messages')
-      .insert({ room: data.room, username: sender, text: data.text, time, reply_to: data.replyTo || null })
-      .select('id').single();
-
-    io.to(data.room).emit('chat message', {
-      user: sender,
-      text: data.text,
-      time,
-      id: inserted?.id || data.id,
-      replyTo: data.replyTo
-    });
-  });
-
-  socket.on('edit message', async (data) => {
-    if (!data.room || !data.id || !data.text) return;
-    await supabase.from('messages').update({ text: data.text }).eq('id', data.id);
-    io.to(data.room).emit('edit message', { id: data.id, text: data.text, user: sessions.get(socket.id) });
-  });
-
-  socket.on('delete message', async (data) => {
-    if (!data.room || !data.id) return;
-    await supabase.from('messages').delete().eq('id', data.id);
-    io.to(data.room).emit('delete message', { id: data.id });
-  });
-
-  socket.on('reaction', (data) => {
-    if (data.room) io.to(data.room).emit('reaction', { id: data.id, emoji: data.emoji });
-  });
-
-  socket.on('change password', async (data, cb) => {
-    const username = sessions.get(socket.id);
-    if (!username) return cb({ success: false });
-    const { data: user } = await supabase.from('users').select('password_hash').eq('username', username).single();
-    if (!user || user.password_hash !== data.oldPassword) return cb({ success: false, message: 'Wrong password' });
-    await supabase.from('users').update({ password_hash: data.newPassword }).eq('username', username);
-    cb({ success: true });
-  });
-
-  socket.on('logout', () => {
-    const username = sessions.get(socket.id);
-    if (username) { sessions.delete(socket.id); onlineUsers.delete(username); broadcastOnlineUsers(); }
-  });
-
-  socket.on('disconnect', () => {
-    const username = sessions.get(socket.id);
-    if (username) { sessions.delete(socket.id); onlineUsers.delete(username); broadcastOnlineUsers(); }
-  });
-
-  socket.on('request online users', () => socket.emit('online users', Array.from(onlineUsers)));
-  socket.on('request all users', async () => {
-    const { data } = await supabase.from('users').select('username, display_name, avatar_url, verified');
-    socket.emit('all users', data || []);
-  });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token, user });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// ===== ДРУЗЬЯ =====
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle();
 
-// Отправить заявку в друзья
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token, user });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/me', authenticate, async (req, res) => {
+  res.json(req.user);
+});
+
+app.put('/api/profile', authenticate, async (req, res) => {
+  try {
+    const { avatar, nickname, email, gender, description, visibility, theme } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        avatar: avatar || req.user.avatar,
+        nickname: nickname || req.user.nickname,
+        email: email || req.user.email,
+        gender: gender || req.user.gender,
+        description: description || req.user.description,
+        visibility: visibility || req.user.visibility,
+        theme: theme || req.user.theme,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, user: data });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ЧАТЫ =====
+app.get('/api/chats', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { data: chats, error } = await supabase
+      .from('chats')
+      .select(`
+        *,
+        messages:messages(
+          id, content, sender_id, created_at, type, file_url,
+          sender:sender_id(id, username, nickname, avatar)
+        )
+      `)
+      .contains('participants', [userId])
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    const formattedChats = await Promise.all(chats.map(async (chat) => {
+      let chatData = { ...chat };
+      
+      if (chat.type === 'personal') {
+        const otherUserId = chat.participants.find(id => id !== userId);
+        if (otherUserId) {
+          const { data: user } = await supabase
+            .from('profiles')
+            .select('id, username, nickname, avatar')
+            .eq('id', otherUserId)
+            .single();
+          chatData.otherUser = user;
+        }
+      }
+
+      if (chatData.messages) {
+        chatData.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      }
+
+      return chatData;
+    }));
+
+    res.json({ success: true, chats: formattedChats });
+  } catch (error) {
+    console.error('Error loading chats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/chats', authenticate, async (req, res) => {
+  try {
+    const { type, participants, name } = req.body;
+    const userId = req.user.id;
+
+    if (type === 'personal') {
+      const { data: existing } = await supabase
+        .from('chats')
+        .select('id')
+        .contains('participants', [userId])
+        .contains('participants', [participants[0]])
+        .eq('type', 'personal')
+        .maybeSingle();
+
+      if (existing) {
+        return res.json({ success: true, chatId: existing.id });
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('chats')
+      .insert({
+        type,
+        participants: type === 'personal' ? [userId, ...participants] : participants,
+        name: name || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, chat: data });
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СООБЩЕНИЯ =====
+app.get('/api/messages/:chatId', authenticate, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:sender_id(id, username, nickname, avatar)
+      `)
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    res.json({ success: true, messages: data });
+  } catch (error) {
+    console.error('Error loading messages:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/messages', authenticate, async (req, res) => {
+  try {
+    const { chatId, content, type, fileUrl, replyTo } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        sender_id: userId,
+        content: content || '',
+        type: type || 'text',
+        file_url: fileUrl || null,
+        reply_to: replyTo || null,
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        sender:sender_id(id, username, nickname, avatar)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    await supabase
+      .from('chats')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', chatId);
+
+    io.to(chatId).emit('new_message', data);
+
+    res.json({ success: true, message: data });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/messages/:messageId', authenticate, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        content,
+        edited: true,
+        edited_at: new Date().toISOString()
+      })
+      .eq('id', messageId)
+      .eq('sender_id', userId)
+      .select(`
+        *,
+        sender:sender_id(id, username, nickname, avatar)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    io.to(data.chat_id).emit('message_edited', data);
+    res.json({ success: true, message: data });
+  } catch (error) {
+    console.error('Error editing message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/messages/:messageId', authenticate, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('sender_id', userId)
+      .select('chat_id')
+      .single();
+
+    if (error) throw error;
+
+    io.to(data.chat_id).emit('message_deleted', messageId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== РЕАКЦИИ =====
+app.post('/api/messages/:messageId/reactions', authenticate, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { reaction } = req.body;
+    const userId = req.user.id;
+
+    const { data: message } = await supabase
+      .from('messages')
+      .select('reactions')
+      .eq('id', messageId)
+      .single();
+
+    let reactions = message.reactions || {};
+    
+    if (reactions[userId] === reaction) {
+      delete reactions[userId];
+    } else {
+      reactions[userId] = reaction;
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .update({ reactions })
+      .eq('id', messageId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    io.to(data.chat_id).emit('reaction_updated', {
+      messageId,
+      reactions: data.reactions
+    });
+
+    res.json({ success: true, reactions: data.reactions });
+  } catch (error) {
+    console.error('Error updating reaction:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ЗАГРУЗКА ФАЙЛОВ =====
+app.post('/api/upload', authenticate, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ success: true, fileUrl });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.use('/uploads', express.static('uploads'));
+
+// ===== ДРУЗЬЯ =====
 app.post('/api/friends/request', authenticate, async (req, res) => {
   try {
     const { friendId } = req.body;
@@ -312,7 +442,6 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Cannot add yourself as friend' });
     }
 
-    // Проверяем, не существует ли уже запись
     const { data: existing } = await supabase
       .from('friends')
       .select('status')
@@ -329,7 +458,6 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
       }
     }
 
-    // Создаем заявку
     const { data, error } = await supabase
       .from('friends')
       .insert({
@@ -342,7 +470,6 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
 
     if (error) throw error;
 
-    // Отправляем уведомление через Socket.IO
     const friendSocketId = userSockets[friendId];
     if (friendSocketId) {
       io.to(friendSocketId).emit('friend_request', {
@@ -362,7 +489,6 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
   }
 });
 
-// Принять заявку в друзья
 app.post('/api/friends/accept', authenticate, async (req, res) => {
   try {
     const { requestId } = req.body;
@@ -382,7 +508,6 @@ app.post('/api/friends/accept', authenticate, async (req, res) => {
 
     if (error) throw error;
 
-    // Уведомляем отправителя
     const senderSocketId = userSockets[data.user_id];
     if (senderSocketId) {
       io.to(senderSocketId).emit('friend_accepted', {
@@ -401,7 +526,6 @@ app.post('/api/friends/accept', authenticate, async (req, res) => {
   }
 });
 
-// Отклонить заявку в друзья
 app.post('/api/friends/reject', authenticate, async (req, res) => {
   try {
     const { requestId } = req.body;
@@ -417,7 +541,6 @@ app.post('/api/friends/reject', authenticate, async (req, res) => {
 
     if (error) throw error;
 
-    // Уведомляем отправителя
     const senderSocketId = userSockets[data.user_id];
     if (senderSocketId) {
       io.to(senderSocketId).emit('friend_rejected', {
@@ -433,12 +556,10 @@ app.post('/api/friends/reject', authenticate, async (req, res) => {
   }
 });
 
-// Получить список друзей и заявок
 app.get('/api/friends', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Получаем все связи пользователя
     const { data, error } = await supabase
       .from('friends')
       .select(`
@@ -450,7 +571,6 @@ app.get('/api/friends', authenticate, async (req, res) => {
 
     if (error) throw error;
 
-    // Форматируем данные
     const friends = [];
     const pendingRequests = [];
     const sentRequests = [];
@@ -505,7 +625,6 @@ app.get('/api/friends', authenticate, async (req, res) => {
   }
 });
 
-// Удалить из друзей
 app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -527,7 +646,6 @@ app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
   }
 });
 
-// Проверить статус дружбы
 app.get('/api/friends/status/:userId', authenticate, async (req, res) => {
   try {
     const currentUserId = req.user.id;
@@ -564,5 +682,54 @@ app.get('/api/friends/status/:userId', authenticate, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server on port ${PORT}`));
+// ===== SOCKET.IO =====
+const userSockets = {};
+
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+
+  socket.on('register', (userId) => {
+    userSockets[userId] = socket.id;
+    socket.join(userId);
+    console.log(`User ${userId} registered with socket ${socket.id}`);
+  });
+
+  socket.on('join_chat', (chatId) => {
+    socket.join(chatId);
+    console.log(`Socket ${socket.id} joined chat ${chatId}`);
+  });
+
+  socket.on('leave_chat', (chatId) => {
+    socket.leave(chatId);
+    console.log(`Socket ${socket.id} left chat ${chatId}`);
+  });
+
+  socket.on('typing', (data) => {
+    socket.to(data.chatId).emit('typing', {
+      userId: data.userId,
+      username: data.username
+    });
+  });
+
+  socket.on('stop_typing', (data) => {
+    socket.to(data.chatId).emit('stop_typing', {
+      userId: data.userId
+    });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+    for (const [userId, socketId] of Object.entries(userSockets)) {
+      if (socketId === socket.id) {
+        delete userSockets[userId];
+        break;
+      }
+    }
+  });
+});
+
+// ===== ЗАПУСК =====
+server.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📍 http://localhost:${PORT}`);
+});
