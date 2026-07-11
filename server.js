@@ -718,6 +718,32 @@ io.on('connection', (socket) => {
   });
 });
 
+// ===== ПОИСК ПОЛЬЗОВАТЕЛЕЙ =====
+app.get('/api/search/users', authenticate, async (req, res) => {
+  try {
+    const { query } = req.query;
+    const userId = req.user.id;
+
+    if (!query || query.length < 1) {
+      return res.json({ success: true, users: [] });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, username, display_name, avatar_url, verified')
+      .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+      .neq('id', userId)
+      .limit(20);
+
+    if (error) throw error;
+
+    res.json({ success: true, users: data });
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ========================================
 // ===== ЗАПУСК =====
 // ========================================
