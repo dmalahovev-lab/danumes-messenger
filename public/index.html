@@ -2,60 +2,204 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#27A5E7">
   <title>Danumes</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <!-- ВХОД -->
-  <div id="loginPage">
-    <div style="max-width:400px;margin:100px auto;padding:20px;text-align:center;">
-      <h1>Danumes</h1>
-      <form id="loginForm">
-        <input type="text" id="loginUsername" placeholder="Username" style="width:100%;padding:10px;margin:5px 0;">
-        <input type="password" id="loginPassword" placeholder="Password" style="width:100%;padding:10px;margin:5px 0;">
-        <button type="submit" style="width:100%;padding:10px;background:#27A5E7;color:white;border:none;border-radius:8px;">Войти</button>
-      </form>
-      <p><a href="#" id="showRegister">Регистрация</a></p>
-      <div id="loginError" style="color:red;margin-top:10px;"></div>
+  <!-- ===== СТРАНИЦА ВХОДА ===== -->
+  <div id="loginPage" class="auth-page">
+    <div class="auth-container">
+      <div class="auth-box">
+        <div class="auth-logo">
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="30" fill="#27A5E7"/>
+            <path d="M16 30.5L26 36L44 20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1>Danumes</h1>
+        <p class="subtitle">Войдите в аккаунт</p>
+        <form id="loginForm">
+          <div class="input-group">
+            <input type="text" id="loginUsername" placeholder="Имя пользователя" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="loginPassword" placeholder="Пароль" required>
+          </div>
+          <button type="submit">Войти</button>
+        </form>
+        <p class="auth-footer">Нет аккаунта? <a href="#" id="showRegister">Регистрация</a></p>
+        <div id="loginError" class="auth-error"></div>
+      </div>
     </div>
   </div>
 
-  <!-- РЕГИСТРАЦИЯ -->
-  <div id="registerPage" style="display:none;">
-    <div style="max-width:400px;margin:100px auto;padding:20px;text-align:center;">
-      <h1>Danumes</h1>
-      <form id="registerForm">
-        <input type="text" id="registerUsername" placeholder="Username" style="width:100%;padding:10px;margin:5px 0;">
-        <input type="email" id="registerEmail" placeholder="Email" style="width:100%;padding:10px;margin:5px 0;">
-        <input type="password" id="registerPassword" placeholder="Password" style="width:100%;padding:10px;margin:5px 0;">
-        <button type="submit" style="width:100%;padding:10px;background:#27A5E7;color:white;border:none;border-radius:8px;">Зарегистрироваться</button>
-      </form>
-      <p><a href="#" id="showLogin">Войти</a></p>
-      <div id="registerError" style="color:red;margin-top:10px;"></div>
+  <!-- ===== СТРАНИЦА РЕГИСТРАЦИИ ===== -->
+  <div id="registerPage" class="auth-page" style="display:none">
+    <div class="auth-container">
+      <div class="auth-box">
+        <div class="auth-logo">
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="30" fill="#27A5E7"/>
+            <path d="M16 30.5L26 36L44 20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1>Danumes</h1>
+        <p class="subtitle">Создайте аккаунт</p>
+        <form id="registerForm">
+          <div class="input-group">
+            <input type="text" id="registerUsername" placeholder="Имя пользователя" required>
+          </div>
+          <div class="input-group">
+            <input type="email" id="registerEmail" placeholder="Email" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="registerPassword" placeholder="Пароль" required>
+          </div>
+          <button type="submit">Зарегистрироваться</button>
+        </form>
+        <p class="auth-footer">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
+        <div id="registerError" class="auth-error"></div>
+      </div>
     </div>
   </div>
 
-  <!-- МЕССЕНДЖЕР -->
-  <div id="app" style="display:none;">
-    <div style="display:flex;height:100vh;">
-      <div style="width:300px;border-right:1px solid #ddd;padding:10px;overflow-y:auto;">
+  <!-- ===== ОСНОВНОЙ ИНТЕРФЕЙС ===== -->
+  <div id="app" class="app-container" style="display:none">
+    <!-- САЙДБАР -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-head">
         <h2>Danumes</h2>
-        <input type="text" id="searchInput" placeholder="Поиск..." style="width:100%;padding:8px;margin:10px 0;">
-        <button id="logoutBtn" style="margin:10px 0;padding:5px 10px;">Выйти</button>
-        <div id="chatList"></div>
-      </div>
-      <div style="flex:1;display:flex;flex-direction:column;">
-        <div style="padding:10px;border-bottom:1px solid #ddd;">
-          <span id="chatUserName">Выберите чат</span>
+        <div class="sidebar-actions">
+          <button id="settingsBtn" class="icon-btn" title="Настройки">⚙️</button>
+          <button id="logoutBtn" class="icon-btn" title="Выйти">🚪</button>
         </div>
-        <div id="messages" style="flex:1;overflow-y:auto;padding:10px;"></div>
-        <div style="display:flex;padding:10px;border-top:1px solid #ddd;">
-          <input type="text" id="messageInput" placeholder="Сообщение..." style="flex:1;padding:8px;">
-          <button id="sendBtn" style="padding:8px 16px;background:#27A5E7;color:white;border:none;border-radius:8px;">➤</button>
+      </div>
+
+      <div class="user-profile" id="userProfile">
+        <div class="user-avatar" id="userAvatar">👤</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">Пользователь</div>
+          <div class="user-status">В сети</div>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Поиск...">
+        <div id="searchResults" class="search-results" style="display:none"></div>
+      </div>
+
+      <!-- Заявки в друзья -->
+      <div class="friend-requests-section" id="friendRequestsSection">
+        <div class="friend-requests-header" id="friendRequestsToggle">
+          <span>📩 Заявки в друзья</span>
+          <span class="badge" id="friendRequestsBadge" style="display:none">0</span>
+        </div>
+        <div id="pendingRequestsList" style="display:none"></div>
+      </div>
+
+      <div id="chatList" class="chat-list"></div>
+    </aside>
+
+    <!-- ЧАТ -->
+    <main id="chatArea" class="chat-area">
+      <!-- Пустое состояние -->
+      <div id="emptyState" class="empty-state-full">
+        <div class="empty-icon">
+          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="50" fill="#E8F5FE"/>
+            <path d="M33 50L43 60L68 38" stroke="#27A5E7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>Danumes</h2>
+        <p>Выберите чат, чтобы начать общение</p>
+      </div>
+
+      <!-- Шапка чата -->
+      <div class="chat-header" id="chatHeader" style="display:none">
+        <button class="back-btn" id="backBtn">←</button>
+        <div class="chat-user-info">
+          <div class="chat-user-avatar" id="chatUserAvatar">👤</div>
+          <div>
+            <div class="chat-user-name" id="chatUserName">Пользователь</div>
+            <div class="chat-user-status" id="chatUserStatus">В сети</div>
+          </div>
+        </div>
+        <button class="chat-actions-btn" id="chatActionsBtn">⋯</button>
+      </div>
+
+      <!-- Сообщения -->
+      <div id="messagesContainer" class="messages-container" style="display:none">
+        <div id="messages" class="messages"></div>
+      </div>
+
+      <!-- Поле ввода -->
+      <div class="input-area" id="inputArea" style="display:none">
+        <button class="attach-btn" id="attachBtn">📎</button>
+        <input type="text" id="messageInput" placeholder="Сообщение...">
+        <button class="send-btn" id="sendBtn">➤</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== МОДАЛКА НАСТРОЕК ===== -->
+  <div id="settingsModal" class="modal" style="display:none">
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Настройки</h2>
+          <button class="modal-close" id="settingsClose">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-avatar">
+            <div class="settings-avatar-preview" id="settingsAvatarPreview">👤</div>
+            <button class="change-avatar-btn" id="changeAvatarBtn">Сменить аватар</button>
+          </div>
+          <div id="emojiGrid" class="emoji-grid" style="display:none"></div>
+          
+          <form id="settingsForm">
+            <div class="form-group">
+              <label>Отображаемое имя</label>
+              <input type="text" id="settingsDisplayName" placeholder="Как вас видеть">
+            </div>
+            <div class="form-group">
+              <label>О себе</label>
+              <textarea id="settingsBio" placeholder="Расскажите о себе..." rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Тема</label>
+              <div class="theme-selector" id="themeSelector">
+                <button data-theme="light" class="active" style="background:#ffffff;border:2px solid #ddd;"></button>
+                <button data-theme="dark" style="background:#1a1a2e;"></button>
+                <button data-theme="blue" style="background:#27A5E7;"></button>
+                <button data-theme="green" style="background:#4CAF50;"></button>
+                <button data-theme="purple" style="background:#9C27B0;"></button>
+              </div>
+            </div>
+            <button type="submit" class="save-btn">Сохранить</button>
+          </form>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ===== МОДАЛКА ПРОСМОТРА ===== -->
+  <div id="imageModal" class="modal" style="display:none">
+    <div class="modal-overlay">
+      <div class="modal-content image-modal">
+        <button class="modal-close" id="imageModalClose">✕</button>
+        <img id="modalImage" src="" alt="Изображение">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== КОНТЕКСТНОЕ МЕНЮ ===== -->
+  <div id="contextMenu" class="context-menu" style="display:none">
+    <div class="context-menu-item" data-action="add-friend">👤 Добавить в друзья</div>
+    <div class="context-menu-item" data-action="remove-friend" style="display:none">❌ Удалить из друзей</div>
+    <div class="context-menu-item" data-action="view-profile">👁️ Профиль</div>
+    <div class="context-menu-item" data-action="start-chat">💬 Начать чат</div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
