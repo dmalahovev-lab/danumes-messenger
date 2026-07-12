@@ -26,39 +26,36 @@ let emojis = ['😀', '😁', '😂', '🤣', '😊', '😍', '🥰', '😘', '�
   '💚', '💙', '💜', '🖤', '🤍', '🤎', '💯', '💢', '💥', '💫'
 ];
 
+// ========================================
 // ===== ИНИЦИАЛИЗАЦИЯ =====
+// ========================================
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Danumes инициализируется...');
   
-  // Инициализируем Socket
   initSocket();
-  
-  // Проверяем авторизацию
   await checkAuth();
-  
-  // Инициализируем все обработчики
   initEventListeners();
   initEmojiGrid();
   initContextMenu();
   initFriendSocketHandlers();
 
-  // Загружаем друзей
   await loadFriends();
 
-  // Обработчик правого клика для добавления в друзья
+  // Обработчик правого клика
   document.addEventListener('contextmenu', async (e) => {
     const chatItem = e.target.closest('.chat-item');
     if (chatItem && chatItem.dataset.userId) {
       e.preventDefault();
       const userId = chatItem.dataset.userId;
       const username = chatItem.dataset.username || 'Пользователь';
-      const nickname = chatItem.dataset.nickname || '';
-      const avatar = chatItem.dataset.avatar || '👤';
-      showContextMenu(e, userId, username, nickname, avatar);
+      const displayName = chatItem.dataset.displayName || '';
+      const avatarUrl = chatItem.dataset.avatarUrl || '👤';
+      showContextMenu(e, userId, username, displayName, avatarUrl);
     }
   });
 
-  // Toggle заявок в друзья
+  // Toggle заявок
   const toggle = document.getElementById('friendRequestsToggle');
   const list = document.getElementById('pendingRequestsList');
   if (toggle && list) {
@@ -72,10 +69,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Выбор темы
+  document.querySelectorAll('.theme-selector button').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.theme-selector button').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const theme = this.dataset.theme;
+      document.getElementById('settingsTheme').value = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+    });
+  });
+
   console.log('✅ Danumes готов к работе!');
 });
 
+// ========================================
 // ===== АУТЕНТИФИКАЦИЯ =====
+// ========================================
+
 async function checkAuth() {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -100,6 +111,11 @@ async function checkAuth() {
       
       if (socket) {
         socket.emit('register', currentUser.id);
+      }
+
+      // Применяем тему
+      if (currentUser.theme) {
+        document.documentElement.setAttribute('data-theme', currentUser.theme);
       }
       
       return;
@@ -144,7 +160,10 @@ function showApp() {
   updateUserProfile();
 }
 
+// ========================================
 // ===== СОКЕТ =====
+// ========================================
+
 function initSocket() {
   socket = io();
   
@@ -209,7 +228,10 @@ function initSocket() {
   });
 }
 
+// ========================================
 // ===== СОБЫТИЯ =====
+// ========================================
+
 function initEventListeners() {
   // Логин
   const loginForm = document.getElementById('loginForm');
@@ -243,6 +265,10 @@ function initEventListeners() {
           
           if (socket) {
             socket.emit('register', currentUser.id);
+          }
+
+          if (currentUser.theme) {
+            document.documentElement.setAttribute('data-theme', currentUser.theme);
           }
           
           showToast('✅ Добро пожаловать!');
@@ -290,8 +316,17 @@ function initEventListeners() {
           if (socket) {
             socket.emit('register', currentUser.id);
           }
+
+          if (currentUser.theme) {
+            document.documentElement.setAttribute('data-theme', currentUser.theme);
+          }
           
-          showToast('✅ Регистрация успешна!');
+          showToast('✅ Регистрация успешна! Заполните профиль');
+          
+          // Открываем настройки для заполнения профиля
+          setTimeout(() => {
+            openSettings();
+          }, 500);
         } else {
           showToast('❌ ' + (data.error || 'Ошибка регистрации'));
         }
@@ -339,8 +374,8 @@ function initEventListeners() {
     }
   });
 
-  // Поиск
-  document.getElementById('searchInput')?.addEventListener('input', searchChats);
+  // Поиск (обновлённый)
+  document.getElementById('searchInput')?.addEventListener('input', handleSearch);
 
   // Эмодзи
   document.getElementById('emojiBtn')?.addEventListener('click', toggleEmojiPicker);
@@ -416,7 +451,67 @@ function initEventListeners() {
   }
 }
 
+// ========================================
+// ===== ПОИСК ПОЛЬЗОВАТЕЛЕЙ =====
+// ========================================
+
+async function handleSearch() {
+  const query = this.value.trim();
+  const resultsContainer = document.getElementById('searchResults');
+  
+  if (query.length < 1) {
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/search/users?query=${encodeURIComponent(query)}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    const data = await response.json();
+    
+    if (data.success && data.users.length > 0) {
+      resultsContainer.innerHTML = data.users.map(user => `
+        <div class="search-result-item" data-user-id="${user.id}">
+          <div class="avatar">${user.avatar_url || '👤'}${user.verified ? ' ✅' : ''}</div>
+          <div>
+            <div class="name">${user.display_name || user.username}</div>
+            <div class="username">@${user.username}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      resultsContainer.style.display = 'block';
+      
+      resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const userId = this.dataset.userId;
+          resultsContainer.style.display = 'none';
+          document.getElementById('searchInput').value = '';
+          startChatWithUser(userId);
+        });
+      });
+    } else {
+      resultsContainer.innerHTML = '<div style="padding:12px 16px;color:rgba(255,255,255,0.2);font-size:13px;">Пользователи не найдены</div>';
+      resultsContainer.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+  }
+}
+
+// Закрываем поиск при клике вне
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+// ========================================
 // ===== ЧАТЫ =====
+// ========================================
+
 async function loadChats() {
   try {
     const response = await fetch('/api/chats', {
@@ -443,7 +538,7 @@ function renderChats() {
   if (search) {
     filtered = chats.filter(chat => {
       if (chat.type === 'personal' && chat.otherUser) {
-        const name = chat.otherUser.nickname || chat.otherUser.username;
+        const name = chat.otherUser.display_name || chat.otherUser.username;
         return name.toLowerCase().includes(search);
       }
       return chat.name && chat.name.toLowerCase().includes(search);
@@ -460,14 +555,16 @@ function renderChats() {
     let avatar = '💬';
     let userId = null;
     let username = '';
-    let nickname = '';
+    let displayName = '';
+    let avatarUrl = '';
 
     if (chat.type === 'personal' && chat.otherUser) {
-      name = chat.otherUser.nickname || chat.otherUser.username;
-      avatar = chat.otherUser.avatar || '👤';
+      name = chat.otherUser.display_name || chat.otherUser.username;
+      avatar = chat.otherUser.avatar_url || '👤';
       userId = chat.otherUser.id;
       username = chat.otherUser.username;
-      nickname = chat.otherUser.nickname;
+      displayName = chat.otherUser.display_name;
+      avatarUrl = chat.otherUser.avatar_url;
     }
 
     const lastMsg = chat.messages && chat.messages.length > 0 
@@ -481,14 +578,16 @@ function renderChats() {
            data-chat-id="${chat.id}"
            data-user-id="${userId || ''}"
            data-username="${username || ''}"
-           data-nickname="${nickname || ''}"
-           data-avatar="${avatar}">
+           data-display-name="${displayName || ''}"
+           data-avatar-url="${avatarUrl || ''}">
         <div class="avatar">${avatar}</div>
         <div class="info">
           <div class="name">${name}</div>
           <div class="last-message">${lastText}</div>
         </div>
-        <div class="time">${time}</div>
+        <div class="meta">
+          <div class="time">${time}</div>
+        </div>
       </div>
     `;
   }).join('');
@@ -520,8 +619,8 @@ async function openChat(chat) {
   let name = chat.name || 'Чат';
   let avatar = '💬';
   if (chat.type === 'personal' && chat.otherUser) {
-    name = chat.otherUser.nickname || chat.otherUser.username;
-    avatar = chat.otherUser.avatar || '👤';
+    name = chat.otherUser.display_name || chat.otherUser.username;
+    avatar = chat.otherUser.avatar_url || '👤';
   }
 
   document.getElementById('chatUserAvatar').textContent = avatar;
@@ -560,7 +659,7 @@ function renderMessages() {
 
   container.innerHTML = chatMessages.map(msg => {
     const isSent = msg.sender_id === currentUser.id;
-    const senderName = msg.sender?.nickname || msg.sender?.username || 'Пользователь';
+    const senderName = msg.sender?.display_name || msg.sender?.username || 'Пользователь';
 
     let content = msg.content || '';
     if (msg.type === 'image' && msg.file_url) {
@@ -613,7 +712,10 @@ function renderMessages() {
   }
 }
 
+// ========================================
 // ===== СООБЩЕНИЯ =====
+// ========================================
+
 async function sendMessage() {
   const input = document.getElementById('messageInput');
   if (!input) return;
@@ -682,7 +784,10 @@ async function uploadFile(file) {
   }
 }
 
+// ========================================
 // ===== РЕАКЦИИ =====
+// ========================================
+
 async function toggleReaction(messageId, reaction) {
   try {
     const response = await fetch(`/api/messages/${messageId}/reactions`, {
@@ -710,7 +815,10 @@ async function toggleReaction(messageId, reaction) {
   }
 }
 
+// ========================================
 // ===== НАСТРОЙКИ =====
+// ========================================
+
 function openSettings() {
   if (!currentUser) return;
   const modal = document.getElementById('settingsModal');
@@ -718,18 +826,23 @@ function openSettings() {
   
   modal.style.display = 'flex';
 
-  document.getElementById('settingsUsername').value = currentUser.username || '';
-  document.getElementById('settingsNickname').value = currentUser.nickname || '';
+  document.getElementById('settingsDisplayName').value = currentUser.display_name || '';
   document.getElementById('settingsEmail').value = currentUser.email || '';
   document.getElementById('settingsGender').value = currentUser.gender || '';
-  document.getElementById('settingsDescription').value = currentUser.description || '';
-  document.getElementById('visibilityEmail').checked = currentUser.visibility?.email !== false;
-  document.getElementById('visibilityGender').checked = currentUser.visibility?.gender !== false;
-  document.getElementById('visibilityDescription').checked = currentUser.visibility?.description !== false;
+  document.getElementById('settingsBio').value = currentUser.bio || '';
+  document.getElementById('visibilityEmail').checked = currentUser.visibility_email !== false;
+  document.getElementById('visibilityGender').checked = currentUser.visibility_gender !== false;
+  document.getElementById('visibilityBio').checked = currentUser.visibility_bio !== false;
   document.getElementById('settingsTheme').value = currentUser.theme || 'blue';
 
+  // Аватар
   document.querySelectorAll('#emojiGrid button').forEach(btn => {
-    btn.classList.toggle('active', btn.textContent === currentUser.avatar);
+    btn.classList.toggle('active', btn.textContent === currentUser.avatar_url);
+  });
+
+  // Тема
+  document.querySelectorAll('.theme-selector button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === (currentUser.theme || 'blue'));
   });
 }
 
@@ -755,16 +868,14 @@ function selectAvatar(emoji) {
 
 async function saveSettings() {
   const data = {
-    avatar: document.querySelector('#emojiGrid button.active')?.textContent || '👤',
-    nickname: document.getElementById('settingsNickname').value,
+    avatar_url: document.querySelector('#emojiGrid button.active')?.textContent || '👤',
+    display_name: document.getElementById('settingsDisplayName').value,
     email: document.getElementById('settingsEmail').value,
     gender: document.getElementById('settingsGender').value,
-    description: document.getElementById('settingsDescription').value,
-    visibility: {
-      email: document.getElementById('visibilityEmail').checked,
-      gender: document.getElementById('visibilityGender').checked,
-      description: document.getElementById('visibilityDescription').checked
-    },
+    bio: document.getElementById('settingsBio').value,
+    visibility_email: document.getElementById('visibilityEmail').checked,
+    visibility_gender: document.getElementById('visibilityGender').checked,
+    visibility_bio: document.getElementById('visibilityBio').checked,
     theme: document.getElementById('settingsTheme').value
   };
 
@@ -794,8 +905,8 @@ async function saveSettings() {
 function updateUserProfile() {
   if (!currentUser) return;
   
-  document.getElementById('userAvatar').textContent = currentUser.avatar || '👤';
-  document.getElementById('userName').textContent = currentUser.nickname || currentUser.username;
+  document.getElementById('userAvatar').textContent = currentUser.avatar_url || '👤';
+  document.getElementById('userName').textContent = currentUser.display_name || currentUser.username;
   document.getElementById('userStatus').textContent = 'В сети';
 
   if (currentUser.theme) {
@@ -803,7 +914,10 @@ function updateUserProfile() {
   }
 }
 
+// ========================================
 // ===== ИЗОБРАЖЕНИЯ =====
+// ========================================
+
 function openImageModal(src) {
   document.getElementById('modalImage').src = src;
   document.getElementById('imageModal').style.display = 'flex';
@@ -813,13 +927,19 @@ function closeImageModal() {
   document.getElementById('imageModal').style.display = 'none';
 }
 
+// ========================================
 // ===== ГОЛОСОВЫЕ =====
+// ========================================
+
 function playVoice(url) {
   const audio = new Audio(url);
   audio.play();
 }
 
+// ========================================
 // ===== УТИЛИТЫ =====
+// ========================================
+
 function formatTime(date) {
   const d = new Date(date);
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -840,11 +960,19 @@ function showToast(message) {
   }, 3000);
 }
 
-// ==========================================
-// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ДРУЗЬЯМИ =====
-// ==========================================
+function toggleEmojiPicker() {
+  const input = document.getElementById('messageInput');
+  if (input) {
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    input.value += randomEmoji;
+    input.focus();
+  }
+}
 
-// Загрузка списка друзей
+// ========================================
+// ===== ФУНКЦИИ ДЛЯ ДРУЗЕЙ =====
+// ========================================
+
 async function loadFriends() {
   try {
     const token = localStorage.getItem('token');
@@ -873,7 +1001,6 @@ async function loadFriends() {
   }
 }
 
-// Отправить заявку в друзья
 async function sendFriendRequest(userId) {
   try {
     const token = localStorage.getItem('token');
@@ -904,7 +1031,6 @@ async function sendFriendRequest(userId) {
   }
 }
 
-// Принять заявку в друзья
 async function acceptFriendRequest(requestId) {
   try {
     const token = localStorage.getItem('token');
@@ -936,7 +1062,6 @@ async function acceptFriendRequest(requestId) {
   }
 }
 
-// Отклонить заявку в друзья
 async function rejectFriendRequest(requestId) {
   try {
     const token = localStorage.getItem('token');
@@ -967,7 +1092,6 @@ async function rejectFriendRequest(requestId) {
   }
 }
 
-// Удалить из друзей
 async function removeFriend(friendId) {
   if (!confirm('Удалить пользователя из друзей?')) return;
   
@@ -997,7 +1121,6 @@ async function removeFriend(friendId) {
   }
 }
 
-// Проверить статус дружбы
 async function checkFriendStatus(userId) {
   try {
     const token = localStorage.getItem('token');
@@ -1018,7 +1141,6 @@ async function checkFriendStatus(userId) {
   }
 }
 
-// Обновить UI заявок в друзья
 function updatePendingRequestsUI() {
   const pendingRequests = friendsState.pendingRequests || [];
   const requestCount = pendingRequests.length;
@@ -1037,15 +1159,15 @@ function updatePendingRequestsUI() {
   if (!container) return;
   
   if (pendingRequests.length === 0) {
-    container.innerHTML = '<div style="padding: 10px; color: #666; text-align: center; font-size: 13px;">Нет новых заявок</div>';
+    container.innerHTML = '<div style="padding:10px 16px;color:rgba(255,255,255,0.2);font-size:13px;">Нет новых заявок</div>';
     return;
   }
   
   container.innerHTML = pendingRequests.map(request => `
     <div class="pending-request-item" data-request-id="${request.id}">
       <div class="request-user-info">
-        <div class="request-avatar">${request.avatar || '👤'}</div>
-        <div class="request-name">${request.nickname || request.username}</div>
+        <div class="request-avatar">${request.avatar_url || '👤'}</div>
+        <div class="request-name">${request.display_name || request.username}</div>
       </div>
       <div class="request-actions">
         <button class="accept-request-btn" data-request-id="${request.id}" title="Принять">✅</button>
@@ -1069,8 +1191,7 @@ function updatePendingRequestsUI() {
   });
 }
 
-// Показать контекстное меню
-function showContextMenu(e, userId, username, nickname, avatar) {
+function showContextMenu(e, userId, username, displayName, avatarUrl) {
   e.preventDefault();
   e.stopPropagation();
   
@@ -1093,17 +1214,17 @@ function showContextMenu(e, userId, username, nickname, avatar) {
       removeFriendAction.style.display = 'flex';
     } else if (status.status === 'pending') {
       if (status.isSender) {
-        addFriendAction.innerHTML = '<span>⏳</span> Заявка отправлена';
+        addFriendAction.innerHTML = '⏳ Заявка отправлена';
         addFriendAction.style.opacity = '0.5';
         addFriendAction.style.pointerEvents = 'none';
       } else {
-        addFriendAction.innerHTML = '<span>📩</span> Заявка от пользователя';
+        addFriendAction.innerHTML = '📩 Заявка от пользователя';
         addFriendAction.style.opacity = '0.5';
         addFriendAction.style.pointerEvents = 'none';
       }
       removeFriendAction.style.display = 'none';
     } else {
-      addFriendAction.innerHTML = '<span>👤</span> Добавить в друзья';
+      addFriendAction.innerHTML = '👤 Добавить в друзья';
       addFriendAction.style.display = 'flex';
       addFriendAction.style.opacity = '1';
       addFriendAction.style.pointerEvents = 'auto';
@@ -1112,8 +1233,8 @@ function showContextMenu(e, userId, username, nickname, avatar) {
     
     menu.dataset.userId = userId;
     menu.dataset.username = username || 'Пользователь';
-    menu.dataset.nickname = nickname || '';
-    menu.dataset.avatar = avatar || '👤';
+    menu.dataset.displayName = displayName || '';
+    menu.dataset.avatarUrl = avatarUrl || '👤';
     
     const menuWidth = 200;
     const menuHeight = 180;
@@ -1133,7 +1254,6 @@ function showContextMenu(e, userId, username, nickname, avatar) {
   });
 }
 
-// Скрыть контекстное меню
 function hideContextMenu() {
   const menu = document.getElementById('contextMenu');
   if (menu) {
@@ -1141,7 +1261,6 @@ function hideContextMenu() {
   }
 }
 
-// Инициализация контекстного меню
 function initContextMenu() {
   const menu = document.getElementById('contextMenu');
   if (!menu) return;
@@ -1183,7 +1302,6 @@ function initContextMenu() {
   });
 }
 
-// Начать чат с пользователем
 function startChatWithUser(userId) {
   let existingChat = null;
   
@@ -1202,7 +1320,6 @@ function startChatWithUser(userId) {
   }
 }
 
-// Создать личный чат
 async function createPersonalChat(userId) {
   try {
     const response = await fetch('/api/chats', {
@@ -1229,7 +1346,6 @@ async function createPersonalChat(userId) {
   }
 }
 
-// Socket.IO обработчики для друзей
 function initFriendSocketHandlers() {
   if (typeof socket === 'undefined' || !socket) {
     console.log('Socket not initialized yet');
@@ -1238,14 +1354,14 @@ function initFriendSocketHandlers() {
   
   socket.on('friend_request', (data) => {
     console.log('📩 Новая заявка в друзья:', data);
-    showToast(`📩 ${data.nickname || data.username} отправил(а) заявку в друзья`);
+    showToast(`📩 ${data.display_name || data.username} отправил(а) заявку в друзья`);
     
     friendsState.pendingRequests.push({
       id: data.id,
       userId: data.userId,
       username: data.username,
-      nickname: data.nickname,
-      avatar: data.avatar,
+      display_name: data.display_name,
+      avatar_url: data.avatar_url,
       createdAt: data.createdAt
     });
     
@@ -1254,7 +1370,7 @@ function initFriendSocketHandlers() {
   
   socket.on('friend_accepted', (data) => {
     console.log('🎉 Заявка принята:', data);
-    showToast(`🎉 ${data.nickname || data.username} принял(а) вашу заявку в друзья!`);
+    showToast(`🎉 ${data.display_name || data.username} принял(а) вашу заявку в друзья!`);
     loadFriends();
     loadChats();
   });
@@ -1266,138 +1382,44 @@ function initFriendSocketHandlers() {
   });
 }
 
-// Функция для эмодзи пикера
-function toggleEmojiPicker() {
-  // Если у тебя есть эмодзи пикер - добавь логику сюда
-  // Или просто вставь эмодзи в поле ввода
-  const input = document.getElementById('messageInput');
-  if (input) {
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    input.value += randomEmoji;
-    input.focus();
-  }
-}
-
+// ========================================
 // ===== СТИЛИ ДЛЯ TOAST =====
+// ========================================
+
 const toastStyle = document.createElement('style');
 toastStyle.textContent = `
   .toast {
     position: fixed;
-    bottom: 20px;
+    bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.85);
-    color: white;
+    background: rgba(20,20,42,0.95);
+    backdrop-filter: blur(20px);
+    color: #ffffff;
     padding: 12px 24px;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 14px;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
     z-index: 99999;
     max-width: 90%;
     text-align: center;
-    animation: slideUp 0.3s ease;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    transition: opacity 0.3s;
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: toastIn 0.3s ease;
   }
   
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateX(-50%) translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
   
   .empty-state {
-    padding: 40px 20px;
     text-align: center;
-    color: #666;
+    padding: 40px 20px;
+    color: rgba(255,255,255,0.2);
     font-size: 14px;
   }
 `;
 document.head.appendChild(toastStyle);
-
-// ===== ПОИСК ПОЛЬЗОВАТЕЛЕЙ =====
-document.getElementById('searchInput').addEventListener('input', async function() {
-  const query = this.value.trim();
-  const resultsContainer = document.getElementById('searchResults');
-  
-  if (query.length < 1) {
-    resultsContainer.style.display = 'none';
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/search/users?query=${encodeURIComponent(query)}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-
-    const data = await response.json();
-    
-    if (data.success && data.users.length > 0) {
-      resultsContainer.innerHTML = data.users.map(user => `
-        <div class="search-result-item" data-user-id="${user.id}">
-          <div class="avatar">${user.avatar_url || '👤'}${user.verified ? ' ✅' : ''}</div>
-          <div>
-            <div class="name">${user.display_name || user.username}</div>
-            <div class="username">@${user.username}</div>
-          </div>
-        </div>
-      `).join('');
-      
-      resultsContainer.style.display = 'block';
-      
-      // Клик по результату
-      resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
-        item.addEventListener('click', function() {
-          const userId = this.dataset.userId;
-          resultsContainer.style.display = 'none';
-          document.getElementById('searchInput').value = '';
-          startChatWithUser(userId);
-        });
-      });
-    } else {
-      resultsContainer.innerHTML = '<div style="padding:12px 16px;color:rgba(255,255,255,0.2);font-size:13px;">Пользователи не найдены</div>';
-      resultsContainer.style.display = 'block';
-    }
-  } catch (error) {
-    console.error('Search error:', error);
-  }
-});
-
-// Закрываем поиск при клике вне
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.search-wrap')) {
-    document.getElementById('searchResults').style.display = 'none';
-  }
-});
-
-// ===== ПРИ РЕГИСТРАЦИИ ПОКАЗЫВАЕМ ОФОРМЛЕНИЕ ПРОФИЛЯ =====
-// После успешной регистрации открываем настройки
-// Добавь это в функцию регистрации после showApp():
-// openSettings();
-// И показываем сообщение "Заполните профиль"
-
-// ===== ТЕМЫ =====
-// В функции saveSettings добавь:
-document.documentElement.setAttribute('data-theme', theme);
-
-// При загрузке применяем тему из профиля
-if (currentUser && currentUser.theme) {
-  document.documentElement.setAttribute('data-theme', currentUser.theme);
-}
-
-// В initEventListeners добавь выбор темы:
-document.querySelectorAll('.theme-selector button').forEach(btn => {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.theme-selector button').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-    document.getElementById('settingsTheme').value = this.dataset.theme;
-  });
-});
 
 console.log('✅ Danumes полностью загружен!');
