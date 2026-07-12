@@ -34,15 +34,13 @@ const authenticate = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const { data: user, error } = await supabase
+    const { data: user } = await supabase
       .from('users')
       .select('*')
       .eq('id', decoded.id)
       .single();
     
-    if (error || !user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(401).json({ error: 'User not found' });
     
     req.user = user;
     next();
@@ -51,11 +49,7 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// ========================================
-// ===== АУТЕНТИФИКАЦИЯ =====
-// ========================================
-
-// РЕГИСТРАЦИЯ
+// ===== РЕГИСТРАЦИЯ =====
 app.post('/api/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -76,25 +70,16 @@ app.post('/api/register', async (req, res) => {
       .from('users')
       .insert({
         username: username,
-        username_alias: '@' + username,
         email: email,
         password_hash: hashedPassword,
         display_name: username,
         avatar_url: '👤',
-        created_at: new Date().toISOString(),
-        profile_setup_complete: false,
-        verified: false,
-        visibility_email: true,
-        visibility_gender: true,
-        visibility_bio: true
+        created_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (error) {
-      console.error('Supabase insert error:', error);
-      return res.status(500).json({ error: error.message });
-    }
+    if (error) throw error;
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ success: true, token, user });
@@ -104,7 +89,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// ЛОГИН
+// ===== ЛОГИН =====
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -132,41 +117,23 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// ПОЛУЧИТЬ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+// ===== ПОЛУЧИТЬ ПОЛЬЗОВАТЕЛЯ =====
 app.get('/api/me', authenticate, async (req, res) => {
   res.json(req.user);
 });
 
-// ОБНОВИТЬ ПРОФИЛЬ
+// ===== ОБНОВИТЬ ПРОФИЛЬ =====
 app.put('/api/profile', authenticate, async (req, res) => {
   try {
-    const { 
-      avatar_url, 
-      display_name, 
-      email, 
-      gender, 
-      bio,
-      visibility_email,
-      visibility_gender,
-      visibility_bio,
-      theme 
-    } = req.body;
-    
+    const { avatar_url, display_name, bio, theme } = req.body;
     const userId = req.user.id;
 
     const updateData = {};
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     if (display_name !== undefined) updateData.display_name = display_name;
-    if (email !== undefined) updateData.email = email;
-    if (gender !== undefined) updateData.gender = gender;
     if (bio !== undefined) updateData.bio = bio;
-    if (visibility_email !== undefined) updateData.visibility_email = visibility_email;
-    if (visibility_gender !== undefined) updateData.visibility_gender = visibility_gender;
-    if (visibility_bio !== undefined) updateData.visibility_bio = visibility_bio;
     if (theme !== undefined) updateData.theme = theme;
-    
     updateData.updated_at = new Date().toISOString();
-    updateData.profile_setup_complete = true;
 
     const { data, error } = await supabase
       .from('users')
@@ -183,10 +150,7 @@ app.put('/api/profile', authenticate, async (req, res) => {
   }
 });
 
-// ========================================
 // ===== ПОИСК ПОЛЬЗОВАТЕЛЕЙ =====
-// ========================================
-
 app.get('/api/search/users', authenticate, async (req, res) => {
   try {
     const { query } = req.query;
@@ -198,7 +162,7 @@ app.get('/api/search/users', authenticate, async (req, res) => {
 
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, display_name, avatar_url, verified')
+      .select('id, username, display_name, avatar_url')
       .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
       .neq('id', userId)
       .limit(20);
@@ -212,10 +176,7 @@ app.get('/api/search/users', authenticate, async (req, res) => {
   }
 });
 
-// ========================================
 // ===== ЧАТЫ =====
-// ========================================
-
 app.get('/api/chats', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -236,7 +197,7 @@ app.get('/api/chats', authenticate, async (req, res) => {
         if (otherUserId) {
           const { data: user } = await supabase
             .from('users')
-            .select('id, username, username_alias, display_name, avatar_url, verified')
+            .select('id, username, display_name, avatar_url')
             .eq('id', otherUserId)
             .single();
           chatData.otherUser = user;
@@ -293,10 +254,7 @@ app.post('/api/chats', authenticate, async (req, res) => {
   }
 });
 
-// ========================================
 // ===== СООБЩЕНИЯ =====
-// ========================================
-
 app.get('/api/messages/:chatId', authenticate, async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -319,7 +277,7 @@ app.get('/api/messages/:chatId', authenticate, async (req, res) => {
 
 app.post('/api/messages', authenticate, async (req, res) => {
   try {
-    const { chatId, content, type, fileUrl, replyTo } = req.body;
+    const { chatId, content, type, fileUrl } = req.body;
     const userId = req.user.id;
 
     const { data, error } = await supabase
@@ -330,7 +288,6 @@ app.post('/api/messages', authenticate, async (req, res) => {
         content: content || '',
         type: type || 'text',
         file_url: fileUrl || null,
-        reply_to: replyTo || null,
         created_at: new Date().toISOString()
       })
       .select(`
@@ -355,352 +312,43 @@ app.post('/api/messages', authenticate, async (req, res) => {
   }
 });
 
-app.put('/api/messages/:messageId', authenticate, async (req, res) => {
-  try {
-    const { messageId } = req.params;
-    const { content } = req.body;
-    const userId = req.user.id;
+// ===== ЗАГРУЗКА ФАЙЛОВ =====
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
-    const { data, error } = await supabase
-      .from('messages')
-      .update({
-        content,
-        edited: true,
-        edited_at: new Date().toISOString()
-      })
-      .eq('id', messageId)
-      .eq('sender_id', userId)
-      .select(`
-        *,
-        sender:sender_id(id, username, display_name, avatar_url)
-      `)
-      .single();
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
-    if (error) throw error;
-
-    io.to(data.chat_id).emit('message_edited', data);
-    res.json({ success: true, message: data });
-  } catch (error) {
-    console.error('Error editing message:', error);
-    res.status(500).json({ error: error.message });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
   }
 });
+const upload = multer({ storage });
 
-app.delete('/api/messages/:messageId', authenticate, async (req, res) => {
+app.post('/api/upload', authenticate, upload.single('file'), async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const userId = req.user.id;
-
-    const { data, error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId)
-      .eq('sender_id', userId)
-      .select('chat_id')
-      .single();
-
-    if (error) throw error;
-
-    io.to(data.chat_id).emit('message_deleted', messageId);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting message:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ========================================
-// ===== РЕАКЦИИ =====
-// ========================================
-
-app.post('/api/messages/:messageId/reactions', authenticate, async (req, res) => {
-  try {
-    const { messageId } = req.params;
-    const { reaction } = req.body;
-    const userId = req.user.id;
-
-    const { data: message } = await supabase
-      .from('messages')
-      .select('reactions')
-      .eq('id', messageId)
-      .single();
-
-    let reactions = message.reactions || {};
-    
-    if (reactions[userId] === reaction) {
-      delete reactions[userId];
-    } else {
-      reactions[userId] = reaction;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { data, error } = await supabase
-      .from('messages')
-      .update({ reactions })
-      .eq('id', messageId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    io.to(data.chat_id).emit('reaction_updated', {
-      messageId,
-      reactions: data.reactions
-    });
-
-    res.json({ success: true, reactions: data.reactions });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ success: true, fileUrl });
   } catch (error) {
-    console.error('Error updating reaction:', error);
+    console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ========================================
-// ===== ДРУЗЬЯ =====
-// ========================================
+app.use('/uploads', express.static('uploads'));
 
-app.post('/api/friends/request', authenticate, async (req, res) => {
-  try {
-    const { friendId } = req.body;
-    const userId = req.user.id;
-
-    if (!friendId) {
-      return res.status(400).json({ error: 'friendId is required' });
-    }
-
-    if (userId === friendId) {
-      return res.status(400).json({ error: 'Cannot add yourself as friend' });
-    }
-
-    const { data: existing } = await supabase
-      .from('friends')
-      .select('status')
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .or(`user_id.eq.${friendId},friend_id.eq.${friendId}`)
-      .maybeSingle();
-
-    if (existing) {
-      if (existing.status === 'accepted') {
-        return res.status(400).json({ error: 'Already friends' });
-      }
-      if (existing.status === 'pending') {
-        return res.status(400).json({ error: 'Friend request already sent' });
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('friends')
-      .insert({
-        user_id: userId,
-        friend_id: friendId,
-        status: 'pending'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const friendSocketId = userSockets[friendId];
-    if (friendSocketId) {
-      io.to(friendSocketId).emit('friend_request', {
-        id: data.id,
-        userId: userId,
-        username: req.user.username,
-        display_name: req.user.display_name,
-        avatar_url: req.user.avatar_url,
-        createdAt: data.created_at
-      });
-    }
-
-    res.json({ success: true, data });
-  } catch (error) {
-    console.error('Error sending friend request:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/friends/accept', authenticate, async (req, res) => {
-  try {
-    const { requestId } = req.body;
-    const userId = req.user.id;
-
-    const { data, error } = await supabase
-      .from('friends')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() })
-      .eq('id', requestId)
-      .eq('friend_id', userId)
-      .select(`
-        *,
-        sender:user_id(id, username, display_name, avatar_url),
-        receiver:friend_id(id, username, display_name, avatar_url)
-      `)
-      .single();
-
-    if (error) throw error;
-
-    const senderSocketId = userSockets[data.user_id];
-    if (senderSocketId) {
-      io.to(senderSocketId).emit('friend_accepted', {
-        requestId: requestId,
-        userId: userId,
-        username: req.user.username,
-        display_name: req.user.display_name,
-        avatar_url: req.user.avatar_url
-      });
-    }
-
-    res.json({ success: true, data });
-  } catch (error) {
-    console.error('Error accepting friend request:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/friends/reject', authenticate, async (req, res) => {
-  try {
-    const { requestId } = req.body;
-    const userId = req.user.id;
-
-    const { data, error } = await supabase
-      .from('friends')
-      .update({ status: 'rejected', updated_at: new Date().toISOString() })
-      .eq('id', requestId)
-      .eq('friend_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const senderSocketId = userSockets[data.user_id];
-    if (senderSocketId) {
-      io.to(senderSocketId).emit('friend_rejected', {
-        requestId: requestId,
-        userId: userId
-      });
-    }
-
-    res.json({ success: true, data });
-  } catch (error) {
-    console.error('Error rejecting friend request:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/friends', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const { data, error } = await supabase
-      .from('friends')
-      .select(`
-        *,
-        sender:user_id(id, username, display_name, avatar_url),
-        receiver:friend_id(id, username, display_name, avatar_url)
-      `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-
-    if (error) throw error;
-
-    const friends = [];
-    const pendingRequests = [];
-
-    data.forEach(item => {
-      const isSender = item.user_id === userId;
-      const otherUser = isSender ? item.receiver : item.sender;
-
-      if (item.status === 'accepted') {
-        friends.push({
-          id: item.id,
-          userId: otherUser.id,
-          username: otherUser.username,
-          display_name: otherUser.display_name,
-          avatar_url: otherUser.avatar_url,
-          createdAt: item.created_at
-        });
-      } else if (item.status === 'pending' && !isSender) {
-        pendingRequests.push({
-          id: item.id,
-          userId: otherUser.id,
-          username: otherUser.username,
-          display_name: otherUser.display_name,
-          avatar_url: otherUser.avatar_url,
-          createdAt: item.created_at
-        });
-      }
-    });
-
-    res.json({
-      success: true,
-      friends,
-      pendingRequests,
-      sentRequests: []
-    });
-  } catch (error) {
-    console.error('Error getting friends:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const friendId = req.params.friendId;
-
-    const { error } = await supabase
-      .from('friends')
-      .delete()
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .or(`user_id.eq.${friendId},friend_id.eq.${friendId}`)
-      .eq('status', 'accepted');
-
-    if (error) throw error;
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error removing friend:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/friends/status/:userId', authenticate, async (req, res) => {
-  try {
-    const currentUserId = req.user.id;
-    const targetUserId = req.params.userId;
-
-    const { data, error } = await supabase
-      .from('friends')
-      .select('status, id, user_id, friend_id')
-      .or(`user_id.eq.${currentUserId},friend_id.eq.${currentUserId}`)
-      .or(`user_id.eq.${targetUserId},friend_id.eq.${targetUserId}`)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    let status = 'none';
-    let requestId = null;
-    let isSender = false;
-
-    if (data) {
-      status = data.status;
-      requestId = data.id;
-      isSender = data.user_id === currentUserId;
-    }
-
-    res.json({
-      success: true,
-      status,
-      requestId,
-      isSender
-    });
-  } catch (error) {
-    console.error('Error checking friend status:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ========================================
 // ===== SOCKET.IO =====
-// ========================================
-
 const userSockets = {};
 
 io.on('connection', (socket) => {
@@ -717,24 +365,6 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined chat ${chatId}`);
   });
 
-  socket.on('leave_chat', (chatId) => {
-    socket.leave(chatId);
-    console.log(`Socket ${socket.id} left chat ${chatId}`);
-  });
-
-  socket.on('typing', (data) => {
-    socket.to(data.chatId).emit('typing', {
-      userId: data.userId,
-      username: data.username
-    });
-  });
-
-  socket.on('stop_typing', (data) => {
-    socket.to(data.chatId).emit('stop_typing', {
-      userId: data.userId
-    });
-  });
-
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     for (const [userId, socketId] of Object.entries(userSockets)) {
@@ -746,10 +376,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ========================================
 // ===== ЗАПУСК =====
-// ========================================
-
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📍 http://localhost:${PORT}`);
