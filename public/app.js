@@ -64,13 +64,18 @@ function initSocket() {
   });
 
   socket.on('friend_request', (data) => {
-    showToast(`📩 ${data.display_name || data.username} отправил(а) заявку в друзья`);
+    showToast(`📩 ${data.display_name || data.username} отправил(а) заявку`);
     friendsState.pendingRequests.push(data);
     updatePendingRequestsUI();
   });
 
   socket.on('friend_accepted', (data) => {
     showToast(`🎉 ${data.display_name || data.username} принял(а) заявку!`);
+    loadFriends();
+  });
+
+  socket.on('friend_rejected', (data) => {
+    showToast(`👋 ${data.username} отклонил(а) заявку`);
     loadFriends();
   });
 
@@ -103,7 +108,13 @@ function checkAuth() {
     loadChats();
     loadFriends();
     if (socket) socket.emit('register', currentUser.id);
-    if (user.theme) document.documentElement.setAttribute('data-theme', user.theme);
+    if (user.theme) {
+      document.documentElement.setAttribute('data-theme', user.theme);
+      // Обновляем активную тему в селекторе
+      document.querySelectorAll('.theme-selector button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === user.theme);
+      });
+    }
   })
   .catch(() => {
     localStorage.removeItem('token');
@@ -157,7 +168,11 @@ function initEvents() {
         loadChats();
         loadFriends();
         if (socket) socket.emit('register', currentUser.id);
+        if (currentUser.theme) {
+          document.documentElement.setAttribute('data-theme', currentUser.theme);
+        }
         showToast('✅ Добро пожаловать!');
+        errorEl.textContent = '';
       } else {
         errorEl.textContent = data.error || 'Ошибка входа';
       }
@@ -246,9 +261,6 @@ function initEvents() {
   });
 
   document.getElementById('imageModalClose').addEventListener('click', closeImageModal);
-  document.getElementById('imageModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeImageModal();
-  });
 
   document.getElementById('changeAvatarBtn').addEventListener('click', () => {
     const grid = document.getElementById('emojiGrid');
@@ -268,18 +280,32 @@ function initEvents() {
       document.querySelectorAll('.theme-selector button').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
       const theme = this.dataset.theme;
-      document.getElementById('settingsTheme').value = theme;
       document.documentElement.setAttribute('data-theme', theme);
+      // Сохраняем в скрытое поле
+      document.getElementById('settingsTheme')?.remove();
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.id = 'settingsTheme';
+      input.value = theme;
+      document.getElementById('settingsForm').appendChild(input);
     });
   });
 
-  // Контекстное меню (ПКМ)
+  // Контекстное меню
   document.addEventListener('contextmenu', async (e) => {
     const chatItem = e.target.closest('.chat-item');
     if (chatItem && chatItem.dataset.userId) {
       e.preventDefault();
       showContextMenu(e, chatItem.dataset.userId);
     }
+  });
+
+  // Закрытие модалок по клику на оверлей
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', () => {
+      document.getElementById('settingsModal').style.display = 'none';
+      document.getElementById('imageModal').style.display = 'none';
+    });
   });
 }
 
@@ -500,8 +526,8 @@ function showContextMenu(e, userId) {
   menu.dataset.userId = userId;
   
   menu.style.display = 'block';
-  menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
-  menu.style.top = Math.min(e.clientY, window.innerHeight - 150) + 'px';
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 140) + 'px';
 
   checkFriendStatus(userId).then(status => {
     const addBtn = menu.querySelector('[data-action="add-friend"]');
@@ -510,7 +536,15 @@ function showContextMenu(e, userId) {
     if (status.status === 'accepted') {
       addBtn.style.display = 'none';
       removeBtn.style.display = 'flex';
+    } else if (status.status === 'pending') {
+      addBtn.textContent = '⏳ Заявка отправлена';
+      addBtn.style.opacity = '0.5';
+      addBtn.style.pointerEvents = 'none';
+      removeBtn.style.display = 'none';
     } else {
+      addBtn.textContent = '👤 Добавить в друзья';
+      addBtn.style.opacity = '1';
+      addBtn.style.pointerEvents = 'auto';
       addBtn.style.display = 'flex';
       removeBtn.style.display = 'none';
     }
@@ -538,7 +572,10 @@ function initContextMenu() {
     });
   });
 
-  document.addEventListener('click', hideContextMenu);
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target)) hideContextMenu();
+  });
+  
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') hideContextMenu();
   });
@@ -613,18 +650,15 @@ function renderChats() {
 async function openChat(chat) {
   currentChat = chat;
   
-  // Показываем элементы чата
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('chatHeader').style.display = 'flex';
   document.getElementById('messagesContainer').style.display = 'flex';
   document.getElementById('inputArea').style.display = 'flex';
 
-  // На мобилке скрываем сайдбар
   if (window.innerWidth <= 768) {
     document.getElementById('sidebar').classList.add('hidden');
   }
 
-  // Заголовок
   let name = chat.name || 'Чат';
   let avatar = '💬';
   if (chat.type === 'personal' && chat.otherUser) {
@@ -639,6 +673,12 @@ async function openChat(chat) {
   renderChats();
   await loadMessages(chat.id);
   socket.emit('join_chat', chat.id);
+  
+  // Прокрутка вниз
+  setTimeout(() => {
+    const container = document.getElementById('messagesContainer');
+    container.scrollTop = container.scrollHeight;
+  }, 100);
 }
 
 async function loadMessages(chatId) {
@@ -702,7 +742,8 @@ function renderMessages() {
     `;
   }).join('');
 
-  document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+  const container2 = document.getElementById('messagesContainer');
+  container2.scrollTop = container2.scrollHeight;
 }
 
 // ========================================
@@ -791,6 +832,9 @@ async function toggleReaction(messageId, reaction) {
 // ========================================
 
 function startChatWithUser(userId) {
+  console.log('➡️ Начинаем чат с пользователем:', userId);
+  
+  // Ищем существующий чат
   let existing = chats.find(c => 
     c.type === 'personal' && 
     c.participants && 
@@ -798,8 +842,10 @@ function startChatWithUser(userId) {
   );
 
   if (existing) {
+    console.log('✅ Найден существующий чат:', existing.id);
     openChat(existing);
   } else {
+    console.log('🆕 Создаём новый чат');
     createChat(userId);
   }
 }
@@ -819,12 +865,26 @@ async function createChat(userId) {
     });
 
     const data = await res.json();
+    console.log('📦 Ответ создания чата:', data);
+    
     if (data.success) {
       await loadChats();
+      // Ищем созданный чат
       const chat = chats.find(c => c.id === data.chatId || c.id === data.chat?.id);
-      if (chat) openChat(chat);
+      if (chat) {
+        console.log('✅ Чат создан, открываем');
+        openChat(chat);
+      } else {
+        // Если не нашли, пробуем ещё раз загрузить
+        setTimeout(async () => {
+          await loadChats();
+          const chat2 = chats.find(c => c.id === data.chatId || c.id === data.chat?.id);
+          if (chat2) openChat(chat2);
+        }, 500);
+      }
     }
   } catch (error) {
+    console.error('❌ Ошибка создания чата:', error);
     showToast('❌ Ошибка создания чата');
   }
 }
@@ -846,6 +906,16 @@ function openSettings() {
   document.querySelectorAll('.theme-selector button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === theme);
   });
+  
+  // Устанавливаем скрытое поле для темы
+  let themeInput = document.getElementById('settingsTheme');
+  if (!themeInput) {
+    themeInput = document.createElement('input');
+    themeInput.type = 'hidden';
+    themeInput.id = 'settingsTheme';
+    document.getElementById('settingsForm').appendChild(themeInput);
+  }
+  themeInput.value = theme;
 }
 
 function closeSettings() {
@@ -868,11 +938,14 @@ function selectAvatar(emoji) {
 async function saveSettings(e) {
   e.preventDefault();
   
+  const themeInput = document.getElementById('settingsTheme');
+  const theme = themeInput ? themeInput.value : 'light';
+  
   const data = {
     avatar_url: document.getElementById('settingsAvatarPreview').textContent || '👤',
     display_name: document.getElementById('settingsDisplayName').value,
     bio: document.getElementById('settingsBio').value,
-    theme: document.querySelector('.theme-selector button.active')?.dataset.theme || 'light'
+    theme: theme
   };
 
   try {
@@ -889,7 +962,7 @@ async function saveSettings(e) {
     if (result.success) {
       currentUser = result.user;
       updateUserProfile();
-      document.documentElement.setAttribute('data-theme', data.theme);
+      document.documentElement.setAttribute('data-theme', theme);
       closeSettings();
       showToast('✅ Настройки сохранены');
     }
