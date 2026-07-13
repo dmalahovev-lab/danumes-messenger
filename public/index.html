@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#27A5E7">
   <title>Danumes</title>
   <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- ===== СТРАНИЦА ВХОДА ===== -->
@@ -13,9 +14,9 @@
     <div class="auth-container">
       <div class="auth-box">
         <div class="auth-logo">
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-            <circle cx="30" cy="30" r="30" fill="#27A5E7"/>
-            <path d="M16 30.5L26 36L44 20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#27A5E7"/>
+            <path d="M15 28.5L25 34L41 19" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <h1>Danumes</h1>
@@ -40,9 +41,9 @@
     <div class="auth-container">
       <div class="auth-box">
         <div class="auth-logo">
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-            <circle cx="30" cy="30" r="30" fill="#27A5E7"/>
-            <path d="M16 30.5L26 36L44 20" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#27A5E7"/>
+            <path d="M15 28.5L25 34L41 19" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <h1>Danumes</h1>
@@ -67,7 +68,6 @@
 
   <!-- ===== ОСНОВНОЙ ИНТЕРФЕЙС ===== -->
   <div id="app" class="app-container" style="display:none">
-    <!-- САЙДБАР -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-head">
         <h2>Danumes</h2>
@@ -90,7 +90,6 @@
         <div id="searchResults" class="search-results" style="display:none"></div>
       </div>
 
-      <!-- Заявки в друзья -->
       <div class="friend-requests-section" id="friendRequestsSection">
         <div class="friend-requests-header" id="friendRequestsToggle">
           <span>📩 Заявки в друзья</span>
@@ -102,39 +101,33 @@
       <div id="chatList" class="chat-list"></div>
     </aside>
 
-    <!-- ЧАТ -->
     <main id="chatArea" class="chat-area">
-      <!-- Пустое состояние -->
       <div id="emptyState" class="empty-state-full">
         <div class="empty-icon">
-          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="50" fill="#E8F5FE"/>
-            <path d="M33 50L43 60L68 38" stroke="#27A5E7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+            <circle cx="40" cy="40" r="40" fill="#E8F5FE"/>
+            <path d="M26 40L35 49L56 30" stroke="#27A5E7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <h2>Danumes</h2>
         <p>Выберите чат, чтобы начать общение</p>
       </div>
 
-      <!-- Шапка чата -->
       <div class="chat-header" id="chatHeader" style="display:none">
         <button class="back-btn" id="backBtn">←</button>
-        <div class="chat-user-info">
+        <div class="chat-user-info" id="chatUserInfo">
           <div class="chat-user-avatar" id="chatUserAvatar">👤</div>
           <div>
             <div class="chat-user-name" id="chatUserName">Пользователь</div>
             <div class="chat-user-status" id="chatUserStatus">В сети</div>
           </div>
         </div>
-        <button class="chat-actions-btn" id="chatActionsBtn">⋯</button>
       </div>
 
-      <!-- Сообщения -->
       <div id="messagesContainer" class="messages-container" style="display:none">
         <div id="messages" class="messages"></div>
       </div>
 
-      <!-- Поле ввода -->
       <div class="input-area" id="inputArea" style="display:none">
         <button class="attach-btn" id="attachBtn">📎</button>
         <input type="text" id="messageInput" placeholder="Сообщение...">
@@ -145,52 +138,50 @@
 
   <!-- ===== МОДАЛКА НАСТРОЕК ===== -->
   <div id="settingsModal" class="modal" style="display:none">
-    <div class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Настройки</h2>
-          <button class="modal-close" id="settingsClose">✕</button>
+    <div class="modal-overlay" onclick="closeSettings()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Настройки</h2>
+        <button class="modal-close" id="settingsClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-avatar">
+          <div class="settings-avatar-preview" id="settingsAvatarPreview">👤</div>
+          <button class="change-avatar-btn" id="changeAvatarBtn">Сменить аватар</button>
         </div>
-        <div class="modal-body">
-          <div class="settings-avatar">
-            <div class="settings-avatar-preview" id="settingsAvatarPreview">👤</div>
-            <button class="change-avatar-btn" id="changeAvatarBtn">Сменить аватар</button>
+        <div id="emojiGrid" class="emoji-grid" style="display:none"></div>
+        
+        <form id="settingsForm">
+          <div class="form-group">
+            <label>Отображаемое имя</label>
+            <input type="text" id="settingsDisplayName" placeholder="Как вас видеть">
           </div>
-          <div id="emojiGrid" class="emoji-grid" style="display:none"></div>
-          
-          <form id="settingsForm">
-            <div class="form-group">
-              <label>Отображаемое имя</label>
-              <input type="text" id="settingsDisplayName" placeholder="Как вас видеть">
+          <div class="form-group">
+            <label>О себе</label>
+            <textarea id="settingsBio" placeholder="Расскажите о себе..." rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Тема</label>
+            <div class="theme-selector" id="themeSelector">
+              <button data-theme="light" class="active" style="background:#ffffff;border:2px solid #ddd;"></button>
+              <button data-theme="dark" style="background:#1a1a2e;"></button>
+              <button data-theme="blue" style="background:#27A5E7;"></button>
+              <button data-theme="green" style="background:#4CAF50;"></button>
+              <button data-theme="purple" style="background:#9C27B0;"></button>
             </div>
-            <div class="form-group">
-              <label>О себе</label>
-              <textarea id="settingsBio" placeholder="Расскажите о себе..." rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Тема</label>
-              <div class="theme-selector" id="themeSelector">
-                <button data-theme="light" class="active" style="background:#ffffff;border:2px solid #ddd;"></button>
-                <button data-theme="dark" style="background:#1a1a2e;"></button>
-                <button data-theme="blue" style="background:#27A5E7;"></button>
-                <button data-theme="green" style="background:#4CAF50;"></button>
-                <button data-theme="purple" style="background:#9C27B0;"></button>
-              </div>
-            </div>
-            <button type="submit" class="save-btn">Сохранить</button>
-          </form>
-        </div>
+          </div>
+          <button type="submit" class="save-btn">Сохранить</button>
+        </form>
       </div>
     </div>
   </div>
 
   <!-- ===== МОДАЛКА ПРОСМОТРА ===== -->
   <div id="imageModal" class="modal" style="display:none">
-    <div class="modal-overlay">
-      <div class="modal-content image-modal">
-        <button class="modal-close" id="imageModalClose">✕</button>
-        <img id="modalImage" src="" alt="Изображение">
-      </div>
+    <div class="modal-overlay" onclick="closeImageModal()"></div>
+    <div class="modal-content image-modal">
+      <button class="modal-close" id="imageModalClose">✕</button>
+      <img id="modalImage" src="" alt="Изображение">
     </div>
   </div>
 
