@@ -94,6 +94,7 @@ app.post('/api/register', async (req, res) => {
         password_hash: hashedPassword,
         display_name: username,
         avatar_url: '👤',
+        theme: 'light',
         created_at: new Date().toISOString()
       })
       .select()
