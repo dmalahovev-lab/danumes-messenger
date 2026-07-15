@@ -31,7 +31,6 @@
           <button type="submit">Войти</button>
         </form>
         <p class="auth-footer">Нет аккаунта? <a href="#" id="showRegister">Регистрация</a></p>
-        <div id="loginError" class="auth-error"></div>
       </div>
     </div>
   </div>
@@ -61,139 +60,241 @@
           <button type="submit">Зарегистрироваться</button>
         </form>
         <p class="auth-footer">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
-        <div id="registerError" class="auth-error"></div>
       </div>
     </div>
   </div>
 
   <!-- ===== ОСНОВНОЙ ИНТЕРФЕЙС ===== -->
-  <div id="app" class="app-container" style="display:none">
+  <div id="app" class="app-container">
+    <!-- САЙДБАР -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-head">
         <h2>Danumes</h2>
         <div class="sidebar-actions">
-          <button id="settingsBtn" class="icon-btn" title="Настройки">⚙️</button>
-          <button id="logoutBtn" class="icon-btn" title="Выйти">🚪</button>
+          <button class="icon-btn" title="Настройки">⚙️</button>
+          <button class="icon-btn" title="Выйти">🚪</button>
         </div>
       </div>
 
-      <div class="user-profile" id="userProfile">
-        <div class="user-avatar" id="userAvatar">👤</div>
+      <div class="user-profile">
+        <div class="user-avatar">👤</div>
         <div class="user-info">
-          <div class="user-name" id="userName">Пользователь</div>
+          <div class="user-name">Алексей</div>
           <div class="user-status">В сети</div>
         </div>
       </div>
 
       <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Поиск...">
-        <div id="searchResults" class="search-results" style="display:none"></div>
+        <input type="text" placeholder="Поиск...">
       </div>
 
-      <div class="friend-requests-section" id="friendRequestsSection">
-        <div class="friend-requests-header" id="friendRequestsToggle">
+      <div class="friend-requests-section">
+        <div class="friend-requests-header">
           <span>📩 Заявки в друзья</span>
-          <span class="badge" id="friendRequestsBadge" style="display:none">0</span>
+          <span class="badge">2</span>
         </div>
-        <div id="pendingRequestsList" style="display:none"></div>
-      </div>
-
-      <div id="chatList" class="chat-list"></div>
-    </aside>
-
-    <main id="chatArea" class="chat-area">
-      <div id="emptyState" class="empty-state-full">
-        <div class="empty-icon">
-          <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-            <circle cx="40" cy="40" r="40" fill="#E8F5FE"/>
-            <path d="M26 40L35 49L56 30" stroke="#27A5E7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <h2>Danumes</h2>
-        <p>Выберите чат, чтобы начать общение</p>
-      </div>
-
-      <div class="chat-header" id="chatHeader" style="display:none">
-        <button class="back-btn" id="backBtn">←</button>
-        <div class="chat-user-info" id="chatUserInfo">
-          <div class="chat-user-avatar" id="chatUserAvatar">👤</div>
-          <div>
-            <div class="chat-user-name" id="chatUserName">Пользователь</div>
-            <div class="chat-user-status" id="chatUserStatus">В сети</div>
+        <div style="padding: 4px 8px 8px;">
+          <div class="pending-request-item">
+            <div class="request-user-info">
+              <div class="request-avatar">👤</div>
+              <div class="request-name">Мария</div>
+            </div>
+            <div class="request-actions">
+              <button class="accept-request-btn">✅</button>
+              <button class="reject-request-btn">❌</button>
+            </div>
+          </div>
+          <div class="pending-request-item">
+            <div class="request-user-info">
+              <div class="request-avatar">👤</div>
+              <div class="request-name">Дмитрий</div>
+            </div>
+            <div class="request-actions">
+              <button class="accept-request-btn">✅</button>
+              <button class="reject-request-btn">❌</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div id="messagesContainer" class="messages-container" style="display:none">
-        <div id="messages" class="messages"></div>
+      <div class="chat-list">
+        <!-- Чат 1 -->
+        <div class="chat-item active">
+          <div class="avatar">👩</div>
+          <div class="info">
+            <div class="name">Анна</div>
+            <div class="last-message">Привет! Как дела?</div>
+          </div>
+          <div class="time">14:30</div>
+        </div>
+
+        <!-- Чат 2 -->
+        <div class="chat-item">
+          <div class="avatar">🧑</div>
+          <div class="info">
+            <div class="name">Максим</div>
+            <div class="last-message">Отлично! Встречаемся завтра?</div>
+          </div>
+          <div class="time">13:15</div>
+        </div>
+
+        <!-- Чат 3 -->
+        <div class="chat-item">
+          <div class="avatar">👨‍👩‍👦</div>
+          <div class="info">
+            <div class="name">Семья</div>
+            <div class="last-message">👨‍👩‍👦: Все на ужин!</div>
+          </div>
+          <div class="time">12:00</div>
+        </div>
+
+        <!-- Чат 4 -->
+        <div class="chat-item">
+          <div class="avatar">👤</div>
+          <div class="info">
+            <div class="name">Елена</div>
+            <div class="last-message">Спасибо за помощь!</div>
+          </div>
+          <div class="time">Вчера</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ОБЛАСТЬ ЧАТА -->
+    <main id="chatArea" class="chat-area">
+      <!-- ШАПКА ЧАТА -->
+      <div class="chat-header">
+        <button class="back-btn">←</button>
+        <div class="chat-user-info">
+          <div class="chat-user-avatar">👩</div>
+          <div>
+            <div class="chat-user-name">Анна</div>
+            <div class="chat-user-status">была недавно</div>
+          </div>
+        </div>
+        <button class="chat-actions-btn">⋯</button>
       </div>
 
-      <div class="input-area" id="inputArea" style="display:none">
-        <button class="attach-btn" id="attachBtn">📎</button>
-        <input type="text" id="messageInput" placeholder="Сообщение...">
-        <button class="send-btn" id="sendBtn">➤</button>
+      <!-- СООБЩЕНИЯ -->
+      <div class="messages-container">
+        <div class="messages">
+          <!-- Сообщение от собеседника -->
+          <div class="message received">
+            <div class="sender">Анна</div>
+            <div class="content">Привет! Как дела?</div>
+            <div class="time">14:30</div>
+          </div>
+
+          <!-- Моё сообщение -->
+          <div class="message sent">
+            <div class="content">Привет! Всё отлично, а у тебя?</div>
+            <div class="time">14:31</div>
+          </div>
+
+          <!-- Сообщение от собеседника с реакциями -->
+          <div class="message received">
+            <div class="sender">Анна</div>
+            <div class="content">Тоже хорошо! Может встретимся?</div>
+            <div class="time">14:32</div>
+            <div class="reactions">
+              <span class="reaction active">❤️ <span class="count">2</span></span>
+              <span class="reaction">👍 <span class="count">1</span></span>
+            </div>
+          </div>
+
+          <!-- Моё сообщение с изображением -->
+          <div class="message sent">
+            <div class="content">
+              <img src="https://picsum.photos/200/150?random=1" class="image-message" alt="Фото">
+            </div>
+            <div class="time">14:33</div>
+          </div>
+
+          <!-- Сообщение с файлом -->
+          <div class="message received">
+            <div class="sender">Анна</div>
+            <div class="content">📎 <a href="#" style="color:#27A5E7;text-decoration:none;">Документ.pdf</a></div>
+            <div class="time">14:35</div>
+          </div>
+
+          <!-- Голосовое сообщение -->
+          <div class="message sent">
+            <div class="content">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button style="background:none;border:none;font-size:18px;cursor:pointer;">▶️</button>
+                <span>Голосовое сообщение (0:24)</span>
+              </div>
+            </div>
+            <div class="time">14:36</div>
+          </div>
+
+          <!-- Время -->
+          <div style="text-align:center;color:#999;font-size:11px;padding:8px 0;">Сегодня</div>
+
+          <!-- Последнее сообщение -->
+          <div class="message received">
+            <div class="sender">Анна</div>
+            <div class="content">Договорились! В 18:00 у парка</div>
+            <div class="time">14:40</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ПОЛЕ ВВОДА -->
+      <div class="input-area">
+        <button class="attach-btn">📎</button>
+        <input type="text" placeholder="Сообщение...">
+        <button class="send-btn">➤</button>
       </div>
     </main>
   </div>
 
   <!-- ===== МОДАЛКА НАСТРОЕК ===== -->
-  <div id="settingsModal" class="modal" style="display:none">
-    <div class="modal-overlay" onclick="closeSettings()"></div>
+  <div id="settingsModal" class="modal">
+    <div class="modal-overlay"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h2>Настройки</h2>
-        <button class="modal-close" id="settingsClose">✕</button>
+        <button class="modal-close">✕</button>
       </div>
       <div class="modal-body">
         <div class="settings-avatar">
-          <div class="settings-avatar-preview" id="settingsAvatarPreview">👤</div>
-          <button class="change-avatar-btn" id="changeAvatarBtn">Сменить аватар</button>
+          <div class="settings-avatar-preview">👤</div>
+          <button class="change-avatar-btn">Сменить аватар</button>
         </div>
-        <div id="emojiGrid" class="emoji-grid" style="display:none"></div>
-        
-        <form id="settingsForm">
-          <div class="form-group">
-            <label>Отображаемое имя</label>
-            <input type="text" id="settingsDisplayName" placeholder="Как вас видеть">
+
+        <div class="form-group">
+          <label>Отображаемое имя</label>
+          <input type="text" value="Алексей" placeholder="Как вас видеть">
+        </div>
+        <div class="form-group">
+          <label>О себе</label>
+          <textarea rows="3" placeholder="Расскажите о себе...">Люблю программирование и кофе ☕</textarea>
+        </div>
+        <div class="form-group">
+          <label>Тема</label>
+          <div class="theme-selector">
+            <button data-theme="light" class="active" style="background:#ffffff;border:2px solid #ddd;"></button>
+            <button data-theme="dark" style="background:#1a1a2e;"></button>
+            <button data-theme="blue" style="background:#27A5E7;"></button>
+            <button data-theme="green" style="background:#4CAF50;"></button>
+            <button data-theme="purple" style="background:#9C27B0;"></button>
           </div>
-          <div class="form-group">
-            <label>О себе</label>
-            <textarea id="settingsBio" placeholder="Расскажите о себе..." rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Тема</label>
-            <div class="theme-selector" id="themeSelector">
-              <button data-theme="light" class="active" style="background:#ffffff;border:2px solid #ddd;"></button>
-              <button data-theme="dark" style="background:#1a1a2e;"></button>
-              <button data-theme="blue" style="background:#27A5E7;"></button>
-              <button data-theme="green" style="background:#4CAF50;"></button>
-              <button data-theme="purple" style="background:#9C27B0;"></button>
-            </div>
-          </div>
-          <button type="submit" class="save-btn">Сохранить</button>
-        </form>
+        </div>
+        <button class="save-btn">Сохранить</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== МОДАЛКА ПРОСМОТРА ===== -->
+  <!-- ===== МОДАЛКА ПРОСМОТРА ИЗОБРАЖЕНИЙ ===== -->
   <div id="imageModal" class="modal" style="display:none">
-    <div class="modal-overlay" onclick="closeImageModal()"></div>
+    <div class="modal-overlay"></div>
     <div class="modal-content image-modal">
-      <button class="modal-close" id="imageModalClose">✕</button>
-      <img id="modalImage" src="" alt="Изображение">
+      <button class="modal-close">✕</button>
+      <img src="https://picsum.photos/800/600?random=1" alt="Изображение">
     </div>
   </div>
 
-  <!-- ===== КОНТЕКСТНОЕ МЕНЮ ===== -->
-  <div id="contextMenu" class="context-menu" style="display:none">
-    <div class="context-menu-item" data-action="add-friend">👤 Добавить в друзья</div>
-    <div class="context-menu-item" data-action="remove-friend" style="display:none">❌ Удалить из друзей</div>
-    <div class="context-menu-item" data-action="view-profile">👁️ Профиль</div>
-    <div class="context-menu-item" data-action="start-chat">💬 Начать чат</div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
